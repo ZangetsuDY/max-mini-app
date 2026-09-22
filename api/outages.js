@@ -755,6 +755,28 @@ function extractClauseStateEvents(
 const MOSCOW_OFFSET_MS =
   3 * 60 * 60 * 1000;
 
+const DAY_MS =
+  24 * 60 * 60 * 1000;
+
+function getMoscowStartOfTodayMs() {
+  const shifted =
+    new Date(
+      Date.now() + MOSCOW_OFFSET_MS
+    );
+
+  return (
+    Date.UTC(
+      shifted.getUTCFullYear(),
+      shifted.getUTCMonth(),
+      shifted.getUTCDate(),
+      0,
+      0,
+      0,
+      0
+    ) - MOSCOW_OFFSET_MS
+  );
+}
+
 function parseRussianDate(value) {
   const match =
     String(value || "").match(
