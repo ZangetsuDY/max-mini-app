@@ -1,6 +1,6 @@
 {
   "functions": {
-    "api/ves.js": {
+    "api/outages.js": {
       "includeFiles": "certs/**"
     }
   }

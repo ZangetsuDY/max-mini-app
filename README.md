@@ -1,0 +1,23 @@
+# MAX Mini App — все подразделения
+
+Добавлены карточки: ВЭС, ГтЭС, ЮЭС, СЭС, ТхЭС, КС, НлЭС, КнЭС, ЮВВР, СВВР, ВВВР, ЦВВР, ОС, Волхов.
+
+## Где вписывать chat_id
+
+В Vercel создайте Secret Environment Variable `CHAT_IDS_JSON`.
+
+Вставьте значение одной строкой:
+
+```json
+{"ves":"ID_ВЭС","gtes":"ID_ГтЭС","yues":"ID_ЮЭС","ses":"ID_СЭС","thes":"ID_ТхЭС","ks":"ID_КС","nles":"ID_НлЭС","knes":"ID_КнЭС","yuvvr":"ID_ЮВВР","svvr":"ID_СВВР","vvvr":"ID_ВВВР","tsvvr":"ID_ЦВВР","os":"ID_ОС","volkhov":"ID_Волхов"}
+```
+
+Если ID пока нет, оставьте пустую строку, например `"gtes":""`. На карточке будет написано, что chat_id не настроен.
+
+Также поддерживаются отдельные переменные: `CHAT_VES`, `CHAT_GTES`, `CHAT_YUES`, `CHAT_SES`, `CHAT_THES`, `CHAT_KS`, `CHAT_NLES`, `CHAT_KNES`, `CHAT_YUVVR`, `CHAT_SVVR`, `CHAT_VVVR`, `CHAT_TSVVR`, `CHAT_OS`, `CHAT_VOLKHOV`.
+
+Оставьте существующие `MAX_BOT_TOKEN`, `AUTH_SECRET`, `APP_USERS_JSON`.
+
+Ваш файл `certs/Russian_Trusted_Root_CA.cer` должен остаться в проекте. Сам сертификат в архив не вложен.
+
+После изменения Environment Variables сделайте Redeploy.

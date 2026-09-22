@@ -148,75 +148,29 @@
 
       <div class="hero-summary glass">
         <span class="summary-label">Активных отключений</span>
-        <strong id="totalOutages">0</strong>
+        <strong id="totalOutages">—</strong>
         <span class="summary-caption">по подключённым подразделениям</span>
       </div>
     </section>
 
-    <section class="dashboard">
-      <article class="division-card glass" id="vesCard">
-        <button class="division-header" id="vesToggle" type="button" aria-expanded="false">
-          <div class="division-main">
-            <div class="division-icon">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M13.2 2 5.5 13.1h5.3L9.9 22l8.6-12.2h-5.6L13.2 2Z"></path>
-              </svg>
-            </div>
-
-            <div>
-              <div class="division-kicker">ПОДРАЗДЕЛЕНИЕ</div>
-              <h2>ВЭС</h2>
-              <p>Выборгские электрические сети</p>
-            </div>
-          </div>
-
-          <div class="division-actions">
-            <div class="counter">
-              <span>Отключений</span>
-              <strong id="vesCount">0</strong>
-            </div>
-
-            <span class="chevron" aria-hidden="true">
-              <svg viewBox="0 0 24 24">
-                <path d="m7 9 5 5 5-5"></path>
-              </svg>
-            </span>
-          </div>
-        </button>
-
-        <div class="division-body" id="vesBody">
-          <div class="section-heading">
-            <div>
-              <h3>Текущие отключения</h3>
-              <p id="vesDescription">Загрузка данных…</p>
-            </div>
-
-            <div class="live-badge">
-              <span></span>
-              LIVE
-            </div>
-          </div>
-
-          <div id="outageList" class="outage-list"></div>
-
-          <div id="emptyState" class="empty-state" hidden>
-            <div class="empty-icon">✓</div>
-            <h3>Активных отключений нет</h3>
-            <p>Все зарегистрированные объекты находятся во включённом состоянии.</p>
-          </div>
+    <section class="dashboard-section">
+      <div class="dashboard-heading">
+        <div>
+          <p class="eyebrow">ПОДРАЗДЕЛЕНИЯ</p>
+          <h2>Оперативная сводка</h2>
         </div>
 
-        <button class="open-button" id="openVes" type="button">
-          <span>Открыть интерфейс отключений</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 12h14M13 6l6 6-6 6"></path>
-          </svg>
-        </button>
-      </article>
+        <div class="dashboard-state">
+          <span class="status-dot"></span>
+          <span id="dashboardStatus">Загрузка данных</span>
+        </div>
+      </div>
+
+      <div id="divisionGrid" class="division-grid"></div>
     </section>
 
     <footer class="footer">
-      <span>Демонстрационная версия интерфейса</span>
+      <span>Оперативный интерфейс</span>
       <span class="footer-separator">•</span>
       <span id="updatedAt">Обновлено —</span>
     </footer>
