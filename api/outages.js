@@ -172,26 +172,31 @@ function normalizeObjectName(value) {
 function getRecordState(record) {
   const value = String(record || "")
     .toLowerCase()
-    .replace(/ё/g, "е");
+    .replace(/ё/g, "е")
+    .replace(/\s+/g, " ")
+    .trim();
 
+  /*
+    Восстановление проверяем ПЕРВЫМ.
+    Например:
+    "10-20 АО уч фЧр-01 10-21 РПВ успешное"
+    содержит "АО", но итоговое состояние уже включено.
+  */
   if (
-    value.includes("включил") ||
-    value.includes("включили") ||
-    value.includes("включен") ||
-    value.includes("включена") ||
-    value.includes("включено") ||
-    value.includes("рпв успешно")
+    /\bвключ(?:ил|или|ен|ена|ено|ены|ить)\b/i.test(value) ||
+    /\bрпв\s+успешн/i.test(value) ||
+    /\bапв\s+успешн/i.test(value) ||
+    value.includes("подано напряжение") ||
+    value.includes("введен в работу") ||
+    value.includes("введена в работу")
   ) {
     return "enabled";
   }
 
   if (
-    value.includes("отключился") ||
-    value.includes("отключилась") ||
-    value.includes("отключились") ||
-    value.includes("отключен") ||
-    value.includes("отключена") ||
-    value.includes("отключено")
+    /\bотключ(?:ился|илась|ились|ен|ена|ено|ены)\b/i.test(value) ||
+    /аварийн\w*\s+отключ/i.test(value) ||
+    /(^|[\s,.;:()-])ао(?=$|[\s,.;:()-])/i.test(value)
   ) {
     return "disabled";
   }
@@ -268,14 +273,24 @@ function parseEmergencyMessage(message) {
 
   const text = cleanMaxMarkdown(rawText);
 
-  if (
-    !/Аварийное отключение фидера\s+6-20\s*кВ/i.test(text)
-  ) {
+  /*
+    В чатах встречаются минимум два шаблона заголовка:
+    1) "Аварийное отключение фидера 6-20 кВ"
+    2) "Аварийные отключения"
+
+    Раньше второй шаблон игнорировался целиком — именно поэтому
+    свежие записи вида "Аварийное отключение В-26" не попадали в Mini App.
+  */
+  const isEmergencyTemplate =
+    /Аварийное отключение фидера\s+6\s*[-–—]\s*20\s*кВ/i.test(text) ||
+    /Аварийные отключения/i.test(text);
+
+  if (!isEmergencyTemplate) {
     return null;
   }
 
   const objectMatch = text.match(
-    /Объект:\s*(.*?)\s*✏\s*Запись:/i
+    /Объект:\s*([\s\S]*?)(?=\s*(?:✏|📝)?\s*Запись:)/i
   );
 
   const recordMatch = text.match(
@@ -283,7 +298,7 @@ function parseEmergencyMessage(message) {
   );
 
   const authorTimeMatch = text.match(
-    /👤\s*([\s\S]*?)\s*🕐\s*(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}:\d{2})/i
+    /👤\s*([\s\S]*?)\s*(?:🕐|🕑|🕒|🕓|🕔|🕕|🕖|🕗|🕘|🕙|🕚|🕛|⏰|⏱️?|🕰️?)?\s*(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}:\d{2})/i
   );
 
   const addedMatch = text.match(
@@ -355,10 +370,14 @@ function parseEmergencyMessage(message) {
   };
 }
 
-function calculateActiveOutages(messages) {
-  const parsed = messages
+function parseEmergencyMessages(messages) {
+  return messages
     .map(parseEmergencyMessage)
-    .filter(Boolean)
+    .filter(Boolean);
+}
+
+function calculateActiveOutages(messages) {
+  const parsed = parseEmergencyMessages(messages)
     .filter((item) => item.state !== "unknown")
     .sort((a, b) => a.timestamp - b.timestamp);
 
@@ -513,7 +532,7 @@ async function fetchMessageHistory(
     const batch = await requestMessages(
       botToken,
       chatId,
-      pageFrom,
+      page === 0 ? null : pageFrom,
       rangeStart
     );
 
@@ -675,6 +694,11 @@ export default {
           chatId
         );
 
+      const parsedEmergency =
+        parseEmergencyMessages(
+          history.messages
+        );
+
       const outages =
         calculateActiveOutages(
           history.messages
@@ -689,6 +713,8 @@ export default {
           history.messages.length,
         todayMessages:
           history.todayMessages,
+        matchedEmergencyMessages:
+          parsedEmergency.length,
         historyLimited:
           history.historyLimited,
         checkedFrom:

@@ -42,6 +42,33 @@ const dashboardStatus = document.getElementById("dashboardStatus");
 let refreshTimer = null;
 let loadVersion = 0;
 
+const SESSION_STORAGE_KEY = "le_app_session";
+
+function getAppSessionToken() {
+  try {
+    return sessionStorage.getItem(
+      SESSION_STORAGE_KEY
+    ) || "";
+  } catch {
+    return "";
+  }
+}
+
+function setAppSessionToken(token) {
+  try {
+    if (token) {
+      sessionStorage.setItem(
+        SESSION_STORAGE_KEY,
+        token
+      );
+    } else {
+      sessionStorage.removeItem(
+        SESSION_STORAGE_KEY
+      );
+    }
+  } catch {}
+}
+
 function getMaxInitData() {
   try { return window.WebApp?.initData || ""; }
   catch { return ""; }
@@ -94,12 +121,21 @@ function showApplication(user) {
 
 async function checkSession() {
   try {
+    const sessionToken =
+      getAppSessionToken();
+
     const response = await fetch(API_ME, {
       method: "GET",
       cache: "no-store",
-      credentials: "same-origin"
+      credentials: "include",
+      headers: sessionToken
+        ? { "X-App-Session": sessionToken }
+        : {}
     });
-    if (!response.ok) return showLoginScreen();
+    if (!response.ok) {
+      setAppSessionToken("");
+      return showLoginScreen();
+    }
     const payload = await response.json();
     if (payload?.authenticated && payload?.user) return showApplication(payload.user);
     showLoginScreen();
@@ -121,12 +157,16 @@ loginForm.addEventListener("submit", async (event) => {
     const response = await fetch(API_LOGIN, {
       method: "POST",
       cache: "no-store",
-      credentials: "same-origin",
+      credentials: "include",
       headers: { "Content-Type": "application/json", "X-Max-Init-Data": initData },
       body: JSON.stringify({ username, password })
     });
     const payload = await response.json().catch(() => null);
     if (!response.ok) throw new Error(payload?.error || "Не удалось выполнить вход");
+    setAppSessionToken(
+      payload?.sessionToken || ""
+    );
+
     passwordInput.value = "";
     showApplication(payload.user);
   } catch (error) {
@@ -146,8 +186,13 @@ togglePassword.addEventListener("click", () => {
 logoutButton.addEventListener("click", async () => {
   stopAutoRefresh();
   try {
-    await fetch(API_LOGOUT, { method: "POST", cache: "no-store", credentials: "same-origin" });
+    await fetch(API_LOGOUT, {
+      method: "POST",
+      cache: "no-store",
+      credentials: "include"
+    });
   } finally {
+    setAppSessionToken("");
     usernameInput.value = "";
     passwordInput.value = "";
     showLoginScreen();
@@ -275,13 +320,22 @@ async function loadDivision(division, version) {
   renderDivisionLoading(division);
   const initData = getMaxInitData();
   if (!initData) throw new Error("Откройте мини-приложение внутри MAX.");
+  const sessionToken =
+    getAppSessionToken();
+
   const response = await fetch(`${API_OUTAGES}?division=${encodeURIComponent(division.id)}`, {
     method: "GET",
     cache: "no-store",
-    credentials: "same-origin",
-    headers: { "X-Max-Init-Data": initData }
+    credentials: "include",
+    headers: {
+      "X-Max-Init-Data": initData,
+      ...(sessionToken
+        ? { "X-App-Session": sessionToken }
+        : {})
+    }
   });
   if (response.status === 401) {
+    setAppSessionToken("");
     stopAutoRefresh();
     showLoginScreen();
     throw new Error("Сессия завершена. Авторизуйтесь снова.");

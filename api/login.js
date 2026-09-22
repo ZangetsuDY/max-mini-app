@@ -1,7 +1,8 @@
 import {
   validateMaxInitData,
   verifyCredentials,
-  createSessionCookie
+  createSessionCookie,
+  createSessionToken
 } from "../lib/security.js";
 
 function json(data, status = 200, extraHeaders = {}) {
@@ -85,12 +86,20 @@ export default {
       );
     }
 
-    const cookie = createSessionCookie(user);
+    const sessionToken =
+      createSessionToken(user);
+
+    const cookie =
+      createSessionCookie(
+        user,
+        sessionToken
+      );
 
     return json(
       {
         ok: true,
-        user
+        user,
+        sessionToken
       },
       200,
       {
