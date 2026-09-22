@@ -2,59 +2,128 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  />
-  <title>Россети Ленэнерго</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#07172f" />
+  <title>Россети Ленэнерго — Аварийные отключения</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="background">
-    <div class="blur-circle blur-circle-1"></div>
-    <div class="blur-circle blur-circle-2"></div>
-    <div class="blur-circle blur-circle-3"></div>
+  <div class="background" aria-hidden="true">
+    <div class="grid"></div>
+    <div class="glow glow-a"></div>
+    <div class="glow glow-b"></div>
+    <div class="glow glow-c"></div>
   </div>
 
-  <main class="app">
-    <section class="hero-card">
-      <div class="hero-top">
-        <div>
-          <p class="eyebrow">МИНИ-ПРИЛОЖЕНИЕ</p>
-          <h1>ПАО «Россети Ленэнерго»</h1>
-          <p class="subtitle">
-            Корпоративная панель мониторинга отключений
-          </p>
+  <main class="app-shell">
+    <header class="topbar glass">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
         </div>
 
-        <div class="status-badge">
-          Онлайн
+        <div class="brand-copy">
+          <div class="brand-name">РОССЕТИ</div>
+          <div class="brand-subname">ЛЕНЭНЕРГО</div>
         </div>
       </div>
 
-      <div class="panel">
-        <div class="panel-header">
-          <div class="panel-icon">⚡</div>
-          <div>
-            <h2>Интерфейс отключений</h2>
-            <p class="panel-description">
-              Быстрый доступ к разделу контроля текущих отключений
-            </p>
-          </div>
-        </div>
+      <div class="topbar-status">
+        <span class="status-dot"></span>
+        <span>Система доступна</span>
+      </div>
+    </header>
 
-        <div class="stats-row">
-          <div class="stat-card">
-            <span class="stat-label">Всего отключений</span>
-            <span class="stat-value">117</span>
-          </div>
-        </div>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">ОПЕРАТИВНЫЙ МОНИТОРИНГ</p>
+        <h1>Аварийные отключения</h1>
+        <p class="hero-text">
+          Текущее состояние объектов по данным оперативных сообщений.
+        </p>
+      </div>
 
-        <button id="openOutagesBtn" class="primary-button">
-          Открыть интерфейс отключений
-        </button>
+      <div class="hero-summary glass">
+        <span class="summary-label">Активных отключений</span>
+        <strong id="totalOutages">0</strong>
+        <span class="summary-caption">по подключённым подразделениям</span>
       </div>
     </section>
+
+    <section class="dashboard">
+      <article class="division-card glass" id="vesCard">
+        <button class="division-header" id="vesToggle" type="button" aria-expanded="false">
+          <div class="division-main">
+            <div class="division-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M13.2 2 5.5 13.1h5.3L9.9 22l8.6-12.2h-5.6L13.2 2Z"></path>
+              </svg>
+            </div>
+
+            <div>
+              <div class="division-kicker">ПОДРАЗДЕЛЕНИЕ</div>
+              <h2>ВЭС</h2>
+              <p>Выборгские электрические сети</p>
+            </div>
+          </div>
+
+          <div class="division-actions">
+            <div class="counter">
+              <span>Отключений</span>
+              <strong id="vesCount">0</strong>
+            </div>
+
+            <span class="chevron" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="m7 9 5 5 5-5"></path>
+              </svg>
+            </span>
+          </div>
+        </button>
+
+        <div class="division-body" id="vesBody">
+          <div class="section-heading">
+            <div>
+              <h3>Текущие отключения</h3>
+              <p id="vesDescription">Загрузка данных…</p>
+            </div>
+
+            <div class="live-badge">
+              <span></span>
+              LIVE
+            </div>
+          </div>
+
+          <div id="outageList" class="outage-list"></div>
+
+          <div id="emptyState" class="empty-state" hidden>
+            <div class="empty-icon">✓</div>
+            <h3>Активных отключений нет</h3>
+            <p>Все зарегистрированные объекты находятся во включённом состоянии.</p>
+          </div>
+        </div>
+
+        <button class="open-button" id="openVes" type="button">
+          <span>Открыть интерфейс отключений</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 12h14M13 6l6 6-6 6"></path>
+          </svg>
+        </button>
+      </article>
+    </section>
+
+    <footer class="footer">
+      <span>Демонстрационная версия интерфейса</span>
+      <span class="footer-separator">•</span>
+      <span id="updatedAt">Обновлено —</span>
+    </footer>
   </main>
 
   <script src="app.js"></script>
