@@ -149,7 +149,17 @@ function maxApiRequest(url, botToken) {
 }
 
 /* =========================================================
-   ПАРСЕР СООБЩЕНИЙ
+   ПАРСЕР АВАРИЙНЫХ СООБЩЕНИЙ
+
+   Поддерживает реальные варианты из чатов:
+   - Аварийное отключение фидера 6-20 кВ
+   - Аварийные отключения
+   - Аварийное отключение ЛЭП 35-220 кВ
+   - Аварийные события
+
+   Главное отличие от старой версии:
+   состояние считается не по полю "Объект" целиком, а по конкретному
+   фидеру / выключателю / линии, извлечённому из текста сообщения.
    ========================================================= */
 
 function cleanMaxMarkdown(text) {
@@ -161,64 +171,615 @@ function cleanMaxMarkdown(text) {
     .trim();
 }
 
-function normalizeObjectName(value) {
+function normalizeSpaces(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeForKey(value) {
   return String(value || "")
     .toLowerCase()
     .replace(/ё/g, "е")
-    .replace(/\s+/g, "")
-    .replace(/\./g, "");
+    .replace(/[^a-zа-я0-9]+/gi, "");
 }
 
-function getRecordState(record) {
-  const value = String(record || "")
-    .toLowerCase()
-    .replace(/ё/g, "е")
-    .replace(/\s+/g, " ")
-    .trim();
+function makeAsset(type, key, label, source = "") {
+  return {
+    type,
+    key: `${type}:${key}`,
+    label: normalizeSpaces(label),
+    source: normalizeSpaces(source || label)
+  };
+}
+
+function uniqueAssets(assets) {
+  const map = new Map();
+
+  for (const asset of assets || []) {
+    if (!asset?.key) continue;
+
+    if (!map.has(asset.key)) {
+      map.set(asset.key, asset);
+    }
+  }
+
+  return [...map.values()];
+}
+
+/*
+  Фидеры:
+    ф331-03
+    ф.331-03
+    фБч-04
+    ф.Сим-04
+    ф. К-21
+    ф330-02,-04,-05
+
+  В последнем случае получаем три отдельных объекта:
+    ф330-02
+    ф330-04
+    ф330-05
+*/
+function extractFeederAssets(text) {
+  const value = String(text || "");
+  const result = [];
+
+  const compactListRegex =
+    /ф\.?\s*([a-zа-яё0-9]+)-(\d{1,3})((?:\s*,\s*-\d{1,3})+)/gi;
+
+  let compactMatch;
+
+  while (
+    (compactMatch =
+      compactListRegex.exec(value)) !== null
+  ) {
+    const base =
+      compactMatch[1];
+
+    const first =
+      compactMatch[2];
+
+    const tail =
+      compactMatch[3];
+
+    const suffixes = [
+      first,
+      ...[...tail.matchAll(/-\s*(\d{1,3})/g)]
+        .map((match) => match[1])
+    ];
+
+    for (const suffix of suffixes) {
+      const raw =
+        `ф${base}-${suffix}`;
+
+      result.push(
+        makeAsset(
+          "feeder",
+          normalizeForKey(raw),
+          raw,
+          compactMatch[0]
+        )
+      );
+    }
+  }
+
+  const singleRegex =
+    /ф\.?\s*([a-zа-яё0-9]+)-(\d{1,3})/gi;
+
+  let match;
+
+  while (
+    (match = singleRegex.exec(value)) !== null
+  ) {
+    const raw =
+      `ф${match[1]}-${match[2]}`;
+
+    result.push(
+      makeAsset(
+        "feeder",
+        normalizeForKey(raw),
+        raw,
+        match[0]
+      )
+    );
+  }
+
+  return uniqueAssets(result);
+}
+
+/*
+  Выключатели вида В-26, В-478, В-816, В-1064.
+  "В-10" часто означает просто выключатель 10 кВ и не является
+  уникальным объектом, поэтому такие номинальные значения исключаем.
+*/
+function extractBreakerAssets(text) {
+  const value = String(text || "");
+  const result = [];
+
+  const regex =
+    /В\s*-\s*(\d{1,4})/gi;
+
+  let match;
+
+  while (
+    (match = regex.exec(value)) !== null
+  ) {
+    const number =
+      String(match[1]);
+
+    if (
+      ["6", "10", "20", "35", "110", "220"].includes(
+        number
+      )
+    ) {
+      continue;
+    }
+
+    const raw =
+      `В-${number}`;
+
+    result.push(
+      makeAsset(
+        "breaker",
+        normalizeForKey(raw),
+        raw,
+        match[0]
+      )
+    );
+  }
+
+  return uniqueAssets(result);
+}
+
+function isGenericResObject(value) {
+  const text =
+    normalizeSpaces(value)
+      .toLowerCase()
+      .replace(/ё/g, "е");
+
+  return (
+    /(?:^|,\s*)[а-яa-z-]+\s+рэс$/i.test(text) ||
+    /^[а-яa-z-]+\s+рэс$/i.test(text)
+  );
+}
+
+/*
+  Для ВЛ 35/110/220 кВ, когда номера фидера нет, ключом становится
+  наименование самой линии из поля "Объект".
+*/
+function extractLineAsset(objectText) {
+  const object =
+    normalizeSpaces(objectText);
+
+  if (
+    !/ВЛ\s*(?:35|110|220)\s*кВ/i.test(
+      object
+    )
+  ) {
+    return [];
+  }
+
+  const key =
+    normalizeForKey(object);
+
+  if (!key) return [];
+
+  return [
+    makeAsset(
+      "line",
+      key,
+      object,
+      object
+    )
+  ];
+}
+
+function extractFallbackObjectAsset(objectText) {
+  const object =
+    normalizeSpaces(objectText);
+
+  if (
+    !object ||
+    isGenericResObject(object)
+  ) {
+    return [];
+  }
 
   /*
-    Восстановление проверяем ПЕРВЫМ.
+    Для сложного объекта сначала пытаемся вытащить фидер/выключатель.
     Например:
-    "10-20 АО уч фЧр-01 10-21 РПВ успешное"
-    содержит "АО", но итоговое состояние уже включено.
+      "В-32, фЛжк-01" -> фЛжк-01
   */
-  if (
-    /\bвключ(?:ил|или|ен|ена|ено|ены|ить)\b/i.test(value) ||
-    /\bрпв\s+успешн/i.test(value) ||
-    /\bапв\s+успешн/i.test(value) ||
-    value.includes("подано напряжение") ||
-    value.includes("введен в работу") ||
-    value.includes("введена в работу")
-  ) {
-    return "enabled";
+  const specific = [
+    ...extractFeederAssets(object),
+    ...extractBreakerAssets(object)
+  ];
+
+  if (specific.length) {
+    return uniqueAssets(specific);
   }
 
-  if (
-    /\bотключ(?:ился|илась|ились|ен|ена|ено|ены)\b/i.test(value) ||
-    /аварийн\w*\s+отключ/i.test(value) ||
-    /(^|[\s,.;:()-])ао(?=$|[\s,.;:()-])/i.test(value)
-  ) {
-    return "disabled";
+  const lines =
+    extractLineAsset(object);
+
+  if (lines.length) {
+    return lines;
   }
 
-  return "unknown";
+  return [
+    makeAsset(
+      "object",
+      normalizeForKey(object),
+      object,
+      object
+    )
+  ];
 }
 
-const MOSCOW_OFFSET_MS = 3 * 60 * 60 * 1000;
-const DAY_MS = 24 * 60 * 60 * 1000;
+function extractSpecificAssets(text) {
+  const feeders =
+    extractFeederAssets(text);
+
+  /*
+    Если в тексте есть конкретный фидер, не добавляем В-10/другие
+    выключатели из той же фразы — фидер является более стабильным ключом.
+  */
+  if (feeders.length) {
+    return feeders;
+  }
+
+  return extractBreakerAssets(text);
+}
+
+function isSupportedEmergencyMessage(text) {
+  return (
+    /Аварийное отключение фидера\s+6\s*[-–—]\s*20\s*кВ/i.test(
+      text
+    ) ||
+    /Аварийные отключения/i.test(
+      text
+    ) ||
+    /Аварийное отключение ЛЭП\s+35\s*[-–—]\s*220\s*кВ/i.test(
+      text
+    ) ||
+    /Аварийные события/i.test(
+      text
+    )
+  );
+}
+
+function hasSuccessfulRestoration(text) {
+  const value =
+    String(text || "")
+      .toLowerCase()
+      .replace(/ё/g, "е");
+
+  /*
+    Не даём "неуспешно" случайно совпасть с "успешно":
+    перед "усп" требуется граница слова.
+  */
+  const rpvApvSuccess =
+    /(?:рпв|апв)\s*(?:[-:=]\s*)?усп(?:ешн[а-яa-z]*|\.)?/i.test(
+      value
+    ) ||
+    /усп(?:ешн[а-яa-z]*|\.)?\s*(?:рпв|апв)/i.test(
+      value
+    );
+
+  const switchedOn =
+    /включ(?:ил|или|ен|ена|ено|ены)/i.test(
+      value
+    );
+
+  const repeatDone =
+    /включить\s+повторно[\s\S]*выполнено/i.test(
+      value
+    );
+
+  const restored =
+    /электроснабжени[ея]\s+восстановлен/i.test(
+      value
+    ) ||
+    /напряжени[ея]\s+подано/i.test(
+      value
+    ) ||
+    /введен[а-я]*\s+в\s+работу/i.test(
+      value
+    );
+
+  return (
+    rpvApvSuccess ||
+    switchedOn ||
+    repeatDone ||
+    restored
+  );
+}
+
+function hasFailedRestoration(text) {
+  const value =
+    String(text || "")
+      .toLowerCase()
+      .replace(/ё/g, "е");
+
+  return (
+    /(?:рпв|апв)\s*(?:[-:=]\s*)?(?:неуспешн[а-яa-z]*|ну)(?:[^а-яa-z]|$)/i.test(
+      value
+    ) ||
+    /(?:рпв|апв)\s+не\s+успешн/i.test(
+      value
+    )
+  );
+}
+
+function hasExplicitOutage(text) {
+  const value =
+    String(text || "")
+      .toLowerCase()
+      .replace(/ё/g, "е");
+
+  return (
+    /отключ(?:ился|илась|ились|ен|ена|ено|ены|ение|ения)/i.test(
+      value
+    ) ||
+    /аварийн[а-яa-z]*\s+отключ/i.test(
+      value
+    ) ||
+    /(^|[\s,.;:()\-])ао(?=$|[\s,.;:()\-])/i.test(
+      value
+    ) ||
+    /в\s+отключенн[а-яa-z]*\s+положени/i.test(
+      value
+    ) ||
+    /погашен[а-яa-z]*/i.test(
+      value
+    ) ||
+    /обесточен[а-яa-z]*/i.test(
+      value
+    ) ||
+    /без\s+напряжени/i.test(
+      value
+    ) ||
+    hasFailedRestoration(value)
+  );
+}
+
+function isNonClosingUpdate(text) {
+  const value =
+    String(text || "")
+      .toLowerCase()
+      .replace(/ё/g, "е");
+
+  return (
+    /подключен[а-яa-z]*\s+рисэ/i.test(
+      value
+    ) ||
+    /обратн[а-яa-z]*\s+трансформац/i.test(
+      value
+    ) ||
+    /уменьшен[а-яa-z]*\s+участок/i.test(
+      value
+    ) ||
+    /выделен[а-яa-z]*\s+участок/i.test(
+      value
+    ) ||
+    /произведен[а-яa-z]*\s+осмотр/i.test(
+      value
+    ) ||
+    /организовываем\s+дг/i.test(
+      value
+    )
+  );
+}
+
+function splitRecordIntoClauses(record) {
+  /*
+    Перед делением убираем точки после "ф.", иначе:
+      "ф.331-03"
+    ошибочно разделится на два предложения.
+  */
+  const prepared =
+    String(record || "")
+      .replace(/ф\.\s*/gi, "ф")
+      .replace(/\r/g, "\n");
+
+  return prepared
+    .split(
+      /(?:\n+|;\s*|(?<=[!?])\s+|(?<=\.)\s+(?=[А-ЯA-Z0-9]))/
+    )
+    .map(normalizeSpaces)
+    .filter(Boolean);
+}
+
+function extractSuccessReferencedAssets(clause) {
+  const value =
+    String(clause || "");
+
+  const lower =
+    value
+      .toLowerCase()
+      .replace(/ё/g, "е");
+
+  const markers = [
+    /(?:рпв|апв)\s*(?:[-:=]\s*)?усп(?:ешн[а-яa-z]*|\.)?/gi,
+    /усп(?:ешн[а-яa-z]*|\.)?\s*(?:рпв|апв)/gi,
+    /включ(?:ил|или|ен|ена|ено|ены)/gi
+  ];
+
+  const pieces = [];
+
+  for (const regex of markers) {
+    let match;
+
+    while (
+      (match = regex.exec(lower)) !== null
+    ) {
+      /*
+        Берём контекст вокруг успешного действия:
+        это позволяет поймать как
+          "успешное РПВ ф330-02,-05"
+        так и
+          "ф330-02,-05 РПВ успешно".
+      */
+      const start =
+        Math.max(
+          0,
+          match.index - 80
+        );
+
+      const end =
+        Math.min(
+          value.length,
+          match.index +
+            match[0].length +
+            100
+        );
+
+      pieces.push(
+        value.slice(start, end)
+      );
+    }
+  }
+
+  return uniqueAssets(
+    pieces.flatMap(
+      extractSpecificAssets
+    )
+  );
+}
+
+function extractClauseStateEvents(
+  clause,
+  allRecordAssets
+) {
+  const clauseAssets =
+    extractSpecificAssets(clause);
+
+  const success =
+    hasSuccessfulRestoration(clause);
+
+  const outage =
+    hasExplicitOutage(clause);
+
+  const updateOnly =
+    isNonClosingUpdate(clause) &&
+    !success &&
+    !outage;
+
+  if (updateOnly) {
+    return [];
+  }
+
+  /*
+    Самый сложный случай:
+      "аварийное отключение ф330-02,-04,-05.
+       успешное РПВ ф330-02,-05"
+
+    Для одной фразы, где одновременно есть авария и восстановление,
+    сначала создаём отключение для всех упомянутых объектов,
+    затем включение только для явно указанных возле РПВ/АПВ объектов.
+  */
+  if (
+    outage &&
+    success
+  ) {
+    const baseAssets =
+      clauseAssets.length
+        ? clauseAssets
+        : allRecordAssets;
+
+    const successAssets =
+      extractSuccessReferencedAssets(
+        clause
+      );
+
+    /*
+      Если объект в сообщении один и успешное РПВ/АПВ не повторяет его имя,
+      считаем восстановленным именно этот объект:
+        "АО В ф330-06, АПВ неуспешное, РПВ успешное"
+    */
+    const effectiveSuccessAssets =
+      successAssets.length
+        ? successAssets
+        : baseAssets.length === 1
+          ? baseAssets
+          : [];
+
+    return [
+      ...baseAssets.map(
+        (asset) => ({
+          asset,
+          state: "disabled"
+        })
+      ),
+      ...effectiveSuccessAssets.map(
+        (asset) => ({
+          asset,
+          state: "enabled"
+        })
+      )
+    ];
+  }
+
+  if (success) {
+    const assets =
+      clauseAssets.length
+        ? clauseAssets
+        : allRecordAssets;
+
+    return assets.map(
+      (asset) => ({
+        asset,
+        state: "enabled"
+      })
+    );
+  }
+
+  if (outage) {
+    const assets =
+      clauseAssets.length
+        ? clauseAssets
+        : allRecordAssets;
+
+    return assets.map(
+      (asset) => ({
+        asset,
+        state: "disabled"
+      })
+    );
+  }
+
+  return [];
+}
+
+const MOSCOW_OFFSET_MS =
+  3 * 60 * 60 * 1000;
 
 function parseRussianDate(value) {
-  const match = String(value || "").match(
-    /(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/
-  );
+  const match =
+    String(value || "").match(
+      /(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/
+    );
 
-  if (!match) return null;
+  if (!match) {
+    return null;
+  }
 
-  const [, day, month, year, hour, minute, second] = match;
+  const [
+    ,
+    day,
+    month,
+    year,
+    hour,
+    minute,
+    second
+  ] = match;
 
-  // Оперативное время считаем московским.
-  // Vercel работает в UTC, поэтому создаём UTC timestamp вручную.
-  const utcMs =
+  /*
+    Оперативное время в сообщениях считаем московским.
+    Vercel работает в UTC.
+  */
+  return new Date(
     Date.UTC(
       Number(year),
       Number(month) - 1,
@@ -226,23 +787,6 @@ function parseRussianDate(value) {
       Number(hour),
       Number(minute),
       Number(second)
-    ) - MOSCOW_OFFSET_MS;
-
-  return new Date(utcMs);
-}
-
-function getMoscowStartOfTodayMs() {
-  const shifted = new Date(Date.now() + MOSCOW_OFFSET_MS);
-
-  return (
-    Date.UTC(
-      shifted.getUTCFullYear(),
-      shifted.getUTCMonth(),
-      shifted.getUTCDate(),
-      0,
-      0,
-      0,
-      0
     ) - MOSCOW_OFFSET_MS
   );
 }
@@ -250,87 +794,122 @@ function getMoscowStartOfTodayMs() {
 function formatApiTimestamp(timestamp) {
   if (!timestamp) return "";
 
-  const date = new Date(Number(timestamp));
+  const date =
+    new Date(
+      Number(timestamp)
+    );
 
-  return new Intl.DateTimeFormat("ru-RU", {
-    timeZone: "Europe/Moscow",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false
-  })
+  return new Intl.DateTimeFormat(
+    "ru-RU",
+    {
+      timeZone: "Europe/Moscow",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false
+    }
+  )
     .format(date)
     .replace(",", "");
 }
 
-function parseEmergencyMessage(message) {
-  const rawText = message?.body?.text;
+function parseEmergencyEvents(message) {
+  const rawText =
+    message?.body?.text;
 
-  if (!rawText) return null;
+  if (!rawText) {
+    return {
+      structured: false,
+      events: []
+    };
+  }
 
-  const text = cleanMaxMarkdown(rawText);
+  const text =
+    cleanMaxMarkdown(rawText);
+
+  if (
+    !isSupportedEmergencyMessage(text)
+  ) {
+    return {
+      structured: false,
+      events: []
+    };
+  }
+
+  const objectMatch =
+    text.match(
+      /Объект:\s*([\s\S]*?)(?=\s*(?:✏|📝)?\s*Запись:)/i
+    );
+
+  const recordMatch =
+    text.match(
+      /Запись:\s*([\s\S]*)$/i
+    );
 
   /*
-    В чатах встречаются минимум два шаблона заголовка:
-    1) "Аварийное отключение фидера 6-20 кВ"
-    2) "Аварийные отключения"
-
-    Раньше второй шаблон игнорировался целиком — именно поэтому
-    свежие записи вида "Аварийное отключение В-26" не попадали в Mini App.
+    Структурированное сообщение без Object/Record не используем для изменения
+    состояния. Это защищает от случайных пересланных/ручных сообщений.
   */
-  const isEmergencyTemplate =
-    /Аварийное отключение фидера\s+6\s*[-–—]\s*20\s*кВ/i.test(text) ||
-    /Аварийные отключения/i.test(text);
-
-  if (!isEmergencyTemplate) {
-    return null;
+  if (
+    !objectMatch ||
+    !recordMatch
+  ) {
+    return {
+      structured: true,
+      events: []
+    };
   }
 
-  const objectMatch = text.match(
-    /Объект:\s*([\s\S]*?)(?=\s*(?:✏|📝)?\s*Запись:)/i
-  );
+  const object =
+    normalizeSpaces(
+      objectMatch[1]
+    );
 
-  const recordMatch = text.match(
-    /Запись:\s*([\s\S]*)$/i
-  );
+  const record =
+    normalizeSpaces(
+      recordMatch[1]
+    );
 
-  const authorTimeMatch = text.match(
-    /👤\s*([\s\S]*?)\s*(?:🕐|🕑|🕒|🕓|🕔|🕕|🕖|🕗|🕘|🕙|🕚|🕛|⏰|⏱️?|🕰️?)?\s*(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}:\d{2})/i
-  );
+  const authorTimeMatch =
+    text.match(
+      /👤\s*([\s\S]*?)\s*(?:🕐|🕑|🕒|🕓|🕔|🕕|🕖|🕗|🕘|🕙|🕚|🕛|⏰|⏱️?|🕰️?)?\s*(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}:\d{2})/i
+    );
 
-  const addedMatch = text.match(
-    /Добавлено:\s*(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}:\d{2})/i
-  );
-
-  if (!objectMatch || !recordMatch) {
-    return null;
-  }
-
-  const object = objectMatch[1].trim();
-  const record = recordMatch[1].trim();
+  const addedMatch =
+    text.match(
+      /Добавлено:\s*(\d{2}\.\d{2}\.\d{4}\s+\d{2}:\d{2}:\d{2})/i
+    );
 
   let author = "";
   let role = "";
   let eventTime = "";
 
   if (authorTimeMatch) {
-    const authorFull = authorTimeMatch[1].trim();
-    const authorParts = authorFull.match(
-      /^(.*?)\s*\((.*?)\)\s*$/
-    );
+    const authorFull =
+      normalizeSpaces(
+        authorTimeMatch[1]
+      );
 
-    author = authorParts
-      ? authorParts[1].trim()
-      : authorFull;
+    const authorParts =
+      authorFull.match(
+        /^(.*?)\s*\((.*?)\)\s*$/
+      );
 
-    role = authorParts
-      ? authorParts[2].trim()
-      : "";
+    author =
+      authorParts
+        ? authorParts[1].trim()
+        : authorFull;
 
-    eventTime = authorTimeMatch[2].trim();
+    role =
+      authorParts
+        ? authorParts[2].trim()
+        : "";
+
+    eventTime =
+      authorTimeMatch[2].trim();
   } else {
     const senderName = [
       message?.sender?.first_name,
@@ -346,67 +925,276 @@ function parseEmergencyMessage(message) {
       "Не указан";
 
     eventTime =
-      formatApiTimestamp(message?.timestamp);
+      formatApiTimestamp(
+        message?.timestamp
+      );
   }
 
-  const parsedDate = parseRussianDate(eventTime);
+  const parsedDate =
+    parseRussianDate(eventTime);
 
-  const timestamp = parsedDate
-    ? parsedDate.getTime()
-    : Number(message?.timestamp || 0);
+  const addedTime =
+    addedMatch
+      ? addedMatch[1].trim()
+      : "";
+
+  const parsedAddedDate =
+    parseRussianDate(
+      addedTime
+    );
+
+  const timestamp =
+    parsedDate
+      ? parsedDate.getTime()
+      : Number(
+          message?.timestamp || 0
+        );
+
+  const addedTimestamp =
+    parsedAddedDate
+      ? parsedAddedDate.getTime()
+      : Number(
+          message?.timestamp || 0
+        );
+
+  /*
+    Сначала ищем конкретные объекты в поле "Запись".
+    Поле "Объект: Рощинский РЭС" не должно становиться ключом,
+    если в записи есть конкретный фидер.
+  */
+  const recordAssets =
+    extractSpecificAssets(
+      record
+    );
+
+  const allRecordAssets =
+    recordAssets.length
+      ? recordAssets
+      : extractFallbackObjectAsset(
+          object
+        );
+
+  const clauses =
+    splitRecordIntoClauses(
+      record
+    );
+
+  let stateEvents =
+    clauses.flatMap(
+      (clause) =>
+        extractClauseStateEvents(
+          clause,
+          allRecordAssets
+        )
+    );
+
+  /*
+    Если предложение не удалось классифицировать по отдельным фразам,
+    пробуем всю запись целиком.
+  */
+  if (!stateEvents.length) {
+    stateEvents =
+      extractClauseStateEvents(
+        record,
+        allRecordAssets
+      );
+  }
+
+  /*
+    Для заголовка "Аварийные события" повреждение может быть описано без слова
+    "отключение", но с "погашены потребители".
+  */
+  if (
+    !stateEvents.length &&
+    /Аварийные события/i.test(
+      text
+    ) &&
+    /погашен[а-яa-z]*|обесточен[а-яa-z]*/i.test(
+      record
+    )
+  ) {
+    stateEvents =
+      allRecordAssets.map(
+        (asset) => ({
+          asset,
+          state: "disabled"
+        })
+      );
+  }
+
+  const seenStateEvents =
+    new Set();
+
+  const events = [];
+
+  let sequence = 0;
+
+  for (const event of stateEvents) {
+    if (
+      !event?.asset?.key ||
+      !["disabled", "enabled"].includes(
+        event.state
+      )
+    ) {
+      continue;
+    }
+
+    const signature =
+      `${event.asset.key}|${event.state}`;
+
+    /*
+      В рамках одного сообщения одинаковый объект/состояние дублировать не надо,
+      но последовательность disabled -> enabled сохраняем.
+    */
+    if (
+      seenStateEvents.has(signature)
+    ) {
+      continue;
+    }
+
+    seenStateEvents.add(
+      signature
+    );
+
+    events.push({
+      assetKey:
+        event.asset.key,
+
+      object:
+        event.asset.label,
+
+      sourceObject:
+        object,
+
+      eventTime,
+      addedTime,
+      timestamp,
+      addedTimestamp,
+
+      author,
+      role,
+      record,
+
+      state:
+        event.state,
+
+      sequence:
+        sequence++
+    });
+  }
 
   return {
-    object,
-    objectKey: normalizeObjectName(object),
-    eventTime,
-    addedTime: addedMatch
-      ? addedMatch[1].trim()
-      : "",
-    timestamp,
-    author,
-    role,
-    record,
-    state: getRecordState(record)
+    structured: true,
+    events
   };
 }
 
 function parseEmergencyMessages(messages) {
-  return messages
-    .map(parseEmergencyMessage)
-    .filter(Boolean);
-}
+  const parsed = [];
 
-function calculateActiveOutages(messages) {
-  const parsed = parseEmergencyMessages(messages)
-    .filter((item) => item.state !== "unknown")
-    .sort((a, b) => a.timestamp - b.timestamp);
+  let structuredMessages = 0;
+  let ignoredStructuredMessages = 0;
 
-  const active = new Map();
-
-  for (const message of parsed) {
-    if (message.state === "disabled") {
-      active.set(
-        message.objectKey,
+  for (const message of messages) {
+    const result =
+      parseEmergencyEvents(
         message
       );
+
+    if (!result.structured) {
       continue;
     }
 
-    if (message.state === "enabled") {
-      active.delete(message.objectKey);
+    structuredMessages += 1;
+
+    if (!result.events.length) {
+      ignoredStructuredMessages += 1;
+      continue;
+    }
+
+    parsed.push(
+      ...result.events
+    );
+  }
+
+  return {
+    events: parsed,
+    structuredMessages,
+    ignoredStructuredMessages
+  };
+}
+
+function calculateActiveOutages(messages) {
+  const parsed =
+    parseEmergencyMessages(
+      messages
+    );
+
+  const events =
+    parsed.events
+      .slice()
+      .sort((a, b) => {
+        return (
+          a.timestamp -
+            b.timestamp ||
+          a.addedTimestamp -
+            b.addedTimestamp ||
+          a.sequence -
+            b.sequence
+        );
+      });
+
+  const active =
+    new Map();
+
+  for (const event of events) {
+    if (
+      event.state === "disabled"
+    ) {
+      active.set(
+        event.assetKey,
+        event
+      );
+
+      continue;
+    }
+
+    if (
+      event.state === "enabled"
+    ) {
+      active.delete(
+        event.assetKey
+      );
     }
   }
 
-  return [...active.values()]
-    .sort((a, b) => b.timestamp - a.timestamp)
-    .map(
-      ({
-        objectKey,
-        timestamp,
-        state,
-        ...publicData
-      }) => publicData
-    );
+  const outages =
+    [...active.values()]
+      .sort(
+        (a, b) =>
+          b.timestamp -
+          a.timestamp
+      )
+      .map(
+        ({
+          assetKey,
+          timestamp,
+          addedTimestamp,
+          state,
+          sequence,
+          ...publicData
+        }) => publicData
+      );
+
+  return {
+    outages,
+    recognizedStateEvents:
+      events.length,
+    structuredMessages:
+      parsed.structuredMessages,
+    ignoredStructuredMessages:
+      parsed.ignoredStructuredMessages
+  };
 }
 
 /* =========================================================
@@ -694,12 +1482,7 @@ export default {
           chatId
         );
 
-      const parsedEmergency =
-        parseEmergencyMessages(
-          history.messages
-        );
-
-      const outages =
+      const state =
         calculateActiveOutages(
           history.messages
         );
@@ -707,14 +1490,18 @@ export default {
       return json({
         division: division.name,
         divisionId,
-        count: outages.length,
-        outages,
+        count: state.outages.length,
+        outages: state.outages,
         analyzedMessages:
           history.messages.length,
         todayMessages:
           history.todayMessages,
-        matchedEmergencyMessages:
-          parsedEmergency.length,
+        structuredEmergencyMessages:
+          state.structuredMessages,
+        ignoredStructuredMessages:
+          state.ignoredStructuredMessages,
+        recognizedStateEvents:
+          state.recognizedStateEvents,
         historyLimited:
           history.historyLimited,
         checkedFrom:
