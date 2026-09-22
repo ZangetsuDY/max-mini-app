@@ -199,6 +199,9 @@ function getRecordState(record) {
   return "unknown";
 }
 
+const MOSCOW_OFFSET_MS = 3 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 function parseRussianDate(value) {
   const match = String(value || "").match(
     /(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/
@@ -208,13 +211,34 @@ function parseRussianDate(value) {
 
   const [, day, month, year, hour, minute, second] = match;
 
-  return new Date(
-    Number(year),
-    Number(month) - 1,
-    Number(day),
-    Number(hour),
-    Number(minute),
-    Number(second)
+  // Оперативное время считаем московским.
+  // Vercel работает в UTC, поэтому создаём UTC timestamp вручную.
+  const utcMs =
+    Date.UTC(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second)
+    ) - MOSCOW_OFFSET_MS;
+
+  return new Date(utcMs);
+}
+
+function getMoscowStartOfTodayMs() {
+  const shifted = new Date(Date.now() + MOSCOW_OFFSET_MS);
+
+  return (
+    Date.UTC(
+      shifted.getUTCFullYear(),
+      shifted.getUTCMonth(),
+      shifted.getUTCDate(),
+      0,
+      0,
+      0,
+      0
+    ) - MOSCOW_OFFSET_MS
   );
 }
 
@@ -373,7 +397,8 @@ function calculateActiveOutages(messages) {
 async function requestMessages(
   botToken,
   chatId,
-  beforeTimestamp = null
+  fromTimestamp,
+  toTimestamp
 ) {
   const url = new URL(
     `${MAX_API_BASE}/messages`
@@ -386,10 +411,20 @@ async function requestMessages(
 
   url.searchParams.set("count", "100");
 
-  if (beforeTimestamp) {
+  // MAX API:
+  // from — верхняя граница времени;
+  // to   — нижняя граница времени.
+  if (fromTimestamp) {
     url.searchParams.set(
       "from",
-      String(beforeTimestamp)
+      String(fromTimestamp)
+    );
+  }
+
+  if (toTimestamp) {
+    url.searchParams.set(
+      "to",
+      String(toTimestamp)
     );
   }
 
@@ -447,14 +482,27 @@ async function fetchMessageHistory(
     )
   );
 
-  const cutoff =
-    Date.now() -
-    lookbackDays * 24 * 60 * 60 * 1000;
+  /*
+    Проверяем календарный диапазон по Москве:
+    от 00:00 МСК N дней назад и до текущего момента.
+
+    Благодаря этому сегодняшний день всегда явно входит
+    в запрос к MAX API.
+  */
+  const todayStart =
+    getMoscowStartOfTodayMs();
+
+  const rangeStart =
+    todayStart -
+    lookbackDays * DAY_MS;
+
+  const rangeEnd =
+    Date.now() + 60 * 1000;
 
   const all = [];
   const seen = new Set();
 
-  let beforeTimestamp = null;
+  let pageFrom = rangeEnd;
   let historyLimited = false;
 
   for (
@@ -465,12 +513,24 @@ async function fetchMessageHistory(
     const batch = await requestMessages(
       botToken,
       chatId,
-      beforeTimestamp
+      pageFrom,
+      rangeStart
     );
 
     if (!batch.length) break;
 
     for (const message of batch) {
+      const timestamp =
+        Number(message?.timestamp || 0);
+
+      if (
+        !timestamp ||
+        timestamp < rangeStart ||
+        timestamp > rangeEnd
+      ) {
+        continue;
+      }
+
       const key =
         message?.body?.mid ||
         message?.mid ||
@@ -494,23 +554,29 @@ async function fetchMessageHistory(
       ...timestamps
     );
 
-    if (oldest <= cutoff) break;
+    if (oldest <= rangeStart) break;
     if (batch.length < 100) break;
 
-    beforeTimestamp = oldest - 1;
+    pageFrom = oldest - 1;
 
     if (page === maxPages - 1) {
       historyLimited = true;
     }
   }
 
-  return {
-    messages: all.filter(
+  const todayMessages =
+    all.filter(
       (message) =>
         Number(message?.timestamp || 0) >=
-        cutoff
-    ),
-    historyLimited
+        todayStart
+    ).length;
+
+  return {
+    messages: all,
+    historyLimited,
+    todayMessages,
+    rangeStart,
+    rangeEnd
   };
 }
 
@@ -621,8 +687,14 @@ export default {
         outages,
         analyzedMessages:
           history.messages.length,
+        todayMessages:
+          history.todayMessages,
         historyLimited:
           history.historyLimited,
+        checkedFrom:
+          new Date(history.rangeStart).toISOString(),
+        checkedTo:
+          new Date(history.rangeEnd).toISOString(),
         updatedAt:
           new Date().toISOString()
       });
