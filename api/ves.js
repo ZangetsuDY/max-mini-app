@@ -1,7 +1,113 @@
 import crypto from "node:crypto";
+import https from "node:https";
+import tls from "node:tls";
+import fs from "node:fs";
 
 const MAX_API_BASE = "https://platform-api2.max.ru";
 const ONE_HOUR_SECONDS = 60 * 60;
+
+
+/* =========================================================
+   TLS ДЛЯ platform-api2.max.ru
+
+   С 19.07.2026 MAX требует доверять сертификатам Минцифры.
+   Официальный корневой сертификат Минцифры должен лежать в /certs:
+
+   certs/Russian_Trusted_Root_CA.cer
+
+   X509Certificate умеет читать как DER .cer, так и PEM.
+   ========================================================= */
+
+function loadCertificate(relativePath) {
+  const fileUrl = new URL(relativePath, import.meta.url);
+  const raw = fs.readFileSync(fileUrl);
+  return new crypto.X509Certificate(raw).toString();
+}
+
+let maxHttpsAgent = null;
+
+function getMaxHttpsAgent() {
+  if (maxHttpsAgent) {
+    return maxHttpsAgent;
+  }
+
+  try {
+    const rootCa = loadCertificate(
+      "../certs/Russian_Trusted_Root_CA.cer"
+    );
+
+    maxHttpsAgent = new https.Agent({
+      keepAlive: true,
+
+      // Не заменяем стандартные доверенные CA:
+      // добавляем корневой сертификат Минцифры к стандартному набору Node.
+      ca: [
+        ...tls.rootCertificates,
+        rootCa
+      ]
+    });
+
+    return maxHttpsAgent;
+  } catch (error) {
+    const details =
+      error instanceof Error
+        ? error.message
+        : String(error);
+
+    throw new Error(
+      "Не удалось загрузить корневой сертификат Минцифры из папки /certs. " +
+      details
+    );
+  }
+}
+
+function maxApiRequest(url, botToken) {
+  return new Promise((resolve, reject) => {
+    const request = https.request(
+      url,
+      {
+        method: "GET",
+        agent: getMaxHttpsAgent(),
+        headers: {
+          Authorization: botToken,
+          Accept: "application/json"
+        },
+        timeout: 15000
+      },
+      (response) => {
+        const chunks = [];
+
+        response.on("data", (chunk) => {
+          chunks.push(chunk);
+        });
+
+        response.on("end", () => {
+          const body = Buffer.concat(chunks).toString("utf8");
+
+          resolve({
+            status: response.statusCode || 500,
+            ok:
+              Number(response.statusCode) >= 200 &&
+              Number(response.statusCode) < 300,
+            body
+          });
+        });
+      }
+    );
+
+    request.on("timeout", () => {
+      request.destroy(
+        new Error("Таймаут соединения с API MAX")
+      );
+    });
+
+    request.on("error", (error) => {
+      reject(error);
+    });
+
+    request.end();
+  });
+}
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -337,19 +443,15 @@ async function requestMessages(botToken, chatId, beforeTimestamp = null) {
     url.searchParams.set("from", String(beforeTimestamp));
   }
 
-  const response = await fetch(url, {
-    headers: {
-      Authorization: botToken
-    },
-    cache: "no-store"
-  });
-
-  const text = await response.text();
+  const response = await maxApiRequest(
+    url,
+    botToken
+  );
 
   let data = null;
 
   try {
-    data = JSON.parse(text);
+    data = JSON.parse(response.body);
   } catch {
     data = null;
   }
@@ -358,7 +460,7 @@ async function requestMessages(botToken, chatId, beforeTimestamp = null) {
     const details =
       data?.message ||
       data?.error ||
-      text ||
+      response.body ||
       `HTTP ${response.status}`;
 
     throw new Error(`MAX API: ${details}`);
@@ -503,12 +605,21 @@ export default {
     } catch (error) {
       console.error(error);
 
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Неизвестная ошибка";
+
+      const cause =
+        error instanceof Error && error.cause
+          ? String(error.cause.code || error.cause.message || error.cause)
+          : "";
+
       return json(
         {
-          error:
-            error instanceof Error
-              ? error.message
-              : "Неизвестная ошибка"
+          error: cause
+            ? `${message} (${cause})`
+            : message
         },
         502
       );
