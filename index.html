@@ -12,7 +12,95 @@
 
   <link rel="stylesheet" href="style.css" />
 </head>
-<body>
+<body class="auth-pending">
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-ambient auth-ambient-a"></div>
+    <div class="auth-ambient auth-ambient-b"></div>
+
+    <div class="auth-card glass">
+      <div class="auth-brand">
+        <div class="brand-mark auth-brand-mark" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+
+        <div class="brand-copy">
+          <div class="brand-name">РОССЕТИ</div>
+          <div class="brand-subname">ЛЕНЭНЕРГО</div>
+        </div>
+      </div>
+
+      <div class="auth-content">
+        <p class="auth-kicker">ЗАЩИЩЁННЫЙ ДОСТУП</p>
+        <h1>Авторизуйтесь</h1>
+        <p class="auth-description">
+          Введите выданные вам учётные данные для доступа
+          к оперативному интерфейсу.
+        </p>
+
+        <form id="loginForm" class="login-form" autocomplete="on">
+          <label class="field">
+            <span>Логин</span>
+            <div class="field-control">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7 8a7 7 0 0 0-14 0"></path>
+              </svg>
+              <input
+                id="usernameInput"
+                name="username"
+                type="text"
+                autocomplete="username"
+                inputmode="text"
+                maxlength="80"
+                placeholder="Введите логин"
+                required
+              />
+            </div>
+          </label>
+
+          <label class="field">
+            <span>Пароль</span>
+            <div class="field-control">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 10V8a5 5 0 0 1 10 0v2M6 10h12v10H6z"></path>
+              </svg>
+              <input
+                id="passwordInput"
+                name="password"
+                type="password"
+                autocomplete="current-password"
+                maxlength="200"
+                placeholder="Введите пароль"
+                required
+              />
+              <button id="togglePassword" class="password-toggle" type="button" aria-label="Показать пароль">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+                  <circle cx="12" cy="12" r="2.5"></circle>
+                </svg>
+              </button>
+            </div>
+          </label>
+
+          <div id="loginError" class="login-error" role="alert" hidden></div>
+
+          <button id="loginButton" class="login-button" type="submit">
+            <span>Войти</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14M13 6l6 6-6 6"></path>
+            </svg>
+          </button>
+        </form>
+      </div>
+
+      <div class="auth-footer">
+        <span class="auth-lock-dot"></span>
+        Защищённое соединение
+      </div>
+    </div>
+  </div>
+
   <div class="background" aria-hidden="true">
     <div class="grid"></div>
     <div class="glow glow-a"></div>
@@ -35,9 +123,17 @@
         </div>
       </div>
 
-      <div class="topbar-status">
-        <span class="status-dot"></span>
-        <span>Система доступна</span>
+      <div class="user-area">
+        <div class="user-greeting">
+          <span class="greeting-label">Добрый день,</span>
+          <strong id="userFullName">Пользователь</strong>
+        </div>
+
+        <button id="logoutButton" class="logout-button" type="button" title="Выйти">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10"></path>
+          </svg>
+        </button>
       </div>
     </header>
 

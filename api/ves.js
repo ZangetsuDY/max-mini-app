@@ -3,19 +3,25 @@ import https from "node:https";
 import tls from "node:tls";
 import fs from "node:fs";
 
-const MAX_API_BASE = "https://platform-api2.max.ru";
-const ONE_HOUR_SECONDS = 60 * 60;
+import {
+  validateMaxInitData,
+  getSession
+} from "../lib/security.js";
 
+const MAX_API_BASE = "https://platform-api2.max.ru";
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data, null, 2), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store"
+    }
+  });
+}
 
 /* =========================================================
-   TLS ДЛЯ platform-api2.max.ru
-
-   С 19.07.2026 MAX требует доверять сертификатам Минцифры.
-   Официальный корневой сертификат Минцифры должен лежать в /certs:
-
-   certs/Russian_Trusted_Root_CA.cer
-
-   X509Certificate умеет читать как DER .cer, так и PEM.
+   TLS ДЛЯ MAX API
    ========================================================= */
 
 function loadCertificate(relativePath) {
@@ -27,9 +33,7 @@ function loadCertificate(relativePath) {
 let maxHttpsAgent = null;
 
 function getMaxHttpsAgent() {
-  if (maxHttpsAgent) {
-    return maxHttpsAgent;
-  }
+  if (maxHttpsAgent) return maxHttpsAgent;
 
   try {
     const rootCa = loadCertificate(
@@ -38,9 +42,6 @@ function getMaxHttpsAgent() {
 
     maxHttpsAgent = new https.Agent({
       keepAlive: true,
-
-      // Не заменяем стандартные доверенные CA:
-      // добавляем корневой сертификат Минцифры к стандартному набору Node.
       ca: [
         ...tls.rootCertificates,
         rootCa
@@ -82,7 +83,9 @@ function maxApiRequest(url, botToken) {
         });
 
         response.on("end", () => {
-          const body = Buffer.concat(chunks).toString("utf8");
+          const body = Buffer
+            .concat(chunks)
+            .toString("utf8");
 
           resolve({
             status: response.statusCode || 500,
@@ -101,130 +104,13 @@ function maxApiRequest(url, botToken) {
       );
     });
 
-    request.on("error", (error) => {
-      reject(error);
-    });
-
+    request.on("error", reject);
     request.end();
   });
 }
 
-function json(data, status = 200) {
-  return new Response(JSON.stringify(data, null, 2), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store"
-    }
-  });
-}
-
 /* =========================================================
-   ВАЛИДАЦИЯ MAX WebApp initData
-   Алгоритм соответствует официальной документации MAX.
-   ========================================================= */
-
-function safeDecode(value) {
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
-}
-
-function parseInitData(initData) {
-  const pairs = String(initData || "")
-    .split("&")
-    .filter(Boolean)
-    .map((part) => {
-      const separatorIndex = part.indexOf("=");
-
-      if (separatorIndex === -1) {
-        return [part, ""];
-      }
-
-      return [
-        part.slice(0, separatorIndex),
-        part.slice(separatorIndex + 1)
-      ];
-    });
-
-  return pairs;
-}
-
-function validateMaxInitData(initData, botToken) {
-  if (!initData || !botToken) {
-    return { ok: false, reason: "Отсутствуют данные авторизации MAX" };
-  }
-
-  const params = parseInitData(initData);
-  const hashItems = params.filter(([key]) => key === "hash");
-
-  if (hashItems.length !== 1) {
-    return { ok: false, reason: "Некорректный hash в initData" };
-  }
-
-  const originalHash = safeDecode(hashItems[0][1]);
-
-  const decoded = params
-    .filter(([key]) => key !== "hash")
-    .map(([key, value]) => [key, safeDecode(value)])
-    .sort(([a], [b]) => a.localeCompare(b));
-
-  const launchParams = decoded
-    .map(([key, value]) => `${key}=${value}`)
-    .join("\n");
-
-  // secret_key = HMAC-SHA256(key="WebAppData", message=BOT_TOKEN)
-  const secretKey = crypto
-    .createHmac("sha256", "WebAppData")
-    .update(botToken)
-    .digest();
-
-  // hash = HMAC-SHA256(key=secret_key, message=launch_params)
-  const calculatedHash = crypto
-    .createHmac("sha256", secretKey)
-    .update(launchParams)
-    .digest("hex");
-
-  const calculatedBuffer = Buffer.from(calculatedHash, "hex");
-  const originalBuffer = Buffer.from(originalHash, "hex");
-
-  if (
-    calculatedBuffer.length !== originalBuffer.length ||
-    !crypto.timingSafeEqual(calculatedBuffer, originalBuffer)
-  ) {
-    return { ok: false, reason: "Подпись MAX не прошла проверку" };
-  }
-
-  const authDateEntry = decoded.find(([key]) => key === "auth_date");
-  const authDate = authDateEntry ? Number(authDateEntry[1]) : 0;
-  const now = Math.floor(Date.now() / 1000);
-
-  if (!authDate || Math.abs(now - authDate) > ONE_HOUR_SECONDS) {
-    return { ok: false, reason: "Сессия MAX устарела. Откройте мини-приложение заново." };
-  }
-
-  const userEntry = decoded.find(([key]) => key === "user");
-  let user = null;
-
-  if (userEntry) {
-    try {
-      user = JSON.parse(userEntry[1]);
-    } catch {
-      user = null;
-    }
-  }
-
-  return {
-    ok: true,
-    user,
-    authDate
-  };
-}
-
-/* =========================================================
-   РАЗБОР СООБЩЕНИЙ
+   ПАРСЕР СООБЩЕНИЙ
    ========================================================= */
 
 function cleanMaxMarkdown(text) {
@@ -249,7 +135,6 @@ function getRecordState(record) {
     .toLowerCase()
     .replace(/ё/g, "е");
 
-  // ВАЖНО: сначала проверяем включение.
   if (
     value.includes("включил") ||
     value.includes("включили") ||
@@ -280,9 +165,7 @@ function parseRussianDate(value) {
     /(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2}):(\d{2})/
   );
 
-  if (!match) {
-    return null;
-  }
+  if (!match) return null;
 
   const [, day, month, year, hour, minute, second] = match;
 
@@ -318,13 +201,13 @@ function formatApiTimestamp(timestamp) {
 function parseEmergencyMessage(message) {
   const rawText = message?.body?.text;
 
-  if (!rawText) {
-    return null;
-  }
+  if (!rawText) return null;
 
   const text = cleanMaxMarkdown(rawText);
 
-  if (!/Аварийное отключение фидера\s+6-20\s*кВ/i.test(text)) {
+  if (
+    !/Аварийное отключение фидера\s+6-20\s*кВ/i.test(text)
+  ) {
     return null;
   }
 
@@ -357,7 +240,9 @@ function parseEmergencyMessage(message) {
 
   if (authorTimeMatch) {
     const authorFull = authorTimeMatch[1].trim();
-    const authorParts = authorFull.match(/^(.*?)\s*\((.*?)\)\s*$/);
+    const authorParts = authorFull.match(
+      /^(.*?)\s*\((.*?)\)\s*$/
+    );
 
     author = authorParts
       ? authorParts[1].trim()
@@ -369,8 +254,6 @@ function parseEmergencyMessage(message) {
 
     eventTime = authorTimeMatch[2].trim();
   } else {
-    // На случай небольшого изменения шаблона сообщения:
-    // используем отправителя/время сообщения MAX как fallback.
     const senderName = [
       message?.sender?.first_name,
       message?.sender?.last_name
@@ -379,11 +262,17 @@ function parseEmergencyMessage(message) {
       .join(" ")
       .trim();
 
-    author = senderName || message?.sender?.name || "Не указан";
-    eventTime = formatApiTimestamp(message?.timestamp);
+    author =
+      senderName ||
+      message?.sender?.name ||
+      "Не указан";
+
+    eventTime =
+      formatApiTimestamp(message?.timestamp);
   }
 
   const parsedDate = parseRussianDate(eventTime);
+
   const timestamp = parsedDate
     ? parsedDate.getTime()
     : Number(message?.timestamp || 0);
@@ -392,7 +281,9 @@ function parseEmergencyMessage(message) {
     object,
     objectKey: normalizeObjectName(object),
     eventTime,
-    addedTime: addedMatch ? addedMatch[1].trim() : "",
+    addedTime: addedMatch
+      ? addedMatch[1].trim()
+      : "",
     timestamp,
     author,
     role,
@@ -412,7 +303,10 @@ function calculateActiveOutages(messages) {
 
   for (const message of parsed) {
     if (message.state === "disabled") {
-      active.set(message.objectKey, message);
+      active.set(
+        message.objectKey,
+        message
+      );
       continue;
     }
 
@@ -423,24 +317,41 @@ function calculateActiveOutages(messages) {
 
   return [...active.values()]
     .sort((a, b) => b.timestamp - a.timestamp)
-    .map(({ objectKey, timestamp, state, ...publicData }) => publicData);
+    .map(
+      ({
+        objectKey,
+        timestamp,
+        state,
+        ...publicData
+      }) => publicData
+    );
 }
 
 /* =========================================================
-   ЗАГРУЗКА ИСТОРИИ ИЗ MAX
-
-   MAX возвращает максимум 100 сообщений за запрос и новые сообщения
-   идут первыми. Поэтому идём назад по времени несколькими страницами.
+   MAX API
    ========================================================= */
 
-async function requestMessages(botToken, chatId, beforeTimestamp = null) {
-  const url = new URL(`${MAX_API_BASE}/messages`);
+async function requestMessages(
+  botToken,
+  chatId,
+  beforeTimestamp = null
+) {
+  const url = new URL(
+    `${MAX_API_BASE}/messages`
+  );
 
-  url.searchParams.set("chat_id", String(chatId));
+  url.searchParams.set(
+    "chat_id",
+    String(chatId)
+  );
+
   url.searchParams.set("count", "100");
 
   if (beforeTimestamp) {
-    url.searchParams.set("from", String(beforeTimestamp));
+    url.searchParams.set(
+      "from",
+      String(beforeTimestamp)
+    );
   }
 
   const response = await maxApiRequest(
@@ -463,7 +374,9 @@ async function requestMessages(botToken, chatId, beforeTimestamp = null) {
       response.body ||
       `HTTP ${response.status}`;
 
-    throw new Error(`MAX API: ${details}`);
+    throw new Error(
+      `MAX API: ${details}`
+    );
   }
 
   return Array.isArray(data?.messages)
@@ -471,18 +384,33 @@ async function requestMessages(botToken, chatId, beforeTimestamp = null) {
     : [];
 }
 
-async function fetchMessageHistory(botToken, chatId) {
+async function fetchMessageHistory(
+  botToken,
+  chatId
+) {
   const maxPages = Math.max(
     1,
-    Math.min(Number(process.env.MAX_HISTORY_PAGES || 5), 10)
+    Math.min(
+      Number(
+        process.env.MAX_HISTORY_PAGES || 5
+      ),
+      10
+    )
   );
 
   const lookbackDays = Math.max(
     1,
-    Math.min(Number(process.env.MAX_LOOKBACK_DAYS || 7), 30)
+    Math.min(
+      Number(
+        process.env.MAX_LOOKBACK_DAYS || 7
+      ),
+      30
+    )
   );
 
-  const cutoff = Date.now() - lookbackDays * 24 * 60 * 60 * 1000;
+  const cutoff =
+    Date.now() -
+    lookbackDays * 24 * 60 * 60 * 1000;
 
   const all = [];
   const seen = new Set();
@@ -490,16 +418,18 @@ async function fetchMessageHistory(botToken, chatId) {
   let beforeTimestamp = null;
   let historyLimited = false;
 
-  for (let page = 0; page < maxPages; page += 1) {
+  for (
+    let page = 0;
+    page < maxPages;
+    page += 1
+  ) {
     const batch = await requestMessages(
       botToken,
       chatId,
       beforeTimestamp
     );
 
-    if (!batch.length) {
-      break;
-    }
+    if (!batch.length) break;
 
     for (const message of batch) {
       const key =
@@ -514,22 +444,19 @@ async function fetchMessageHistory(botToken, chatId) {
     }
 
     const timestamps = batch
-      .map((message) => Number(message?.timestamp || 0))
+      .map((message) =>
+        Number(message?.timestamp || 0)
+      )
       .filter(Boolean);
 
-    if (!timestamps.length) {
-      break;
-    }
+    if (!timestamps.length) break;
 
-    const oldest = Math.min(...timestamps);
+    const oldest = Math.min(
+      ...timestamps
+    );
 
-    if (oldest <= cutoff) {
-      break;
-    }
-
-    if (batch.length < 100) {
-      break;
-    }
+    if (oldest <= cutoff) break;
+    if (batch.length < 100) break;
 
     beforeTimestamp = oldest - 1;
 
@@ -538,29 +465,34 @@ async function fetchMessageHistory(botToken, chatId) {
     }
   }
 
-  // Не анализируем сообщения старше выбранного окна.
-  const filtered = all.filter(
-    (message) => Number(message?.timestamp || 0) >= cutoff
-  );
-
   return {
-    messages: filtered,
+    messages: all.filter(
+      (message) =>
+        Number(message?.timestamp || 0) >=
+        cutoff
+    ),
     historyLimited
   };
 }
 
 /* =========================================================
-   VERCEL FUNCTION
+   ENDPOINT
    ========================================================= */
 
 export default {
   async fetch(request) {
     if (request.method !== "GET") {
-      return json({ error: "Method not allowed" }, 405);
+      return json(
+        { error: "Method not allowed" },
+        405
+      );
     }
 
-    const botToken = process.env.MAX_BOT_TOKEN;
-    const chatId = process.env.VES_CHAT_ID;
+    const botToken =
+      process.env.MAX_BOT_TOKEN;
+
+    const chatId =
+      process.env.VES_CHAT_ID;
 
     if (!botToken || !chatId) {
       return json(
@@ -572,54 +504,85 @@ export default {
       );
     }
 
-    const initData = request.headers.get("X-Max-Init-Data") || "";
-    const validation = validateMaxInitData(initData, botToken);
+    let session;
+
+    try {
+      session = getSession(request);
+    } catch (error) {
+      return json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Ошибка сессии"
+        },
+        500
+      );
+    }
+
+    if (!session) {
+      return json(
+        {
+          error:
+            "Требуется авторизация"
+        },
+        401
+      );
+    }
+
+    const initData =
+      request.headers.get(
+        "X-Max-Init-Data"
+      ) || "";
+
+    const validation =
+      validateMaxInitData(
+        initData,
+        botToken
+      );
 
     if (!validation.ok) {
       return json(
         {
-          error: validation.reason
+          error:
+            validation.reason
         },
         401
       );
     }
 
     try {
-      const history = await fetchMessageHistory(
-        botToken,
-        chatId
-      );
+      const history =
+        await fetchMessageHistory(
+          botToken,
+          chatId
+        );
 
-      const outages = calculateActiveOutages(
-        history.messages
-      );
+      const outages =
+        calculateActiveOutages(
+          history.messages
+        );
 
       return json({
         division: "ВЭС",
         count: outages.length,
         outages,
-        analyzedMessages: history.messages.length,
-        historyLimited: history.historyLimited,
-        updatedAt: new Date().toISOString()
+        analyzedMessages:
+          history.messages.length,
+        historyLimited:
+          history.historyLimited,
+        updatedAt:
+          new Date().toISOString()
       });
     } catch (error) {
       console.error(error);
 
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Неизвестная ошибка";
-
-      const cause =
-        error instanceof Error && error.cause
-          ? String(error.cause.code || error.cause.message || error.cause)
-          : "";
-
       return json(
         {
-          error: cause
-            ? `${message} (${cause})`
-            : message
+          error:
+            error instanceof Error
+              ? error.message
+              : "Неизвестная ошибка"
         },
         502
       );
