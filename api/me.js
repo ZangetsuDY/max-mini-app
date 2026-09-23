@@ -32,7 +32,8 @@ export default {
         authenticated: true,
         user: {
           username: session.username,
-          fullName: session.fullName
+          fullName: session.fullName,
+          isDispatcher: Boolean(session.isDispatcher)
         }
       });
     } catch (error) {

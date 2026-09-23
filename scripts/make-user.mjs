@@ -5,7 +5,8 @@ const [
   ,
   usernameArg,
   fullNameArg,
-  passwordArg
+  passwordArg,
+  roleArg = "user"
 ] = process.argv;
 
 if (
@@ -16,11 +17,17 @@ if (
   console.log(`
 Использование:
 
-node scripts/make-user.mjs LOGIN "ФИО" "ПАРОЛЬ"
+node scripts/make-user.mjs LOGIN "ФИО" "ПАРОЛЬ" ROLE
 
-Пример:
+ROLE:
+  user        — обычный пользователь
+  dispatcher  — диспетчер
 
-node scripts/make-user.mjs ivanov "Иванов Иван Иванович" "MyStrongPassword123!"
+Примеры:
+
+node scripts/make-user.mjs ivanov "Иванов Иван Иванович" "MyStrongPassword123!" user
+
+node scripts/make-user.mjs petrov "Петров Пётр Петрович" "MyStrongPassword123!" dispatcher
 `);
   process.exit(1);
 }
@@ -34,12 +41,47 @@ const fullName =
 const password =
   String(passwordArg);
 
+const role =
+  String(roleArg)
+    .trim()
+    .toLowerCase();
+
+const dispatcherValues = new Set([
+  "dispatcher",
+  "disp",
+  "true",
+  "1",
+  "yes",
+  "да"
+]);
+
+const regularValues = new Set([
+  "user",
+  "false",
+  "0",
+  "no",
+  "нет"
+]);
+
+if (
+  !dispatcherValues.has(role) &&
+  !regularValues.has(role)
+) {
+  console.error(
+    'ROLE должен быть "user" или "dispatcher".'
+  );
+  process.exit(1);
+}
+
 if (password.length < 10) {
   console.error(
     "Пароль должен содержать хотя бы 10 символов."
   );
   process.exit(1);
 }
+
+const isDispatcher =
+  dispatcherValues.has(role);
 
 const iterations = 210000;
 
@@ -60,12 +102,24 @@ const passwordHash = crypto
 const user = {
   username,
   fullName,
+  isDispatcher,
   salt,
   passwordHash,
   iterations
 };
 
-console.log("\nДобавьте этот объект в APP_USERS_JSON:\n");
+console.log(
+  `\nРоль: ${
+    isDispatcher
+      ? "ДИСПЕТЧЕР"
+      : "ПОЛЬЗОВАТЕЛЬ"
+  }\n`
+);
+
+console.log(
+  "Добавьте этот объект в APP_USERS_JSON:\n"
+);
+
 console.log(
   JSON.stringify(
     user,
@@ -73,4 +127,5 @@ console.log(
     2
   )
 );
+
 console.log();
