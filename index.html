@@ -179,9 +179,9 @@
             определяется вашей учётной записью.
           </p>
 
-          <div class="system-line">
-            <span class="system-pulse"></span>
-            <span>Система работает штатно</span>
+          <div id="systemLine" class="system-line">
+            <span id="systemPulse" class="system-pulse"></span>
+            <span id="systemStatusText">Проверка состояния системы…</span>
           </div>
         </div>
 
@@ -202,7 +202,7 @@
           <span class="micro-label">РАЗДЕЛЫ СИСТЕМЫ</span>
           <h2>Выберите интерфейс</h2>
         </div>
-        <span class="section-caption">2 модуля</span>
+        <span id="moduleCount" class="section-caption">2 модуля</span>
       </div>
 
       <div class="module-grid">
@@ -265,6 +265,40 @@
             </svg>
           </div>
         </button>
+
+        <button
+          id="openAdminButton"
+          class="module-card module-card-admin"
+          type="button"
+          hidden
+        >
+          <div class="module-topline">
+            <div class="module-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 7h16M7 4v6M4 17h16M16 14v6"></path>
+              </svg>
+            </div>
+            <span class="module-status module-status-developer">
+              РОЛЬ: РАЗРАБОТЧИК
+            </span>
+          </div>
+
+          <div class="module-copy">
+            <span>ЭКСПЛУАТАЦИЯ И КОНТРОЛЬ</span>
+            <h3>Центр управления системой</h3>
+            <p>
+              Режим работы Mini App, состояние сервиса,
+              активные пользователи и история последних сеансов.
+            </p>
+          </div>
+
+          <div class="module-footer">
+            <span>Открыть центр управления</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14M13 6l6 6-6 6"></path>
+            </svg>
+          </div>
+        </button>
       </div>
     </section>
 
@@ -315,6 +349,151 @@
         <span>•</span>
         <span id="updatedAt">Обновлено —</span>
       </footer>
+    </section>
+
+    <!-- DEVELOPER CONTROL CENTER -->
+    <section id="adminView" class="app-view">
+      <div class="view-toolbar">
+        <button id="backFromAdminButton" class="back-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 12H5M11 18l-6-6 6-6"></path>
+          </svg>
+          <span>Главное меню</span>
+        </button>
+
+        <div class="toolbar-status">
+          <span class="system-pulse"></span>
+          <span id="adminUpdatedAt">Данные центра управления</span>
+        </div>
+      </div>
+
+      <div class="admin-hero">
+        <div>
+          <span class="micro-label">ДОСТУП РАЗРАБОТЧИКА</span>
+          <h1>Центр управления системой</h1>
+          <p>
+            Управление эксплуатационным режимом Mini App
+            и контроль пользовательских сессий.
+          </p>
+        </div>
+
+        <div id="adminSystemBadge" class="admin-system-badge">
+          <span></span>
+          <strong>Штатный режим</strong>
+        </div>
+      </div>
+
+      <div id="storageWarning" class="storage-warning" hidden>
+        <div>
+          <strong>Хранилище состояния не подключено</strong>
+          <p>
+            Для режимов системы и статистики сеансов необходимо
+            подключить Upstash Redis и добавить переменные окружения.
+          </p>
+        </div>
+      </div>
+
+      <div class="admin-stats">
+        <article class="admin-stat-card">
+          <span>Сейчас в Mini App</span>
+          <strong id="adminOnlineCount">—</strong>
+          <small>активность за последние 2 минуты</small>
+        </article>
+
+        <article class="admin-stat-card">
+          <span>Учётных записей</span>
+          <strong id="adminTotalUsers">—</strong>
+          <small>из APP_USERS_JSON</small>
+        </article>
+
+        <article class="admin-stat-card">
+          <span>Диспетчеров</span>
+          <strong id="adminDispatcherCount">—</strong>
+          <small>пользователи с ролью диспетчера</small>
+        </article>
+
+        <article class="admin-stat-card">
+          <span>Разработчиков</span>
+          <strong id="adminDeveloperCount">—</strong>
+          <small>доступ к центру управления</small>
+        </article>
+      </div>
+
+      <div class="admin-layout">
+        <article class="admin-panel system-control-panel">
+          <div class="admin-panel-heading">
+            <div>
+              <span class="micro-label">ЭКСПЛУАТАЦИОННЫЙ РЕЖИМ</span>
+              <h2>Состояние системы</h2>
+            </div>
+          </div>
+
+          <div class="mode-selector" id="modeSelector">
+            <button class="mode-option is-selected" data-mode="normal" type="button">
+              <span class="mode-light mode-light-green"></span>
+              <strong>Штатный режим</strong>
+              <small>Все функции доступны</small>
+            </button>
+
+            <button class="mode-option" data-mode="maintenance" type="button">
+              <span class="mode-light mode-light-amber"></span>
+              <strong>Технические работы</strong>
+              <small>Доступ пользователей ограничен</small>
+            </button>
+
+            <button class="mode-option" data-mode="stopped" type="button">
+              <span class="mode-light mode-light-red"></span>
+              <strong>Система остановлена</strong>
+              <small>Оперативный доступ временно закрыт</small>
+            </button>
+          </div>
+
+          <label class="admin-message-field">
+            <span>Сообщение пользователям</span>
+            <textarea
+              id="systemMessageInput"
+              maxlength="500"
+              rows="4"
+              placeholder="Например: Выполняются плановые технические работы до 14:00."
+            ></textarea>
+          </label>
+
+          <div class="system-control-footer">
+            <div id="systemChangedInfo" class="system-changed-info">
+              Изменения ещё не выполнялись
+            </div>
+
+            <button id="saveSystemStateButton" class="primary-action admin-save-button" type="button">
+              <span>Применить режим</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6"></path>
+              </svg>
+            </button>
+          </div>
+        </article>
+
+        <article class="admin-panel sessions-panel">
+          <div class="admin-panel-heading sessions-heading">
+            <div>
+              <span class="micro-label">ПОЛЬЗОВАТЕЛЬСКИЕ СЕССИИ</span>
+              <h2>Активность пользователей</h2>
+            </div>
+
+            <button id="refreshAdminButton" class="icon-button admin-refresh-button" type="button" title="Обновить">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 6v5h-5M4 18v-5h5"></path>
+                <path d="M18.5 9A7 7 0 0 0 6 6.5L4 11M5.5 15A7 7 0 0 0 18 17.5l2-4.5"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div id="sessionList" class="session-list">
+            <div class="session-loading">
+              Загрузка пользовательских сессий…
+            </div>
+          </div>
+        </article>
+      </div>
     </section>
   </main>
 

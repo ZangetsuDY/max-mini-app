@@ -8,6 +8,10 @@ import {
   getSession
 } from "../lib/security.js";
 
+import {
+  getSystemState
+} from "../lib/runtime-store.js";
+
 const MAX_API_BASE = "https://platform-api2.max.ru";
 
 const DIVISIONS = {
@@ -1455,6 +1459,44 @@ export default {
             "Требуется авторизация"
         },
         401
+      );
+    }
+
+    /*
+      В нештатном режиме обычные пользователи не получают
+      оперативные данные. Разработчик сохраняет доступ
+      для диагностики.
+    */
+    try {
+      const systemState =
+        await getSystemState();
+
+      if (
+        systemState.mode !== "normal" &&
+        !session.isDeveloper
+      ) {
+        const fallback =
+          systemState.mode === "maintenance"
+            ? "Система временно переведена в режим технических работ."
+            : "Система временно остановлена.";
+
+        return json(
+          {
+            error:
+              systemState.message ||
+              fallback,
+            code:
+              "SYSTEM_UNAVAILABLE",
+            system:
+              systemState
+          },
+          503
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Не удалось проверить режим системы:",
+        error
       );
     }
 

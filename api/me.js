@@ -33,7 +33,8 @@ export default {
         user: {
           username: session.username,
           fullName: session.fullName,
-          isDispatcher: Boolean(session.isDispatcher)
+          isDispatcher: Boolean(session.isDispatcher),
+          isDeveloper: Boolean(session.isDeveloper)
         }
       });
     } catch (error) {

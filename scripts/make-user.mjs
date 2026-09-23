@@ -20,14 +20,18 @@ if (
 node scripts/make-user.mjs LOGIN "ФИО" "ПАРОЛЬ" ROLE
 
 ROLE:
-  user        — обычный пользователь
-  dispatcher  — диспетчер
+  user                  — обычный пользователь
+  dispatcher            — диспетчер
+  developer             — разработчик
+  developer-dispatcher  — разработчик + диспетчер
 
 Примеры:
 
-node scripts/make-user.mjs ivanov "Иванов Иван Иванович" "MyStrongPassword123!" user
+node scripts/make-user.mjs ivanov "Иванов Иван Иванович" "StrongPassword123!" user
 
-node scripts/make-user.mjs petrov "Петров Пётр Петрович" "MyStrongPassword123!" dispatcher
+node scripts/make-user.mjs petrov "Петров Пётр Петрович" "StrongPassword123!" dispatcher
+
+node scripts/make-user.mjs dev "Разработчик Системы" "StrongPassword123!" developer
 `);
   process.exit(1);
 }
@@ -46,29 +50,17 @@ const role =
     .trim()
     .toLowerCase();
 
-const dispatcherValues = new Set([
-  "dispatcher",
-  "disp",
-  "true",
-  "1",
-  "yes",
-  "да"
-]);
+const allowed =
+  new Set([
+    "user",
+    "dispatcher",
+    "developer",
+    "developer-dispatcher"
+  ]);
 
-const regularValues = new Set([
-  "user",
-  "false",
-  "0",
-  "no",
-  "нет"
-]);
-
-if (
-  !dispatcherValues.has(role) &&
-  !regularValues.has(role)
-) {
+if (!allowed.has(role)) {
   console.error(
-    'ROLE должен быть "user" или "dispatcher".'
+    'ROLE должен быть user, dispatcher, developer или developer-dispatcher.'
   );
   process.exit(1);
 }
@@ -81,7 +73,12 @@ if (password.length < 10) {
 }
 
 const isDispatcher =
-  dispatcherValues.has(role);
+  role === "dispatcher" ||
+  role === "developer-dispatcher";
+
+const isDeveloper =
+  role === "developer" ||
+  role === "developer-dispatcher";
 
 const iterations = 210000;
 
@@ -103,17 +100,14 @@ const user = {
   username,
   fullName,
   isDispatcher,
+  isDeveloper,
   salt,
   passwordHash,
   iterations
 };
 
 console.log(
-  `\nРоль: ${
-    isDispatcher
-      ? "ДИСПЕТЧЕР"
-      : "ПОЛЬЗОВАТЕЛЬ"
-  }\n`
+  `\nРоль: ${role}\n`
 );
 
 console.log(

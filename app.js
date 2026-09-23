@@ -8,8 +8,14 @@ const API_LOGOUT = "/api/logout";
 const API_ME = "/api/me";
 const API_OUTAGES = "/api/outages";
 const API_DISPATCHER = "/api/dispatcher";
+const API_HEARTBEAT = "/api/heartbeat";
+const API_SYSTEM = "/api/system";
+const API_ADMIN_DASHBOARD = "/api/admin/dashboard";
+const API_ADMIN_SYSTEM = "/api/admin/system";
 
 const REFRESH_INTERVAL_MS = 120_000;
+const HEARTBEAT_INTERVAL_MS = 45_000;
+const ADMIN_REFRESH_INTERVAL_MS = 30_000;
 const SESSION_STORAGE_KEY = "le_app_session";
 
 const DIVISIONS = [
@@ -44,11 +50,32 @@ const brandHomeButton = document.getElementById("brandHomeButton");
 
 const homeView = document.getElementById("homeView");
 const monitoringView = document.getElementById("monitoringView");
+const adminView = document.getElementById("adminView");
 
 const openMonitoringButton = document.getElementById("openMonitoringButton");
 const openDispatcherButton = document.getElementById("openDispatcherButton");
+const openAdminButton = document.getElementById("openAdminButton");
 const dispatcherCardStatus = document.getElementById("dispatcherCardStatus");
+const moduleCount = document.getElementById("moduleCount");
 const backToMenuButton = document.getElementById("backToMenuButton");
+const backFromAdminButton = document.getElementById("backFromAdminButton");
+
+const systemLine = document.getElementById("systemLine");
+const systemStatusText = document.getElementById("systemStatusText");
+
+const adminUpdatedAt = document.getElementById("adminUpdatedAt");
+const adminSystemBadge = document.getElementById("adminSystemBadge");
+const storageWarning = document.getElementById("storageWarning");
+const adminOnlineCount = document.getElementById("adminOnlineCount");
+const adminTotalUsers = document.getElementById("adminTotalUsers");
+const adminDispatcherCount = document.getElementById("adminDispatcherCount");
+const adminDeveloperCount = document.getElementById("adminDeveloperCount");
+const modeSelector = document.getElementById("modeSelector");
+const systemMessageInput = document.getElementById("systemMessageInput");
+const systemChangedInfo = document.getElementById("systemChangedInfo");
+const saveSystemStateButton = document.getElementById("saveSystemStateButton");
+const refreshAdminButton = document.getElementById("refreshAdminButton");
+const sessionList = document.getElementById("sessionList");
 
 const divisionGrid = document.getElementById("divisionGrid");
 const totalOutages = document.getElementById("totalOutages");
@@ -65,9 +92,18 @@ const modalMessage = document.getElementById("modalMessage");
 
 let currentUser = null;
 let currentView = "home";
+let currentSystemState = {
+  mode: "normal",
+  message: "",
+  storageConfigured: false
+};
+
 let refreshTimer = null;
+let heartbeatTimer = null;
+let adminRefreshTimer = null;
 let loadVersion = 0;
 let divisionCardsRendered = false;
+let selectedSystemMode = "normal";
 
 function getAppSessionToken() {
   try {
@@ -127,30 +163,52 @@ function setUserUi(user) {
   currentUser = {
     username: String(user?.username || ""),
     fullName: String(user?.fullName || "Пользователь"),
-    isDispatcher: Boolean(user?.isDispatcher)
+    isDispatcher: Boolean(user?.isDispatcher),
+    isDeveloper: Boolean(user?.isDeveloper)
   };
 
   userFullName.textContent =
     currentUser.fullName;
 
+  const roleText =
+    currentUser.isDeveloper
+      ? "Разработчик"
+      : currentUser.isDispatcher
+        ? "Диспетчер"
+        : "Пользователь";
+
   userRoleBadge.textContent =
-    currentUser.isDispatcher
-      ? "Диспетчер"
-      : "Пользователь";
+    roleText;
 
   userRoleBadge.classList.toggle(
     "is-dispatcher",
-    currentUser.isDispatcher
+    currentUser.isDispatcher &&
+    !currentUser.isDeveloper
+  );
+
+  userRoleBadge.classList.toggle(
+    "is-developer",
+    currentUser.isDeveloper
   );
 
   dispatcherCardStatus.textContent =
     currentUser.isDispatcher
       ? "РОЛЬ: ДИСПЕТЧЕР"
       : "ДОСТУП ПО РОЛИ";
+
+  openAdminButton.hidden =
+    !currentUser.isDeveloper;
+
+  moduleCount.textContent =
+    currentUser.isDeveloper
+      ? "3 модуля"
+      : "2 модуля";
 }
 
 function showLoginScreen() {
   stopAutoRefresh();
+  stopHeartbeat();
+  stopAdminRefresh();
 
   currentUser = null;
   currentView = "home";
@@ -161,6 +219,7 @@ function showLoginScreen() {
 
   homeView.classList.add("is-active");
   monitoringView.classList.remove("is-active");
+  adminView.classList.remove("is-active");
 
   setTimeout(
     () => usernameInput?.focus(),
@@ -177,6 +236,8 @@ function showApplication(user) {
 
   clearLoginError();
   navigateHome();
+  startHeartbeat();
+  loadSystemState();
 }
 
 function setView(view) {
@@ -192,8 +253,17 @@ function setView(view) {
     view === "monitoring"
   );
 
+  adminView.classList.toggle(
+    "is-active",
+    view === "admin"
+  );
+
   if (view !== "monitoring") {
     stopAutoRefresh();
+  }
+
+  if (view !== "admin") {
+    stopAdminRefresh();
   }
 
   window.scrollTo({
@@ -207,6 +277,27 @@ function navigateHome() {
 }
 
 function navigateMonitoring() {
+  if (
+    currentSystemState.mode !== "normal" &&
+    !currentUser?.isDeveloper
+  ) {
+    const title =
+      currentSystemState.mode === "maintenance"
+        ? "Технические работы"
+        : "Система временно остановлена";
+
+    openModal({
+      type: "denied",
+      eyebrow: "СОСТОЯНИЕ СИСТЕМЫ",
+      title,
+      message:
+        currentSystemState.message ||
+        "Оперативный доступ временно ограничен."
+    });
+
+    return;
+  }
+
   setView("monitoring");
 
   if (!divisionCardsRendered) {
@@ -216,6 +307,171 @@ function navigateMonitoring() {
 
   loadAllDivisions();
   startAutoRefresh();
+}
+
+function navigateAdmin() {
+  if (!currentUser?.isDeveloper) {
+    return;
+  }
+
+  setView("admin");
+  loadAdminDashboard();
+  startAdminRefresh();
+}
+
+function getSessionHeaders() {
+  const sessionToken =
+    getAppSessionToken();
+
+  return sessionToken
+    ? {
+        "X-App-Session":
+          sessionToken
+      }
+    : {};
+}
+
+function systemModeLabel(mode) {
+  if (mode === "maintenance") {
+    return "Технические работы";
+  }
+
+  if (mode === "stopped") {
+    return "Система остановлена";
+  }
+
+  return "Штатный режим";
+}
+
+function renderSystemState(state) {
+  currentSystemState = {
+    mode:
+      state?.mode || "normal",
+    message:
+      state?.message || "",
+    storageConfigured:
+      Boolean(
+        state?.storageConfigured
+      ),
+    changedAt:
+      state?.changedAt || null,
+    changedBy:
+      state?.changedBy || null
+  };
+
+  systemLine.classList.remove(
+    "is-maintenance",
+    "is-stopped"
+  );
+
+  if (
+    currentSystemState.mode ===
+    "maintenance"
+  ) {
+    systemLine.classList.add(
+      "is-maintenance"
+    );
+  }
+
+  if (
+    currentSystemState.mode ===
+    "stopped"
+  ) {
+    systemLine.classList.add(
+      "is-stopped"
+    );
+  }
+
+  systemStatusText.textContent =
+    currentSystemState.message
+      ? `${systemModeLabel(
+          currentSystemState.mode
+        )} — ${currentSystemState.message}`
+      : systemModeLabel(
+          currentSystemState.mode
+        );
+
+  if (adminSystemBadge) {
+    adminSystemBadge.classList.remove(
+      "is-maintenance",
+      "is-stopped"
+    );
+
+    if (
+      currentSystemState.mode ===
+      "maintenance"
+    ) {
+      adminSystemBadge.classList.add(
+        "is-maintenance"
+      );
+    }
+
+    if (
+      currentSystemState.mode ===
+      "stopped"
+    ) {
+      adminSystemBadge.classList.add(
+        "is-stopped"
+      );
+    }
+
+    adminSystemBadge
+      .querySelector("strong")
+      .textContent =
+        systemModeLabel(
+          currentSystemState.mode
+        );
+  }
+}
+
+async function loadSystemState() {
+  try {
+    const response =
+      await fetch(
+        API_SYSTEM,
+        {
+          method: "GET",
+          cache: "no-store",
+          credentials: "include",
+          headers:
+            getSessionHeaders()
+        }
+      );
+
+    if (response.status === 401) {
+      setAppSessionToken("");
+      showLoginScreen();
+      return;
+    }
+
+    const payload =
+      await response
+        .json()
+        .catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(
+        payload?.error ||
+        "Не удалось получить состояние системы"
+      );
+    }
+
+    renderSystemState(
+      payload
+    );
+  } catch (error) {
+    console.error(
+      "System state:",
+      error
+    );
+
+    renderSystemState({
+      mode: "normal",
+      message:
+        "Состояние режима недоступно",
+      storageConfigured: false
+    });
+  }
 }
 
 function openModal({
@@ -420,7 +676,9 @@ logoutButton.addEventListener(
         {
           method: "POST",
           cache: "no-store",
-          credentials: "include"
+          credentials: "include",
+          headers:
+            getSessionHeaders()
         }
       );
     } finally {
@@ -442,9 +700,19 @@ backToMenuButton.addEventListener(
   navigateHome
 );
 
+backFromAdminButton.addEventListener(
+  "click",
+  navigateHome
+);
+
 openMonitoringButton.addEventListener(
   "click",
   navigateMonitoring
+);
+
+openAdminButton.addEventListener(
+  "click",
+  navigateAdmin
 );
 
 openDispatcherButton.addEventListener(
@@ -550,6 +818,489 @@ document.addEventListener(
       closeModal();
     }
   }
+);
+
+/* =========================================================
+   HEARTBEAT + ЦЕНТР УПРАВЛЕНИЯ
+   ========================================================= */
+
+async function sendHeartbeat() {
+  if (!currentUser) {
+    return;
+  }
+
+  try {
+    const response =
+      await fetch(
+        API_HEARTBEAT,
+        {
+          method: "POST",
+          cache: "no-store",
+          credentials: "include",
+          headers:
+            getSessionHeaders()
+        }
+      );
+
+    if (response.status === 401) {
+      setAppSessionToken("");
+      showLoginScreen();
+    }
+  } catch (error) {
+    console.error(
+      "Heartbeat:",
+      error
+    );
+  }
+}
+
+function startHeartbeat() {
+  stopHeartbeat();
+
+  sendHeartbeat();
+
+  heartbeatTimer =
+    setInterval(
+      sendHeartbeat,
+      HEARTBEAT_INTERVAL_MS
+    );
+}
+
+function stopHeartbeat() {
+  if (heartbeatTimer) {
+    clearInterval(
+      heartbeatTimer
+    );
+
+    heartbeatTimer = null;
+  }
+}
+
+function formatDateTime(value) {
+  if (!value) {
+    return "Нет данных";
+  }
+
+  const date =
+    new Date(value);
+
+  if (
+    Number.isNaN(
+      date.getTime()
+    )
+  ) {
+    return "Нет данных";
+  }
+
+  return date.toLocaleString(
+    "ru-RU",
+    {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    }
+  );
+}
+
+function userRoleText(user) {
+  if (
+    user?.isDeveloper &&
+    user?.isDispatcher
+  ) {
+    return "Разработчик · Диспетчер";
+  }
+
+  if (user?.isDeveloper) {
+    return "Разработчик";
+  }
+
+  if (user?.isDispatcher) {
+    return "Диспетчер";
+  }
+
+  return "Пользователь";
+}
+
+function renderAdminUsers(users) {
+  if (
+    !Array.isArray(users) ||
+    !users.length
+  ) {
+    sessionList.innerHTML = `
+      <div class="session-empty">
+        Пользователи не найдены.
+      </div>
+    `;
+
+    return;
+  }
+
+  sessionList.innerHTML =
+    users.map(
+      (user) => {
+        const lastSession =
+          user.online
+            ? `Последняя активность: ${formatDateTime(
+                user.lastSeenAt
+              )}`
+            : user.lastSessionAt
+              ? `Последний сеанс: ${formatDateTime(
+                  user.lastSessionAt
+                )}`
+              : "Ещё не входил";
+
+        const loginText =
+          user.lastLoginAt
+            ? `Последний вход: ${formatDateTime(
+                user.lastLoginAt
+              )}`
+            : "Входов пока нет";
+
+        return `
+          <div class="session-row">
+            <div class="session-person">
+              <strong>
+                ${escapeHtml(
+                  user.fullName ||
+                  user.username
+                )}
+              </strong>
+              <span>
+                ${escapeHtml(
+                  user.username
+                )} · ${escapeHtml(
+                  loginText
+                )}
+              </span>
+            </div>
+
+            <span class="session-role">
+              ${escapeHtml(
+                userRoleText(user)
+              )}
+            </span>
+
+            <div class="session-status">
+              <strong class="${
+                user.online
+                  ? "is-online"
+                  : ""
+              }">
+                <i></i>
+                ${
+                  user.online
+                    ? "Сейчас в системе"
+                    : "Не в системе"
+                }
+              </strong>
+              <small>
+                ${escapeHtml(
+                  lastSession
+                )}
+              </small>
+            </div>
+          </div>
+        `;
+      }
+    ).join("");
+}
+
+function selectMode(mode) {
+  selectedSystemMode =
+    mode;
+
+  modeSelector
+    .querySelectorAll(
+      ".mode-option"
+    )
+    .forEach(
+      (button) => {
+        button.classList.toggle(
+          "is-selected",
+          button.dataset.mode ===
+            mode
+        );
+      }
+    );
+}
+
+function renderAdminDashboard(
+  payload
+) {
+  storageWarning.hidden =
+    Boolean(
+      payload.storageConfigured
+    );
+
+  adminOnlineCount.textContent =
+    payload.onlineCount ?? "—";
+
+  adminTotalUsers.textContent =
+    payload.totalUsers ?? "—";
+
+  adminDispatcherCount.textContent =
+    payload.dispatcherCount ?? "—";
+
+  adminDeveloperCount.textContent =
+    payload.developerCount ?? "—";
+
+  const system =
+    payload.system || {
+      mode: "normal",
+      message: ""
+    };
+
+  renderSystemState(system);
+
+  selectMode(
+    system.mode || "normal"
+  );
+
+  systemMessageInput.value =
+    system.message || "";
+
+  if (system.changedAt) {
+    const who =
+      system.changedBy?.fullName ||
+      system.changedBy?.username ||
+      "неизвестно";
+
+    systemChangedInfo.textContent =
+      `Изменено ${formatDateTime(
+        system.changedAt
+      )} · ${who}`;
+  } else {
+    systemChangedInfo.textContent =
+      payload.storageConfigured
+        ? "Режим ещё не изменялся"
+        : "Хранилище состояния не подключено";
+  }
+
+  renderAdminUsers(
+    payload.users
+  );
+
+  adminUpdatedAt.textContent =
+    `Обновлено ${new Date().toLocaleTimeString(
+      "ru-RU",
+      {
+        hour: "2-digit",
+        minute: "2-digit"
+      }
+    )}`;
+}
+
+async function loadAdminDashboard() {
+  if (!currentUser?.isDeveloper) {
+    return;
+  }
+
+  sessionList.innerHTML = `
+    <div class="session-loading">
+      Обновление данных центра управления…
+    </div>
+  `;
+
+  try {
+    const response =
+      await fetch(
+        API_ADMIN_DASHBOARD,
+        {
+          method: "GET",
+          cache: "no-store",
+          credentials: "include",
+          headers:
+            getSessionHeaders()
+        }
+      );
+
+    if (response.status === 401) {
+      setAppSessionToken("");
+      showLoginScreen();
+      return;
+    }
+
+    if (response.status === 403) {
+      navigateHome();
+      return;
+    }
+
+    const payload =
+      await response
+        .json()
+        .catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(
+        payload?.error ||
+        "Не удалось загрузить центр управления"
+      );
+    }
+
+    renderAdminDashboard(
+      payload
+    );
+  } catch (error) {
+    sessionList.innerHTML = `
+      <div class="session-empty">
+        ${escapeHtml(
+          error instanceof Error
+            ? error.message
+            : "Ошибка загрузки"
+        )}
+      </div>
+    `;
+  }
+}
+
+async function saveSystemState() {
+  if (!currentUser?.isDeveloper) {
+    return;
+  }
+
+  saveSystemStateButton.disabled =
+    true;
+
+  saveSystemStateButton
+    .querySelector("span")
+    .textContent =
+      "Применение…";
+
+  try {
+    const response =
+      await fetch(
+        API_ADMIN_SYSTEM,
+        {
+          method: "POST",
+          cache: "no-store",
+          credentials: "include",
+          headers: {
+            "Content-Type":
+              "application/json",
+            ...getSessionHeaders()
+          },
+          body: JSON.stringify({
+            mode:
+              selectedSystemMode,
+            message:
+              systemMessageInput.value
+                .trim()
+          })
+        }
+      );
+
+    const payload =
+      await response
+        .json()
+        .catch(() => null);
+
+    if (response.status === 401) {
+      setAppSessionToken("");
+      showLoginScreen();
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        payload?.error ||
+        "Не удалось применить режим"
+      );
+    }
+
+    renderSystemState(
+      payload.system
+    );
+
+    await loadAdminDashboard();
+
+    openModal({
+      type: "development",
+      eyebrow:
+        "ЦЕНТР УПРАВЛЕНИЯ",
+      title:
+        "Режим применён",
+      message:
+        `Текущее состояние: ${systemModeLabel(
+          payload.system.mode
+        )}.`
+    });
+  } catch (error) {
+    openModal({
+      type: "denied",
+      eyebrow:
+        "ЦЕНТР УПРАВЛЕНИЯ",
+      title:
+        "Не удалось изменить режим",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Попробуйте ещё раз."
+    });
+  } finally {
+    saveSystemStateButton.disabled =
+      false;
+
+    saveSystemStateButton
+      .querySelector("span")
+      .textContent =
+        "Применить режим";
+  }
+}
+
+function startAdminRefresh() {
+  stopAdminRefresh();
+
+  adminRefreshTimer =
+    setInterval(
+      () => {
+        if (
+          currentView === "admin"
+        ) {
+          loadAdminDashboard();
+        }
+      },
+      ADMIN_REFRESH_INTERVAL_MS
+    );
+}
+
+function stopAdminRefresh() {
+  if (adminRefreshTimer) {
+    clearInterval(
+      adminRefreshTimer
+    );
+
+    adminRefreshTimer = null;
+  }
+}
+
+modeSelector.addEventListener(
+  "click",
+  (event) => {
+    const button =
+      event.target.closest(
+        ".mode-option"
+      );
+
+    if (!button) {
+      return;
+    }
+
+    selectMode(
+      button.dataset.mode
+    );
+  }
+);
+
+saveSystemStateButton.addEventListener(
+  "click",
+  saveSystemState
+);
+
+refreshAdminButton.addEventListener(
+  "click",
+  loadAdminDashboard
 );
 
 /* =========================================================

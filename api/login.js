@@ -5,6 +5,10 @@ import {
   createSessionToken
 } from "../lib/security.js";
 
+import {
+  recordLogin
+} from "../lib/runtime-store.js";
+
 function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data, null, 2), {
     status,
@@ -94,6 +98,15 @@ export default {
         user,
         sessionToken
       );
+
+    try {
+      await recordLogin(user);
+    } catch (error) {
+      console.error(
+        "Не удалось записать вход пользователя:",
+        error
+      );
+    }
 
     return json(
       {
