@@ -351,6 +351,115 @@
       </footer>
     </section>
 
+    <!-- DISPATCHER -->
+    <section id="dispatcherView" class="app-view">
+      <div class="view-toolbar">
+        <button id="backFromDispatcherButton" class="back-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 12H5M11 18l-6-6 6-6"></path>
+          </svg>
+          <span>Главное меню</span>
+        </button>
+
+        <div class="toolbar-status toolbar-status-dispatcher">
+          <span class="system-pulse"></span>
+          <span id="dispatcherUpdatedAt">Интерфейс готовится</span>
+        </div>
+      </div>
+
+      <div class="dispatcher-shell">
+        <div class="dispatcher-hero">
+          <div>
+            <span class="micro-label">ИНТЕРФЕЙС ДИСПЕТЧЕРА</span>
+            <h1>Оперативная панель РЭС</h1>
+            <p>
+              Выберите нужный РЭС и просматривайте сводную информацию
+              по заявкам и внутренним operational-модулям.
+            </p>
+          </div>
+
+          <div class="dispatcher-assigned-tile">
+            <span>РЭС по роли</span>
+            <strong id="dispatcherAssignedDivision">—</strong>
+            <small>Определяется назначенной ролью</small>
+          </div>
+        </div>
+
+        <div class="dispatcher-select-wrap glass-panel">
+          <div>
+            <span class="micro-label">ОБЛАСТЬ НАБЛЮДЕНИЯ</span>
+            <h2>Выбор РЭС</h2>
+          </div>
+
+          <label class="dispatcher-select-label">
+            <span>Смотреть информацию по РЭС</span>
+            <select id="dispatcherDivisionSelect" class="dispatcher-select"></select>
+          </label>
+        </div>
+
+        <div class="dispatcher-grid">
+          <article class="dispatcher-panel glass-panel">
+            <div class="dispatcher-panel-head">
+              <div>
+                <span class="micro-label">ЗАЯВКИ</span>
+                <h2>Оперативный счётчик</h2>
+              </div>
+              <div class="dispatcher-live-badge">
+                <i></i>
+                LIVE
+              </div>
+            </div>
+
+            <div class="dispatcher-request-grid">
+              <div class="dispatcher-request-card">
+                <span>Открыта</span>
+                <strong id="dispatcherReqOpen">—</strong>
+              </div>
+              <div class="dispatcher-request-card">
+                <span>Разрешена · На смену</span>
+                <strong id="dispatcherReqApproved">—</strong>
+              </div>
+              <div class="dispatcher-request-card">
+                <span>Заканчиваются</span>
+                <strong id="dispatcherReqEnding">—</strong>
+              </div>
+              <div class="dispatcher-request-card is-primary">
+                <span>Всего</span>
+                <strong id="dispatcherReqTotal">—</strong>
+                <small>Сумма рабочих заявок</small>
+              </div>
+              <div class="dispatcher-request-card">
+                <span>Закрыто</span>
+                <strong id="dispatcherReqClosed">—</strong>
+              </div>
+            </div>
+          </article>
+
+          <article class="dispatcher-panel glass-panel">
+            <div class="dispatcher-panel-head">
+              <div>
+                <span class="micro-label">ДЕФЕКТЫ</span>
+                <h2>Контур дефектов</h2>
+              </div>
+              <div class="dispatcher-dev-badge">МОДУЛЬ</div>
+            </div>
+
+            <div class="dispatcher-defects-lockup">
+              <div class="dispatcher-defects-blur"></div>
+              <div class="dispatcher-defects-copy">
+                <div class="dispatcher-defects-icon">!</div>
+                <strong>В разработке</strong>
+                <span>
+                  Раздел дефектов будет подключён в следующих версиях
+                  диспетчерского интерфейса.
+                </span>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
     <!-- DEVELOPER CONTROL CENTER -->
     <section id="adminView" class="app-view">
       <div class="view-toolbar">

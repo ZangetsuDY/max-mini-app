@@ -87,6 +87,8 @@ export default {
               body?.description,
             panelIds:
               body?.panelIds,
+            dispatcherDivisionId:
+              body?.dispatcherDivisionId,
             actor:
               access
           });
@@ -108,6 +110,8 @@ export default {
               body?.description,
             panelIds:
               body?.panelIds,
+            dispatcherDivisionId:
+              body?.dispatcherDivisionId,
             actor:
               access
           });

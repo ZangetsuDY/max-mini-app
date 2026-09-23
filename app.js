@@ -53,6 +53,7 @@ const brandHomeButton = document.getElementById("brandHomeButton");
 
 const homeView = document.getElementById("homeView");
 const monitoringView = document.getElementById("monitoringView");
+const dispatcherView = document.getElementById("dispatcherView");
 const adminView = document.getElementById("adminView");
 
 const openMonitoringButton = document.getElementById("openMonitoringButton");
@@ -61,6 +62,7 @@ const openAdminButton = document.getElementById("openAdminButton");
 const dispatcherCardStatus = document.getElementById("dispatcherCardStatus");
 const moduleCount = document.getElementById("moduleCount");
 const backToMenuButton = document.getElementById("backToMenuButton");
+const backFromDispatcherButton = document.getElementById("backFromDispatcherButton");
 const backFromAdminButton = document.getElementById("backFromAdminButton");
 
 const systemLine = document.getElementById("systemLine");
@@ -135,6 +137,15 @@ const totalOutages = document.getElementById("totalOutages");
 const updatedAt = document.getElementById("updatedAt");
 const dashboardStatus = document.getElementById("dashboardStatus");
 
+const dispatcherAssignedDivision = document.getElementById("dispatcherAssignedDivision");
+const dispatcherDivisionSelect = document.getElementById("dispatcherDivisionSelect");
+const dispatcherUpdatedAt = document.getElementById("dispatcherUpdatedAt");
+const dispatcherReqOpen = document.getElementById("dispatcherReqOpen");
+const dispatcherReqApproved = document.getElementById("dispatcherReqApproved");
+const dispatcherReqEnding = document.getElementById("dispatcherReqEnding");
+const dispatcherReqTotal = document.getElementById("dispatcherReqTotal");
+const dispatcherReqClosed = document.getElementById("dispatcherReqClosed");
+
 const accessModal = document.getElementById("accessModal");
 const closeModalButton = document.getElementById("closeModalButton");
 const modalActionButton = document.getElementById("modalActionButton");
@@ -157,11 +168,13 @@ let adminRefreshTimer = null;
 let loadVersion = 0;
 let divisionCardsRendered = false;
 let selectedSystemMode = "normal";
+let selectedDispatcherDivisionId = "";
 
 let accessCatalog = {
   panels: [],
   roles: [],
-  users: []
+  users: [],
+  dispatcherDivisions: []
 };
 
 let managementContext = null;
@@ -285,7 +298,15 @@ function setUserUi(user) {
                 : [
                     "monitoring"
                   ]
-          )
+          ),
+    dispatcherDivisionId:
+      String(
+        user?.dispatcherDivisionId || ""
+      ),
+    dispatcherDivisionName:
+      String(
+        user?.dispatcherDivisionName || ""
+      )
   };
 
   userFullName.textContent =
@@ -322,7 +343,11 @@ function setUserUi(user) {
     hasPanelAccess(
       "dispatcher"
     )
-      ? "ДОСТУП РАЗРЕШЁН"
+      ? (
+          currentUser?.dispatcherDivisionName
+            ? `РЭС: ${currentUser.dispatcherDivisionName}`
+            : "ДОСТУП РАЗРЕШЁН"
+        )
       : "ДОСТУП ПО РОЛИ";
 
   openAdminButton.hidden =
@@ -364,6 +389,7 @@ function showLoginScreen() {
 
   homeView.classList.add("is-active");
   monitoringView.classList.remove("is-active");
+  dispatcherView.classList.remove("is-active");
   adminView.classList.remove("is-active");
 
   setTimeout(
@@ -396,6 +422,11 @@ function setView(view) {
   monitoringView.classList.toggle(
     "is-active",
     view === "monitoring"
+  );
+
+  dispatcherView.classList.toggle(
+    "is-active",
+    view === "dispatcher"
   );
 
   adminView.classList.toggle(
@@ -470,6 +501,75 @@ function navigateMonitoring() {
 
   loadAllDivisions();
   startAutoRefresh();
+}
+
+async function navigateDispatcher() {
+  const sessionToken =
+    getAppSessionToken();
+
+  try {
+    const query =
+      selectedDispatcherDivisionId
+        ? `?division=${encodeURIComponent(selectedDispatcherDivisionId)}`
+        : "";
+
+    const response = await fetch(
+      `${API_DISPATCHER}${query}`,
+      {
+        method: "GET",
+        cache: "no-store",
+        credentials: "include",
+        headers: sessionToken
+          ? {
+              "X-App-Session":
+                sessionToken
+            }
+          : {}
+      }
+    );
+
+    const payload =
+      await response
+        .json()
+        .catch(() => null);
+
+    if (response.status === 401) {
+      setAppSessionToken("");
+      showLoginScreen();
+      return;
+    }
+
+    if (response.status === 403) {
+      openModal({
+        type: "denied",
+        title: "Доступ ограничен",
+        message:
+          payload?.message ||
+          "Вы не диспетчер"
+      });
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(
+        payload?.error ||
+        "Не удалось загрузить интерфейс диспетчера"
+      );
+    }
+
+    setView("dispatcher");
+    renderDispatcherDashboard(payload);
+  } catch (error) {
+    openModal({
+      type: "denied",
+      eyebrow: "ОШИБКА ДОСТУПА",
+      title: "Не удалось загрузить интерфейс",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Попробуйте ещё раз."
+    });
+  }
 }
 
 function navigateAdmin() {
@@ -729,6 +829,72 @@ async function checkSession() {
   }
 }
 
+function renderDispatcherDivisionOptions(
+  divisions,
+  selectedId
+) {
+  const list =
+    Array.isArray(divisions) &&
+    divisions.length
+      ? divisions
+      : [];
+
+  dispatcherDivisionSelect.innerHTML =
+    list.map(
+      (division) => `
+        <option value="${escapeHtml(division.id)}" ${division.id === selectedId ? "selected" : ""}>
+          ${escapeHtml(division.name)} — ${escapeHtml(division.description || "")}
+        </option>
+      `
+    ).join("");
+}
+
+function renderDispatcherDashboard(payload) {
+  const divisions =
+    Array.isArray(
+      payload?.availableDivisions
+    )
+      ? payload.availableDivisions
+      : [];
+
+  const selectedId =
+    String(
+      payload?.division?.id ||
+      payload?.assignedDivisionId ||
+      divisions[0]?.id ||
+      ""
+    );
+
+  selectedDispatcherDivisionId =
+    selectedId;
+
+  renderDispatcherDivisionOptions(
+    divisions,
+    selectedId
+  );
+
+  dispatcherAssignedDivision.textContent =
+    payload?.assignedDivisionName ||
+    payload?.division?.name ||
+    "Не задан";
+
+  dispatcherReqOpen.textContent =
+    payload?.requests?.open ?? "—";
+  dispatcherReqApproved.textContent =
+    payload?.requests?.approvedShift ?? "—";
+  dispatcherReqEnding.textContent =
+    payload?.requests?.ending ?? "—";
+  dispatcherReqTotal.textContent =
+    payload?.requests?.total ?? "—";
+  dispatcherReqClosed.textContent =
+    payload?.requests?.closed ?? "—";
+
+  dispatcherUpdatedAt.textContent =
+    payload?.updatedAt
+      ? `Обновлено ${formatDateTime(payload.updatedAt)}`
+      : "Интерфейс готов";
+}
+
 loginForm.addEventListener(
   "submit",
   async (event) => {
@@ -867,6 +1033,11 @@ backToMenuButton.addEventListener(
   navigateHome
 );
 
+backFromDispatcherButton.addEventListener(
+  "click",
+  navigateHome
+);
+
 backFromAdminButton.addEventListener(
   "click",
   navigateHome
@@ -884,72 +1055,17 @@ openAdminButton.addEventListener(
 
 openDispatcherButton.addEventListener(
   "click",
-  async () => {
-    const sessionToken =
-      getAppSessionToken();
+  navigateDispatcher
+);
 
-    try {
-      const response = await fetch(
-        API_DISPATCHER,
-        {
-          method: "GET",
-          cache: "no-store",
-          credentials: "include",
-          headers: sessionToken
-            ? {
-                "X-App-Session":
-                  sessionToken
-              }
-            : {}
-        }
-      );
+dispatcherDivisionSelect.addEventListener(
+  "change",
+  () => {
+    selectedDispatcherDivisionId =
+      dispatcherDivisionSelect.value;
 
-      const payload =
-        await response
-          .json()
-          .catch(() => null);
-
-      if (response.status === 401) {
-        setAppSessionToken("");
-        showLoginScreen();
-        return;
-      }
-
-      if (response.status === 403) {
-        openModal({
-          type: "denied",
-          title: "Доступ ограничен",
-          message:
-            payload?.message ||
-            "Вы не диспетчер"
-        });
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error(
-          payload?.error ||
-          "Не удалось проверить доступ"
-        );
-      }
-
-      openModal({
-        type: "development",
-        title: "Интерфейс Диспетчера",
-        message:
-          payload?.message ||
-          "В разработке"
-      });
-    } catch (error) {
-      openModal({
-        type: "denied",
-        eyebrow: "ОШИБКА ДОСТУПА",
-        title: "Не удалось проверить права",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Попробуйте ещё раз."
-      });
+    if (currentView === "dispatcher") {
+      navigateDispatcher();
     }
   }
 );
@@ -1045,6 +1161,15 @@ async function sendHeartbeat() {
           currentView === "monitoring" &&
           !hasPanelAccess(
             "monitoring"
+          )
+        ) {
+          navigateHome();
+        }
+
+        if (
+          currentView === "dispatcher" &&
+          !hasPanelAccess(
+            "dispatcher"
           )
         ) {
           navigateHome();
@@ -1662,6 +1787,17 @@ function renderRoleList() {
                   </span>
                 `
             }
+            ${
+              role.dispatcherDivisionName
+                ? `
+                  <span class="role-panel-chip role-panel-chip-dispatcher">
+                    РЭС: ${escapeHtml(
+                      role.dispatcherDivisionName
+                    )}
+                  </span>
+                `
+                : ""
+            }
           </div>
 
           ${
@@ -1779,6 +1915,12 @@ async function loadAccessManagement() {
           payload.users
         )
           ? payload.users
+          : [],
+      dispatcherDivisions:
+        Array.isArray(
+          payload.dispatcherDivisions
+        )
+          ? payload.dispatcherDivisions
           : []
     };
 
@@ -1890,6 +2032,87 @@ function panelCheckboxes(
   `;
 }
 
+function renderDispatcherRoleScope(
+  selectedDivisionId = ""
+) {
+  const host =
+    document.getElementById(
+      "dispatcherRoleScopeWrap"
+    );
+
+  if (!host) {
+    return;
+  }
+
+  const dispatcherEnabled =
+    Boolean(
+      managementBody.querySelector(
+        'input[name="panelAccess"][value="dispatcher"]:checked'
+      )
+    );
+
+  if (!dispatcherEnabled) {
+    host.innerHTML = "";
+    return;
+  }
+
+  const options =
+    (accessCatalog.dispatcherDivisions || [])
+      .map(
+        (division) => `
+          <option value="${escapeHtml(division.id)}" ${division.id === selectedDivisionId ? "selected" : ""}>
+            ${escapeHtml(division.name)} — ${escapeHtml(division.description || "")}
+          </option>
+        `
+      )
+      .join("");
+
+  host.innerHTML = `
+    <div class="management-section-title">
+      Настройка РЭС для диспетчерской роли
+    </div>
+
+    <label class="management-field">
+      <span>Базовый РЭС роли</span>
+      <select id="dispatcherRoleDivisionSelect" class="dispatcher-select dispatcher-role-select">
+        <option value="">Не задан</option>
+        ${options}
+      </select>
+    </label>
+
+    <div class="management-note">
+      Если пользователь войдёт под ролью с доступом к интерфейсу диспетчера,
+      выбранный здесь РЭС откроется для него по умолчанию.
+      При необходимости он сможет переключиться на другой РЭС в самом интерфейсе.
+    </div>
+  `;
+}
+
+function bindDispatcherRoleScope(
+  role
+) {
+  const checkboxes =
+    managementBody.querySelectorAll(
+      'input[name="panelAccess"]'
+    );
+
+  const refresh = () =>
+    renderDispatcherRoleScope(
+      role?.dispatcherDivisionId || ""
+    );
+
+  checkboxes.forEach(
+    (checkbox) => {
+      checkbox.addEventListener(
+        "change",
+        refresh
+      );
+    }
+  );
+
+  refresh();
+}
+
 function openRoleEditor(
   roleId = null
 ) {
@@ -1948,6 +2171,8 @@ function openRoleEditor(
         role?.panelIds || []
       )}
 
+      <div id="dispatcherRoleScopeWrap"></div>
+
       <div class="management-note">
         Список панелей формируется из единого реестра Mini App.
         Когда в будущем будет добавлена новая панель и зарегистрирована
@@ -1955,6 +2180,10 @@ function openRoleEditor(
       </div>
     `
   });
+
+  bindDispatcherRoleScope(
+    role || null
+  );
 }
 
 async function openUserRoleEditor(
@@ -2051,6 +2280,18 @@ async function openUserRoleEditor(
                     "Без описания"
                   )}
                 </span>
+
+                ${
+                  role.dispatcherDivisionName
+                    ? `
+                      <span class="role-choice-panels">
+                        Базовый РЭС: ${escapeHtml(
+                          role.dispatcherDivisionName
+                        )}
+                      </span>
+                    `
+                    : ""
+                }
 
                 <span class="role-choice-panels">
                   Панели: ${
@@ -2153,6 +2394,11 @@ async function saveManagementEditor() {
             input.value
         );
 
+      const dispatcherDivisionId =
+        document.getElementById(
+          "dispatcherRoleDivisionSelect"
+        )?.value || "";
+
       const response =
         await fetch(
           API_ADMIN_ROLES,
@@ -2177,7 +2423,8 @@ async function saveManagementEditor() {
                   .roleId,
               name,
               description,
-              panelIds
+              panelIds,
+              dispatcherDivisionId
             })
           }
         );

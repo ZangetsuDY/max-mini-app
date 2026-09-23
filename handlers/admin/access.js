@@ -4,6 +4,7 @@ import {
 
 import {
   PANEL_REGISTRY,
+  DISPATCHER_RES_REGISTRY,
   getRoleDefinitions,
   getUsersWithAccess,
   resolveSessionAccess
@@ -71,6 +72,8 @@ export default {
       return json({
         panels:
           PANEL_REGISTRY,
+        dispatcherDivisions:
+          DISPATCHER_RES_REGISTRY,
         roles,
         users,
         currentUser:

@@ -4,7 +4,8 @@ import {
 
 import {
   resolveSessionAccess,
-  hasPanel
+  hasPanel,
+  DISPATCHER_RES_REGISTRY
 } from "../lib/access-control.js";
 
 function json(data, status = 200) {
@@ -21,6 +22,36 @@ function json(data, status = 200) {
     }
   );
 }
+
+const DISPATCHER_DATA = Object.freeze({
+  ves: {
+    requests: {
+      open: 2,
+      approvedShift: 8,
+      ending: 10,
+      total: 20,
+      closed: 2
+    }
+  },
+  yues: {
+    requests: {
+      open: 1,
+      approvedShift: 6,
+      ending: 4,
+      total: 11,
+      closed: 1
+    }
+  },
+  gtes: {
+    requests: {
+      open: 3,
+      approvedShift: 7,
+      ending: 5,
+      total: 15,
+      closed: 4
+    }
+  }
+});
 
 export default {
   async fetch(request) {
@@ -78,10 +109,70 @@ export default {
       );
     }
 
+    const url =
+      new URL(request.url);
+
+    const requestedDivisionId =
+      String(
+        url.searchParams.get(
+          "division"
+        ) || ""
+      )
+        .trim()
+        .toLowerCase();
+
+    const validDivisionIds =
+      new Set(
+        DISPATCHER_RES_REGISTRY.map(
+          (division) =>
+            division.id
+        )
+      );
+
+    const selectedDivisionId =
+      validDivisionIds.has(
+        requestedDivisionId
+      )
+        ? requestedDivisionId
+        : (
+            access.dispatcherDivisionId ||
+            DISPATCHER_RES_REGISTRY[0]?.id ||
+            "ves"
+          );
+
+    const selectedDivision =
+      DISPATCHER_RES_REGISTRY.find(
+        (division) =>
+          division.id ===
+          selectedDivisionId
+      ) ||
+      DISPATCHER_RES_REGISTRY[0];
+
+    const data =
+      DISPATCHER_DATA[
+        selectedDivisionId
+      ] ||
+      DISPATCHER_DATA.ves;
+
     return json({
       allowed: true,
-      code: "IN_DEVELOPMENT",
-      message: "В разработке"
+      code: "READY",
+      division:
+        selectedDivision,
+      assignedDivisionId:
+        access.dispatcherDivisionId || "",
+      assignedDivisionName:
+        access.dispatcherDivisionName || "",
+      availableDivisions:
+        DISPATCHER_RES_REGISTRY,
+      requests:
+        data.requests,
+      defects: {
+        available: false,
+        message: "В разработке"
+      },
+      updatedAt:
+        new Date().toISOString()
     });
   }
 };
