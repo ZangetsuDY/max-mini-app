@@ -494,8 +494,91 @@
           </div>
         </article>
       </div>
+
+      <article
+        id="accessManagementPanel"
+        class="admin-panel access-management-panel"
+        hidden
+      >
+        <div class="admin-panel-heading access-heading">
+          <div>
+            <span class="micro-label">УПРАВЛЕНИЕ ДОСТУПОМ</span>
+            <h2>Роли и права пользователей</h2>
+            <p class="access-heading-copy">
+              Системные роли защищены. Пользовательские роли можно
+              создавать с любым набором зарегистрированных панелей.
+            </p>
+          </div>
+
+          <button
+            id="createRoleButton"
+            class="secondary-action create-role-button"
+            type="button"
+          >
+            + Создать роль
+          </button>
+        </div>
+
+        <div id="roleList" class="role-list"></div>
+      </article>
     </section>
   </main>
+
+  <!-- ROLE / USER ACCESS EDITOR -->
+  <div
+    id="managementModal"
+    class="management-backdrop"
+    aria-hidden="true"
+  >
+    <div
+      class="management-card"
+      role="dialog"
+      aria-modal="true"
+    >
+      <button
+        id="closeManagementModal"
+        class="icon-button modal-close"
+        type="button"
+        aria-label="Закрыть"
+      >
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 6l12 12M18 6 6 18"></path>
+        </svg>
+      </button>
+
+      <span id="managementEyebrow" class="micro-label">
+        УПРАВЛЕНИЕ ДОСТУПОМ
+      </span>
+
+      <h2 id="managementTitle">Настройка доступа</h2>
+
+      <div
+        id="managementBody"
+        class="management-body"
+      ></div>
+
+      <div class="management-actions">
+        <button
+          id="managementCancelButton"
+          class="secondary-action"
+          type="button"
+        >
+          Отмена
+        </button>
+
+        <button
+          id="managementSaveButton"
+          class="primary-action management-save"
+          type="button"
+        >
+          <span>Сохранить</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 12h14M13 6l6 6-6 6"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL -->
   <div id="accessModal" class="modal-backdrop" aria-hidden="true">

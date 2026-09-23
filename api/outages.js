@@ -12,6 +12,11 @@ import {
   getSystemState
 } from "../lib/runtime-store.js";
 
+import {
+  resolveSessionAccess,
+  hasPanel
+} from "../lib/access-control.js";
+
 const MAX_API_BASE = "https://platform-api2.max.ru";
 
 const DIVISIONS = {
@@ -1462,10 +1467,31 @@ export default {
       );
     }
 
+    const access =
+      await resolveSessionAccess(
+        session
+      );
+
+    if (
+      !access ||
+      !hasPanel(
+        access,
+        "monitoring"
+      )
+    ) {
+      return json(
+        {
+          error:
+            "У вашей роли нет доступа к аварийному мониторингу"
+        },
+        403
+      );
+    }
+
     /*
       В нештатном режиме обычные пользователи не получают
-      оперативные данные. Разработчик сохраняет доступ
-      для диагностики.
+      оперативные данные. Пользователь с доступом к центру
+      управления сохраняет мониторинг для диагностики.
     */
     try {
       const systemState =
@@ -1473,7 +1499,10 @@ export default {
 
       if (
         systemState.mode !== "normal" &&
-        !session.isDeveloper
+        !hasPanel(
+          access,
+          "system-control"
+        )
       ) {
         const fallback =
           systemState.mode === "maintenance"

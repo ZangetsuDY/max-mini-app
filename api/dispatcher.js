@@ -2,14 +2,21 @@ import {
   getSession
 } from "../lib/security.js";
 
+import {
+  resolveSessionAccess,
+  hasPanel
+} from "../lib/access-control.js";
+
 function json(data, status = 200) {
   return new Response(
     JSON.stringify(data, null, 2),
     {
       status,
       headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        "Cache-Control": "no-store"
+        "Content-Type":
+          "application/json; charset=utf-8",
+        "Cache-Control":
+          "no-store"
       }
     }
   );
@@ -27,7 +34,8 @@ export default {
     let session;
 
     try {
-      session = getSession(request);
+      session =
+        getSession(request);
     } catch (error) {
       return json(
         {
@@ -47,12 +55,24 @@ export default {
       );
     }
 
-    if (!session.isDispatcher) {
+    const access =
+      await resolveSessionAccess(
+        session
+      );
+
+    if (
+      !access ||
+      !hasPanel(
+        access,
+        "dispatcher"
+      )
+    ) {
       return json(
         {
           allowed: false,
           code: "NOT_DISPATCHER",
-          message: "Вы не диспетчер"
+          message:
+            "У вашей роли нет доступа к интерфейсу диспетчера"
         },
         403
       );

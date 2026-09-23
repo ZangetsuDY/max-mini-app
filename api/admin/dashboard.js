@@ -1,6 +1,5 @@
 import {
-  getSession,
-  getConfiguredUsers
+  getSession
 } from "../../lib/security.js";
 
 import {
@@ -8,6 +7,12 @@ import {
   getSystemState,
   isRuntimeStoreConfigured
 } from "../../lib/runtime-store.js";
+
+import {
+  getUsersWithAccess,
+  resolveSessionAccess,
+  hasPanel
+} from "../../lib/access-control.js";
 
 function json(
   data,
@@ -60,17 +65,28 @@ export default {
       );
     }
 
-    if (!session.isDeveloper) {
+    const access =
+      await resolveSessionAccess(
+        session
+      );
+
+    if (
+      !access ||
+      !hasPanel(
+        access,
+        "system-control"
+      )
+    ) {
       return json(
         { error: "Недостаточно прав" },
         403
       );
     }
 
-    const users =
-      getConfiguredUsers();
-
     try {
+      const accessUsers =
+        await getUsersWithAccess();
+
       const [
         system,
         presence
@@ -78,7 +94,7 @@ export default {
         await Promise.all([
           getSystemState(),
           getPresenceSnapshot(
-            users
+            accessUsers
           )
         ]);
 
@@ -91,17 +107,23 @@ export default {
         onlineWindowSeconds:
           presence.onlineWindowSeconds,
         totalUsers:
-          users.length,
+          accessUsers.length,
         dispatcherCount:
-          users.filter(
+          accessUsers.filter(
             (user) =>
-              user.isDispatcher
+              user.panelIds.includes(
+                "dispatcher"
+              )
           ).length,
         developerCount:
-          users.filter(
+          accessUsers.filter(
             (user) =>
               user.isDeveloper
           ).length,
+        canManageRoles:
+          Boolean(
+            access.isDeveloper
+          ),
         users:
           presence.users,
         updatedAt:

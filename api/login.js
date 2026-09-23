@@ -9,6 +9,10 @@ import {
   recordLogin
 } from "../lib/runtime-store.js";
 
+import {
+  resolveUserAccess
+} from "../lib/access-control.js";
+
 function json(data, status = 200, extraHeaders = {}) {
   return new Response(JSON.stringify(data, null, 2), {
     status,
@@ -108,10 +112,24 @@ export default {
       );
     }
 
+    let effectiveUser = user;
+
+    try {
+      effectiveUser =
+        await resolveUserAccess(
+          user
+        ) || user;
+    } catch (error) {
+      console.error(
+        "Не удалось загрузить роли пользователя:",
+        error
+      );
+    }
+
     return json(
       {
         ok: true,
-        user,
+        user: effectiveUser,
         sessionToken
       },
       200,

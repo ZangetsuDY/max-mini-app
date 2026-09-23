@@ -7,6 +7,10 @@ import {
   isRuntimeStoreConfigured
 } from "../lib/runtime-store.js";
 
+import {
+  resolveSessionAccess
+} from "../lib/access-control.js";
+
 function json(
   data,
   status = 200
@@ -58,13 +62,28 @@ export default {
       );
     }
 
+    let access = null;
+
+    try {
+      access =
+        await resolveSessionAccess(
+          session
+        );
+    } catch (error) {
+      console.error(
+        "Не удалось обновить права heartbeat:",
+        error
+      );
+    }
+
     if (
       !isRuntimeStoreConfigured()
     ) {
       return json({
         ok: true,
         tracked: false,
-        storageConfigured: false
+        storageConfigured: false,
+        user: access
       });
     }
 
@@ -76,7 +95,8 @@ export default {
       return json({
         ok: true,
         tracked: true,
-        storageConfigured: true
+        storageConfigured: true,
+        user: access
       });
     } catch (error) {
       return json(

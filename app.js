@@ -12,6 +12,9 @@ const API_HEARTBEAT = "/api/heartbeat";
 const API_SYSTEM = "/api/system";
 const API_ADMIN_DASHBOARD = "/api/admin/dashboard";
 const API_ADMIN_SYSTEM = "/api/admin/system";
+const API_ADMIN_ACCESS = "/api/admin/access";
+const API_ADMIN_ROLES = "/api/admin/roles";
+const API_ADMIN_USER_ROLES = "/api/admin/user-roles";
 
 const REFRESH_INTERVAL_MS = 120_000;
 const HEARTBEAT_INTERVAL_MS = 45_000;
@@ -77,6 +80,56 @@ const saveSystemStateButton = document.getElementById("saveSystemStateButton");
 const refreshAdminButton = document.getElementById("refreshAdminButton");
 const sessionList = document.getElementById("sessionList");
 
+const accessManagementPanel =
+  document.getElementById(
+    "accessManagementPanel"
+  );
+
+const createRoleButton =
+  document.getElementById(
+    "createRoleButton"
+  );
+
+const roleList =
+  document.getElementById(
+    "roleList"
+  );
+
+const managementModal =
+  document.getElementById(
+    "managementModal"
+  );
+
+const closeManagementModal =
+  document.getElementById(
+    "closeManagementModal"
+  );
+
+const managementCancelButton =
+  document.getElementById(
+    "managementCancelButton"
+  );
+
+const managementSaveButton =
+  document.getElementById(
+    "managementSaveButton"
+  );
+
+const managementEyebrow =
+  document.getElementById(
+    "managementEyebrow"
+  );
+
+const managementTitle =
+  document.getElementById(
+    "managementTitle"
+  );
+
+const managementBody =
+  document.getElementById(
+    "managementBody"
+  );
+
 const divisionGrid = document.getElementById("divisionGrid");
 const totalOutages = document.getElementById("totalOutages");
 const updatedAt = document.getElementById("updatedAt");
@@ -104,6 +157,14 @@ let adminRefreshTimer = null;
 let loadVersion = 0;
 let divisionCardsRendered = false;
 let selectedSystemMode = "normal";
+
+let accessCatalog = {
+  panels: [],
+  roles: [],
+  users: []
+};
+
+let managementContext = null;
 
 function getAppSessionToken() {
   try {
@@ -159,30 +220,96 @@ function clearLoginError() {
   loginError.textContent = "";
 }
 
+function hasPanelAccess(
+  panelId
+) {
+  return Boolean(
+    currentUser?.panelIds?.includes(
+      panelId
+    )
+  );
+}
+
 function setUserUi(user) {
   currentUser = {
-    username: String(user?.username || ""),
-    fullName: String(user?.fullName || "Пользователь"),
-    isDispatcher: Boolean(user?.isDispatcher),
-    isDeveloper: Boolean(user?.isDeveloper)
+    username:
+      String(
+        user?.username || ""
+      ),
+    fullName:
+      String(
+        user?.fullName ||
+        "Пользователь"
+      ),
+    isDispatcher:
+      Boolean(
+        user?.isDispatcher
+      ),
+    isDeveloper:
+      Boolean(
+        user?.isDeveloper
+      ),
+    canManageRoles:
+      Boolean(
+        user?.canManageRoles ??
+        user?.isDeveloper
+      ),
+    roleIds:
+      Array.isArray(
+        user?.roleIds
+      )
+        ? [...user.roleIds]
+        : [],
+    roleNames:
+      Array.isArray(
+        user?.roleNames
+      )
+        ? [...user.roleNames]
+        : [],
+    panelIds:
+      Array.isArray(
+        user?.panelIds
+      )
+        ? [...user.panelIds]
+        : (
+            user?.isDeveloper
+              ? [
+                  "monitoring",
+                  "system-control"
+                ]
+              : user?.isDispatcher
+                ? [
+                    "monitoring",
+                    "dispatcher"
+                  ]
+                : [
+                    "monitoring"
+                  ]
+          )
   };
 
   userFullName.textContent =
     currentUser.fullName;
 
   const roleText =
-    currentUser.isDeveloper
-      ? "Разработчик"
-      : currentUser.isDispatcher
-        ? "Диспетчер"
-        : "Пользователь";
+    currentUser.roleNames.length
+      ? currentUser.roleNames
+          .slice(0, 2)
+          .join(" · ")
+      : currentUser.isDeveloper
+        ? "Разработчик"
+        : currentUser.isDispatcher
+          ? "Диспетчер"
+          : "Пользователь";
 
   userRoleBadge.textContent =
     roleText;
 
   userRoleBadge.classList.toggle(
     "is-dispatcher",
-    currentUser.isDispatcher &&
+    hasPanelAccess(
+      "dispatcher"
+    ) &&
     !currentUser.isDeveloper
   );
 
@@ -192,17 +319,35 @@ function setUserUi(user) {
   );
 
   dispatcherCardStatus.textContent =
-    currentUser.isDispatcher
-      ? "РОЛЬ: ДИСПЕТЧЕР"
+    hasPanelAccess(
+      "dispatcher"
+    )
+      ? "ДОСТУП РАЗРЕШЁН"
       : "ДОСТУП ПО РОЛИ";
 
   openAdminButton.hidden =
-    !currentUser.isDeveloper;
+    !hasPanelAccess(
+      "system-control"
+    );
+
+  const visibleModules =
+    2 +
+    (
+      hasPanelAccess(
+        "system-control"
+      )
+        ? 1
+        : 0
+    );
 
   moduleCount.textContent =
-    currentUser.isDeveloper
-      ? "3 модуля"
-      : "2 модуля";
+    `${visibleModules} ${
+      visibleModules === 1
+        ? "модуль"
+        : visibleModules < 5
+          ? "модуля"
+          : "модулей"
+    }`;
 }
 
 function showLoginScreen() {
@@ -278,8 +423,26 @@ function navigateHome() {
 
 function navigateMonitoring() {
   if (
+    !hasPanelAccess(
+      "monitoring"
+    )
+  ) {
+    openModal({
+      type: "denied",
+      eyebrow: "ДОСТУП ПО РОЛИ",
+      title: "Нет доступа",
+      message:
+        "У вашей текущей роли нет доступа к аварийному мониторингу."
+    });
+
+    return;
+  }
+
+  if (
     currentSystemState.mode !== "normal" &&
-    !currentUser?.isDeveloper
+    !hasPanelAccess(
+      "system-control"
+    )
   ) {
     const title =
       currentSystemState.mode === "maintenance"
@@ -310,7 +473,11 @@ function navigateMonitoring() {
 }
 
 function navigateAdmin() {
-  if (!currentUser?.isDeveloper) {
+  if (
+    !hasPanelAccess(
+      "system-control"
+    )
+  ) {
     return;
   }
 
@@ -845,6 +1012,44 @@ async function sendHeartbeat() {
     if (response.status === 401) {
       setAppSessionToken("");
       showLoginScreen();
+      return;
+    }
+
+    if (response.ok) {
+      const payload =
+        await response
+          .json()
+          .catch(() => null);
+
+      if (payload?.user) {
+        setUserUi(
+          payload.user
+        );
+
+        /*
+          Если во время открытой сессии у пользователя
+          забрали доступ к текущей панели, возвращаем его
+          в главное меню. Backend и так уже блокирует запросы,
+          это только синхронизация интерфейса.
+        */
+        if (
+          currentView === "admin" &&
+          !hasPanelAccess(
+            "system-control"
+          )
+        ) {
+          navigateHome();
+        }
+
+        if (
+          currentView === "monitoring" &&
+          !hasPanelAccess(
+            "monitoring"
+          )
+        ) {
+          navigateHome();
+        }
+      }
     }
   } catch (error) {
     console.error(
@@ -906,6 +1111,17 @@ function formatDateTime(value) {
 
 function userRoleText(user) {
   if (
+    Array.isArray(
+      user?.roleNames
+    ) &&
+    user.roleNames.length
+  ) {
+    return user.roleNames.join(
+      " · "
+    );
+  }
+
+  if (
     user?.isDeveloper &&
     user?.isDispatcher
   ) {
@@ -937,6 +1153,11 @@ function renderAdminUsers(users) {
     return;
   }
 
+  const manageable =
+    Boolean(
+      currentUser?.isDeveloper
+    );
+
   sessionList.innerHTML =
     users.map(
       (user) => {
@@ -958,8 +1179,37 @@ function renderAdminUsers(users) {
               )}`
             : "Входов пока нет";
 
+        const roleNames =
+          Array.isArray(
+            user.roleNames
+          ) &&
+          user.roleNames.length
+            ? user.roleNames
+            : [
+                userRoleText(user)
+              ];
+
         return `
-          <div class="session-row">
+          <div
+            class="session-row ${
+              manageable
+                ? "is-manageable"
+                : ""
+            }"
+            data-username="${escapeHtml(
+              user.username
+            )}"
+            role="${
+              manageable
+                ? "button"
+                : "group"
+            }"
+            tabindex="${
+              manageable
+                ? "0"
+                : "-1"
+            }"
+          >
             <div class="session-person">
               <strong>
                 ${escapeHtml(
@@ -976,11 +1226,19 @@ function renderAdminUsers(users) {
               </span>
             </div>
 
-            <span class="session-role">
-              ${escapeHtml(
-                userRoleText(user)
-              )}
-            </span>
+            <div class="session-role-stack">
+              ${roleNames
+                .map(
+                  (roleName) => `
+                    <span class="session-role">
+                      ${escapeHtml(
+                        roleName
+                      )}
+                    </span>
+                  `
+                )
+                .join("")}
+            </div>
 
             <div class="session-status">
               <strong class="${
@@ -1005,6 +1263,41 @@ function renderAdminUsers(users) {
         `;
       }
     ).join("");
+
+  if (manageable) {
+    sessionList
+      .querySelectorAll(
+        ".session-row"
+      )
+      .forEach(
+        (row) => {
+          const open =
+            () =>
+              openUserRoleEditor(
+                row.dataset.username
+              );
+
+          row.addEventListener(
+            "click",
+            open
+          );
+
+          row.addEventListener(
+            "keydown",
+            (event) => {
+              if (
+                event.key ===
+                  "Enter" ||
+                event.key === " "
+              ) {
+                event.preventDefault();
+                open();
+              }
+            }
+          );
+        }
+      );
+  }
 }
 
 function selectMode(mode) {
@@ -1082,6 +1375,17 @@ function renderAdminDashboard(
     payload.users
   );
 
+  accessManagementPanel.hidden =
+    !Boolean(
+      payload.canManageRoles
+    );
+
+  if (
+    payload.canManageRoles
+  ) {
+    loadAccessManagement();
+  }
+
   adminUpdatedAt.textContent =
     `Обновлено ${new Date().toLocaleTimeString(
       "ru-RU",
@@ -1093,7 +1397,11 @@ function renderAdminDashboard(
 }
 
 async function loadAdminDashboard() {
-  if (!currentUser?.isDeveloper) {
+  if (
+    !hasPanelAccess(
+      "system-control"
+    )
+  ) {
     return;
   }
 
@@ -1156,7 +1464,11 @@ async function loadAdminDashboard() {
 }
 
 async function saveSystemState() {
-  if (!currentUser?.isDeveloper) {
+  if (
+    !hasPanelAccess(
+      "system-control"
+    )
+  ) {
     return;
   }
 
@@ -1248,6 +1560,853 @@ async function saveSystemState() {
         "Применить режим";
   }
 }
+
+function panelNameById(
+  panelId
+) {
+  return (
+    accessCatalog.panels.find(
+      (panel) =>
+        panel.id === panelId
+    )?.name ||
+    panelId
+  );
+}
+
+function roleById(
+  roleId
+) {
+  return (
+    accessCatalog.roles.find(
+      (role) =>
+        role.id === roleId
+    ) || null
+  );
+}
+
+function renderRoleList() {
+  if (
+    !Array.isArray(
+      accessCatalog.roles
+    ) ||
+    !accessCatalog.roles.length
+  ) {
+    roleList.innerHTML = `
+      <div class="access-empty">
+        Роли не найдены.
+      </div>
+    `;
+
+    return;
+  }
+
+  roleList.innerHTML =
+    accessCatalog.roles.map(
+      (role) => `
+        <article
+          class="role-card ${
+            role.builtin
+              ? "is-builtin"
+              : ""
+          }"
+        >
+          <div class="role-card-top">
+            <div class="role-card-name">
+              <strong>
+                ${escapeHtml(
+                  role.name
+                )}
+              </strong>
+              <span>
+                ${escapeHtml(
+                  role.description ||
+                  "Без описания"
+                )}
+              </span>
+            </div>
+
+            <span
+              class="role-kind ${
+                role.builtin
+                  ? ""
+                  : "is-custom"
+              }"
+            >
+              ${
+                role.builtin
+                  ? "СИСТЕМНАЯ"
+                  : "ПОЛЬЗОВАТЕЛЬСКАЯ"
+              }
+            </span>
+          </div>
+
+          <div class="role-panels">
+            ${
+              role.panelIds?.length
+                ? role.panelIds
+                    .map(
+                      (panelId) => `
+                        <span class="role-panel-chip">
+                          ${escapeHtml(
+                            panelNameById(
+                              panelId
+                            )
+                          )}
+                        </span>
+                      `
+                    )
+                    .join("")
+                : `
+                  <span class="role-panel-chip">
+                    Нет доступа к панелям
+                  </span>
+                `
+            }
+          </div>
+
+          ${
+            role.builtin
+              ? ""
+              : `
+                <div class="role-card-actions">
+                  <button
+                    class="role-action"
+                    type="button"
+                    data-edit-role="${
+                      role.id
+                    }"
+                  >
+                    Изменить
+                  </button>
+
+                  <button
+                    class="role-action is-danger"
+                    type="button"
+                    data-delete-role="${
+                      role.id
+                    }"
+                  >
+                    Удалить
+                  </button>
+                </div>
+              `
+          }
+        </article>
+      `
+    ).join("");
+
+  roleList
+    .querySelectorAll(
+      "[data-edit-role]"
+    )
+    .forEach(
+      (button) => {
+        button.addEventListener(
+          "click",
+          () =>
+            openRoleEditor(
+              button.dataset
+                .editRole
+            )
+        );
+      }
+    );
+
+  roleList
+    .querySelectorAll(
+      "[data-delete-role]"
+    )
+    .forEach(
+      (button) => {
+        button.addEventListener(
+          "click",
+          () =>
+            deleteCustomRole(
+              button.dataset
+                .deleteRole
+            )
+        );
+      }
+    );
+}
+
+async function loadAccessManagement() {
+  if (!currentUser?.isDeveloper) {
+    return;
+  }
+
+  try {
+    const response =
+      await fetch(
+        API_ADMIN_ACCESS,
+        {
+          method: "GET",
+          cache: "no-store",
+          credentials:
+            "include",
+          headers:
+            getSessionHeaders()
+        }
+      );
+
+    const payload =
+      await response
+        .json()
+        .catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(
+        payload?.error ||
+        "Не удалось загрузить роли"
+      );
+    }
+
+    accessCatalog = {
+      panels:
+        Array.isArray(
+          payload.panels
+        )
+          ? payload.panels
+          : [],
+      roles:
+        Array.isArray(
+          payload.roles
+        )
+          ? payload.roles
+          : [],
+      users:
+        Array.isArray(
+          payload.users
+        )
+          ? payload.users
+          : []
+    };
+
+    renderRoleList();
+  } catch (error) {
+    roleList.innerHTML = `
+      <div class="access-empty">
+        ${escapeHtml(
+          error instanceof Error
+            ? error.message
+            : "Ошибка загрузки ролей"
+        )}
+      </div>
+    `;
+  }
+}
+
+function openManagementModal({
+  eyebrow,
+  title,
+  bodyHtml,
+  context
+}) {
+  managementEyebrow.textContent =
+    eyebrow;
+
+  managementTitle.textContent =
+    title;
+
+  managementBody.innerHTML =
+    bodyHtml;
+
+  managementContext =
+    context;
+
+  managementModal.classList.add(
+    "is-open"
+  );
+
+  managementModal.setAttribute(
+    "aria-hidden",
+    "false"
+  );
+}
+
+function closeManagementEditor() {
+  managementModal.classList.remove(
+    "is-open"
+  );
+
+  managementModal.setAttribute(
+    "aria-hidden",
+    "true"
+  );
+
+  managementContext = null;
+  managementBody.innerHTML = "";
+}
+
+function panelCheckboxes(
+  selectedPanelIds = []
+) {
+  const selected =
+    new Set(
+      selectedPanelIds
+    );
+
+  return `
+    <div class="permission-grid">
+      ${
+        accessCatalog.panels
+          .map(
+            (panel) => `
+              <label class="permission-option">
+                <input
+                  type="checkbox"
+                  name="panelAccess"
+                  value="${escapeHtml(
+                    panel.id
+                  )}"
+                  ${
+                    selected.has(
+                      panel.id
+                    )
+                      ? "checked"
+                      : ""
+                  }
+                />
+
+                <span class="permission-copy">
+                  <strong>
+                    ${escapeHtml(
+                      panel.name
+                    )}
+                  </strong>
+                  <span>
+                    ${escapeHtml(
+                      panel.description ||
+                      ""
+                    )}
+                  </span>
+                </span>
+              </label>
+            `
+          )
+          .join("")
+      }
+    </div>
+  `;
+}
+
+function openRoleEditor(
+  roleId = null
+) {
+  const role =
+    roleId
+      ? roleById(roleId)
+      : null;
+
+  if (role?.builtin) {
+    return;
+  }
+
+  openManagementModal({
+    eyebrow:
+      role
+        ? "РЕДАКТИРОВАНИЕ РОЛИ"
+        : "НОВАЯ РОЛЬ",
+    title:
+      role
+        ? role.name
+        : "Создать роль",
+    context: {
+      type: "role",
+      roleId:
+        role?.id || null
+    },
+    bodyHtml: `
+      <label class="management-field">
+        <span>Название роли</span>
+        <input
+          id="roleNameInput"
+          maxlength="80"
+          value="${escapeHtml(
+            role?.name || ""
+          )}"
+          placeholder="Например: Старший диспетчер"
+        />
+      </label>
+
+      <label class="management-field">
+        <span>Описание</span>
+        <textarea
+          id="roleDescriptionInput"
+          maxlength="300"
+          placeholder="Кратко опишите назначение роли"
+        >${escapeHtml(
+          role?.description || ""
+        )}</textarea>
+      </label>
+
+      <div class="management-section-title">
+        Доступ к панелям
+      </div>
+
+      ${panelCheckboxes(
+        role?.panelIds || []
+      )}
+
+      <div class="management-note">
+        Список панелей формируется из единого реестра Mini App.
+        Когда в будущем будет добавлена новая панель и зарегистрирована
+        в системе, она автоматически появится здесь.
+      </div>
+    `
+  });
+}
+
+async function openUserRoleEditor(
+  username,
+  allowReload = true
+) {
+  if (!currentUser?.isDeveloper) {
+    return;
+  }
+
+  let user =
+    accessCatalog.users.find(
+      (item) =>
+        item.username ===
+        username
+    );
+
+  if (
+    !user &&
+    allowReload
+  ) {
+    await loadAccessManagement();
+
+    user =
+      accessCatalog.users.find(
+        (item) =>
+          item.username ===
+          username
+      );
+  }
+
+  if (!user) {
+    openModal({
+      type: "denied",
+      eyebrow:
+        "УПРАВЛЕНИЕ ДОСТУПОМ",
+      title:
+        "Пользователь не найден",
+      message:
+        "Не удалось загрузить данные пользователя. Обновите центр управления и попробуйте ещё раз."
+    });
+
+    return;
+  }
+
+  const selected =
+    new Set(
+      user.roleIds || []
+    );
+
+  const choices =
+    accessCatalog.roles
+      .map(
+        (role) => {
+          const panels =
+            (role.panelIds || [])
+              .map(
+                panelNameById
+              )
+              .join(", ");
+
+          return `
+            <label class="role-choice">
+              <input
+                type="checkbox"
+                name="userRole"
+                value="${escapeHtml(
+                  role.id
+                )}"
+                ${
+                  selected.has(
+                    role.id
+                  )
+                    ? "checked"
+                    : ""
+                }
+              />
+
+              <span class="role-choice-copy">
+                <strong>
+                  ${escapeHtml(
+                    role.name
+                  )}
+                  ${
+                    role.builtin
+                      ? " · системная"
+                      : ""
+                  }
+                </strong>
+
+                <span>
+                  ${escapeHtml(
+                    role.description ||
+                    "Без описания"
+                  )}
+                </span>
+
+                <span class="role-choice-panels">
+                  Панели: ${
+                    escapeHtml(
+                      panels ||
+                      "нет"
+                    )
+                  }
+                </span>
+              </span>
+            </label>
+          `;
+        }
+      )
+      .join("");
+
+  openManagementModal({
+    eyebrow:
+      "РОЛИ ПОЛЬЗОВАТЕЛЯ",
+    title:
+      user.fullName ||
+      user.username,
+    context: {
+      type: "user",
+      username:
+        user.username
+    },
+    bodyHtml: `
+      <div class="management-note">
+        Логин: ${escapeHtml(
+          user.username
+        )}. Изменения вступают в силу сразу на сервере;
+        повторный вход обычно не требуется.
+      </div>
+
+      <div class="management-section-title">
+        Назначенные роли
+      </div>
+
+      <div class="role-choice-grid">
+        ${choices}
+      </div>
+
+      ${
+        user.username ===
+          currentUser.username &&
+        user.roleIds?.includes(
+          "developer"
+        )
+          ? `
+            <div class="management-note">
+              Для защиты от случайной блокировки нельзя снять роль
+              «Разработчик» у своей текущей учётной записи.
+            </div>
+          `
+          : ""
+      }
+    `
+  });
+}
+
+async function saveManagementEditor() {
+  if (!managementContext) {
+    return;
+  }
+
+  managementSaveButton.disabled =
+    true;
+
+  managementSaveButton
+    .querySelector("span")
+    .textContent =
+      "Сохранение…";
+
+  try {
+    if (
+      managementContext.type ===
+      "role"
+    ) {
+      const name =
+        document.getElementById(
+          "roleNameInput"
+        )?.value
+          .trim();
+
+      const description =
+        document.getElementById(
+          "roleDescriptionInput"
+        )?.value
+          .trim();
+
+      const panelIds =
+        [
+          ...managementBody
+            .querySelectorAll(
+              'input[name="panelAccess"]:checked'
+            )
+        ].map(
+          (input) =>
+            input.value
+        );
+
+      const response =
+        await fetch(
+          API_ADMIN_ROLES,
+          {
+            method: "POST",
+            cache: "no-store",
+            credentials:
+              "include",
+            headers: {
+              "Content-Type":
+                "application/json",
+              ...getSessionHeaders()
+            },
+            body: JSON.stringify({
+              action:
+                managementContext
+                  .roleId
+                  ? "update"
+                  : "create",
+              roleId:
+                managementContext
+                  .roleId,
+              name,
+              description,
+              panelIds
+            })
+          }
+        );
+
+      const payload =
+        await response
+          .json()
+          .catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          payload?.error ||
+          "Не удалось сохранить роль"
+        );
+      }
+    }
+
+    if (
+      managementContext.type ===
+      "user"
+    ) {
+      const roleIds =
+        [
+          ...managementBody
+            .querySelectorAll(
+              'input[name="userRole"]:checked'
+            )
+        ].map(
+          (input) =>
+            input.value
+        );
+
+      const response =
+        await fetch(
+          API_ADMIN_USER_ROLES,
+          {
+            method: "POST",
+            cache: "no-store",
+            credentials:
+              "include",
+            headers: {
+              "Content-Type":
+                "application/json",
+              ...getSessionHeaders()
+            },
+            body: JSON.stringify({
+              username:
+                managementContext
+                  .username,
+              roleIds
+            })
+          }
+        );
+
+      const payload =
+        await response
+          .json()
+          .catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          payload?.error ||
+          "Не удалось назначить роли"
+        );
+      }
+    }
+
+    closeManagementEditor();
+
+    await Promise.all([
+      loadAccessManagement(),
+      loadAdminDashboard()
+    ]);
+
+    /*
+      Если разработчик изменил кому-то роли, backend уже применяет
+      их сразу. Для текущего пользователя обновляем /api/me тоже.
+    */
+    const meResponse =
+      await fetch(
+        API_ME,
+        {
+          method: "GET",
+          cache: "no-store",
+          credentials:
+            "include",
+          headers:
+            getSessionHeaders()
+        }
+      );
+
+    if (meResponse.ok) {
+      const mePayload =
+        await meResponse.json();
+
+      if (
+        mePayload?.user
+      ) {
+        setUserUi(
+          mePayload.user
+        );
+      }
+    }
+  } catch (error) {
+    openModal({
+      type: "denied",
+      eyebrow:
+        "УПРАВЛЕНИЕ ДОСТУПОМ",
+      title:
+        "Не удалось сохранить",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Попробуйте ещё раз."
+    });
+  } finally {
+    managementSaveButton.disabled =
+      false;
+
+    managementSaveButton
+      .querySelector("span")
+      .textContent =
+        "Сохранить";
+  }
+}
+
+async function deleteCustomRole(
+  roleId
+) {
+  const role =
+    roleById(roleId);
+
+  if (!role || role.builtin) {
+    return;
+  }
+
+  const confirmed =
+    window.confirm(
+      `Удалить роль «${role.name}»? Пользователи с этой ролью вернутся к оставшимся ролям или к значениям из APP_USERS_JSON.`
+    );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    const response =
+      await fetch(
+        API_ADMIN_ROLES,
+        {
+          method: "POST",
+          cache: "no-store",
+          credentials:
+            "include",
+          headers: {
+            "Content-Type":
+              "application/json",
+            ...getSessionHeaders()
+          },
+          body: JSON.stringify({
+            action: "delete",
+            roleId
+          })
+        }
+      );
+
+    const payload =
+      await response
+        .json()
+        .catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(
+        payload?.error ||
+        "Не удалось удалить роль"
+      );
+    }
+
+    await Promise.all([
+      loadAccessManagement(),
+      loadAdminDashboard()
+    ]);
+  } catch (error) {
+    openModal({
+      type: "denied",
+      eyebrow:
+        "УПРАВЛЕНИЕ ДОСТУПОМ",
+      title:
+        "Не удалось удалить роль",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Попробуйте ещё раз."
+    });
+  }
+}
+
+createRoleButton.addEventListener(
+  "click",
+  () =>
+    openRoleEditor()
+);
+
+closeManagementModal.addEventListener(
+  "click",
+  closeManagementEditor
+);
+
+managementCancelButton.addEventListener(
+  "click",
+  closeManagementEditor
+);
+
+managementSaveButton.addEventListener(
+  "click",
+  saveManagementEditor
+);
+
+managementModal.addEventListener(
+  "click",
+  (event) => {
+    if (
+      event.target ===
+      managementModal
+    ) {
+      closeManagementEditor();
+    }
+  }
+);
 
 function startAdminRefresh() {
   stopAdminRefresh();
@@ -1968,3 +3127,18 @@ function stopAutoRefresh() {
 }
 
 checkSession();
+
+
+document.addEventListener(
+  "keydown",
+  (event) => {
+    if (
+      event.key === "Escape" &&
+      managementModal.classList.contains(
+        "is-open"
+      )
+    ) {
+      closeManagementEditor();
+    }
+  }
+);

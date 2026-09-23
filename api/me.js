@@ -2,40 +2,64 @@ import {
   getSession
 } from "../lib/security.js";
 
+import {
+  resolveSessionAccess
+} from "../lib/access-control.js";
+
 function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store"
+  return new Response(
+    JSON.stringify(data),
+    {
+      status,
+      headers: {
+        "Content-Type":
+          "application/json; charset=utf-8",
+        "Cache-Control":
+          "no-store"
+      }
     }
-  });
+  );
 }
 
 export default {
   async fetch(request) {
     if (request.method !== "GET") {
-      return json({ error: "Method not allowed" }, 405);
+      return json(
+        { error: "Method not allowed" },
+        405
+      );
     }
 
     try {
-      const session = getSession(request);
+      const session =
+        getSession(request);
 
       if (!session) {
         return json(
-          { authenticated: false },
+          {
+            authenticated: false
+          },
+          401
+        );
+      }
+
+      const access =
+        await resolveSessionAccess(
+          session
+        );
+
+      if (!access) {
+        return json(
+          {
+            authenticated: false
+          },
           401
         );
       }
 
       return json({
         authenticated: true,
-        user: {
-          username: session.username,
-          fullName: session.fullName,
-          isDispatcher: Boolean(session.isDispatcher),
-          isDeveloper: Boolean(session.isDeveloper)
-        }
+        user: access
       });
     } catch (error) {
       return json(

@@ -3,12 +3,8 @@ import {
 } from "../../lib/security.js";
 
 import {
-  setSystemState
-} from "../../lib/runtime-store.js";
-
-import {
   resolveSessionAccess,
-  hasPanel
+  assignUserRoles
 } from "../../lib/access-control.js";
 
 function json(
@@ -38,22 +34,8 @@ export default {
       );
     }
 
-    let session;
-
-    try {
-      session =
-        getSession(request);
-    } catch (error) {
-      return json(
-        {
-          error:
-            error instanceof Error
-              ? error.message
-              : "Ошибка сессии"
-        },
-        500
-      );
-    }
+    const session =
+      getSession(request);
 
     if (!session) {
       return json(
@@ -67,13 +49,7 @@ export default {
         session
       );
 
-    if (
-      !access ||
-      !hasPanel(
-        access,
-        "system-control"
-      )
-    ) {
+    if (!access?.isDeveloper) {
       return json(
         { error: "Недостаточно прав" },
         403
@@ -93,23 +69,19 @@ export default {
     }
 
     try {
-      const state =
-        await setSystemState({
-          mode:
-            String(
-              body?.mode || ""
-            ),
-          message:
-            String(
-              body?.message || ""
-            ),
+      const user =
+        await assignUserRoles({
+          username:
+            body?.username,
+          roleIds:
+            body?.roleIds,
           actor:
-            session
+            access
         });
 
       return json({
         ok: true,
-        system: state
+        user
       });
     } catch (error) {
       return json(
@@ -117,9 +89,9 @@ export default {
           error:
             error instanceof Error
               ? error.message
-              : "Не удалось изменить режим"
+              : "Не удалось назначить роли"
         },
-        500
+        400
       );
     }
   }
