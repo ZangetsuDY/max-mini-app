@@ -77,7 +77,7 @@ export default {
       );
     }
 
-    const user = verifyCredentials(
+    const user = await verifyCredentials(
       username,
       password
     );

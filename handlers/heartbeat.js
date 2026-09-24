@@ -76,6 +76,16 @@ export default {
       );
     }
 
+    if (!access) {
+      return json(
+        {
+          error:
+            "Учётная запись больше не активна"
+        },
+        401
+      );
+    }
+
     if (
       !isRuntimeStoreConfigured()
     ) {

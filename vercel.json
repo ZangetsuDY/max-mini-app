@@ -55,6 +55,10 @@
       "destination": "/api/router?route=admin/user-roles"
     },
     {
+      "source": "/api/admin/users",
+      "destination": "/api/router?route=admin/users"
+    },
+    {
       "source": "/api/admin/dispatcher-config",
       "destination": "/api/router?route=admin/dispatcher-config"
     }

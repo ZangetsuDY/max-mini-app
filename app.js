@@ -15,6 +15,7 @@ const API_ADMIN_SYSTEM = "/api/admin/system";
 const API_ADMIN_ACCESS = "/api/admin/access";
 const API_ADMIN_ROLES = "/api/admin/roles";
 const API_ADMIN_USER_ROLES = "/api/admin/user-roles";
+const API_ADMIN_USERS = "/api/admin/users";
 const API_ADMIN_DISPATCHER_CONFIG = "/api/admin/dispatcher-config";
 
 const REFRESH_INTERVAL_MS = 120_000;
@@ -82,6 +83,7 @@ const systemMessageInput = document.getElementById("systemMessageInput");
 const systemChangedInfo = document.getElementById("systemChangedInfo");
 const saveSystemStateButton = document.getElementById("saveSystemStateButton");
 const refreshAdminButton = document.getElementById("refreshAdminButton");
+const createUserButton = document.getElementById("createUserButton");
 const sessionList = document.getElementById("sessionList");
 
 const accessManagementPanel =
@@ -1779,6 +1781,11 @@ function renderAdminDashboard(
       payload.canManageRoles
     );
 
+  createUserButton.hidden =
+    !Boolean(
+      payload.canManageRoles
+    );
+
   dispatcherSourceManagementPanel.hidden =
     !Boolean(
       payload.canManageRoles
@@ -2614,7 +2621,8 @@ function openManagementModal({
   eyebrow,
   title,
   bodyHtml,
-  context
+  context,
+  saveLabel = "Сохранить"
 }) {
   managementEyebrow.textContent =
     eyebrow;
@@ -2627,6 +2635,11 @@ function openManagementModal({
 
   managementContext =
     context;
+
+  managementSaveButton
+    .querySelector("span")
+    .textContent =
+      saveLabel;
 
   managementModal.classList.add(
     "is-open"
@@ -2650,6 +2663,10 @@ function closeManagementEditor() {
 
   managementContext = null;
   managementBody.innerHTML = "";
+  managementSaveButton
+    .querySelector("span")
+    .textContent =
+      "Сохранить";
 }
 
 function panelCheckboxes(
@@ -2876,6 +2893,133 @@ function openRoleEditor(
   );
 }
 
+function createUserRoleChoices() {
+  const selected =
+    new Set(["user"]);
+
+  return accessCatalog.roles
+    .map(
+      (role) => {
+        const panels =
+          (role.panelIds || [])
+            .map(panelNameById)
+            .join(", ");
+
+        return `
+          <label class="role-choice">
+            <input
+              type="checkbox"
+              name="newUserRole"
+              value="${escapeHtml(role.id)}"
+              ${selected.has(role.id) ? "checked" : ""}
+            />
+
+            <span class="role-choice-copy">
+              <strong>
+                ${escapeHtml(role.name)}
+                ${role.builtin ? " · системная" : ""}
+              </strong>
+
+              <span>
+                ${escapeHtml(role.description || "Без описания")}
+              </span>
+
+              ${
+                role.dispatcherAllDivisions
+                  ? `
+                    <span class="role-choice-panels">
+                      Подразделения: Все
+                    </span>
+                  `
+                  : role.dispatcherDivisionName
+                    ? `
+                      <span class="role-choice-panels">
+                        Подразделение: ${escapeHtml(role.dispatcherDivisionName)}
+                      </span>
+                    `
+                    : ""
+              }
+
+              <span class="role-choice-panels">
+                Панели: ${escapeHtml(panels || "нет")}
+              </span>
+            </span>
+          </label>
+        `;
+      }
+    )
+    .join("");
+}
+
+function openCreateUserEditor() {
+  if (!currentUser?.isDeveloper) {
+    return;
+  }
+
+  openManagementModal({
+    eyebrow:
+      "НОВАЯ УЧЁТНАЯ ЗАПИСЬ",
+    title:
+      "Создать пользователя",
+    saveLabel:
+      "Создать пользователя",
+    context: {
+      type: "create-user"
+    },
+    bodyHtml: `
+      <div class="user-create-grid">
+        <label class="management-field">
+          <span>Логин</span>
+          <input
+            id="newUserLoginInput"
+            maxlength="64"
+            autocomplete="off"
+            placeholder="Например: Ivanov.II"
+          />
+        </label>
+
+        <label class="management-field">
+          <span>ФИО</span>
+          <input
+            id="newUserFullNameInput"
+            maxlength="120"
+            autocomplete="off"
+            placeholder="Иванов Иван Иванович"
+          />
+        </label>
+      </div>
+
+      <label class="management-field">
+        <span>Пароль</span>
+        <input
+          id="newUserPasswordInput"
+          type="password"
+          maxlength="200"
+          autocomplete="new-password"
+          placeholder="Минимум 8 символов"
+        />
+      </label>
+
+      <div class="management-note">
+        Пароль не сохраняется в открытом виде. На сервере хранится
+        только PBKDF2-хэш и индивидуальная соль пользователя.
+      </div>
+
+      <div class="management-section-title">
+        Роли пользователя
+      </div>
+
+      <div class="role-choice-grid">
+        ${createUserRoleChoices()}
+      </div>
+    `
+  });
+
+  document.getElementById(
+    "newUserLoginInput"
+  )?.focus();
+}
+
 async function openUserRoleEditor(
   username,
   allowReload = true
@@ -3021,6 +3165,11 @@ async function openUserRoleEditor(
           user.username
         )}. Изменения вступают в силу сразу на сервере;
         повторный вход обычно не требуется.
+        ${
+          user.accountSource === "managed"
+            ? "Учётная запись создана через Центр управления."
+            : "Исходная учётная запись из APP_USERS_JSON; удаление отключит её через Redis/KV."
+        }
       </div>
 
       <div class="management-section-title">
@@ -3045,8 +3194,41 @@ async function openUserRoleEditor(
           `
           : ""
       }
+
+      ${
+        user.username !==
+          currentUser.username
+          ? `
+            <div class="user-danger-zone">
+              <div>
+                <strong>Удаление пользователя</strong>
+                <span>Доступ будет отозван, роли и активная сессия очищены.</span>
+              </div>
+              <button
+                id="deleteUserButton"
+                class="danger-action"
+                type="button"
+              >
+                Удалить
+              </button>
+            </div>
+          `
+          : ""
+      }
     `
   });
+
+  document.getElementById(
+    "deleteUserButton"
+  )?.addEventListener(
+    "click",
+    () =>
+      deleteUserAccount(
+        user.username,
+        user.fullName ||
+        user.username
+      )
+  );
 }
 
 async function saveManagementEditor() {
@@ -3063,6 +3245,72 @@ async function saveManagementEditor() {
       "Сохранение…";
 
   try {
+    if (
+      managementContext.type ===
+      "create-user"
+    ) {
+      const username =
+        document.getElementById(
+          "newUserLoginInput"
+        )?.value.trim() || "";
+
+      const fullName =
+        document.getElementById(
+          "newUserFullNameInput"
+        )?.value.trim() || "";
+
+      const password =
+        document.getElementById(
+          "newUserPasswordInput"
+        )?.value || "";
+
+      const roleIds =
+        [
+          ...managementBody
+            .querySelectorAll(
+              'input[name="newUserRole"]:checked'
+            )
+        ].map(
+          (input) =>
+            input.value
+        );
+
+      const response =
+        await fetch(
+          API_ADMIN_USERS,
+          {
+            method: "POST",
+            cache: "no-store",
+            credentials:
+              "include",
+            headers: {
+              "Content-Type":
+                "application/json",
+              ...getSessionHeaders()
+            },
+            body: JSON.stringify({
+              action: "create",
+              username,
+              fullName,
+              password,
+              roleIds
+            })
+          }
+        );
+
+      const payload =
+        await response
+          .json()
+          .catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          payload?.error ||
+          "Не удалось создать пользователя"
+        );
+      }
+    }
+
     if (
       managementContext.type ===
       "role"
@@ -3310,7 +3558,77 @@ async function saveManagementEditor() {
     managementSaveButton
       .querySelector("span")
       .textContent =
-        "Сохранить";
+        managementContext?.type ===
+          "create-user"
+          ? "Создать пользователя"
+          : "Сохранить";
+  }
+}
+
+async function deleteUserAccount(
+  username,
+  fullName
+) {
+  const confirmed =
+    window.confirm(
+      `Удалить пользователя «${fullName}» (${username})? Доступ к Mini App будет отозван.`
+    );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    const response =
+      await fetch(
+        API_ADMIN_USERS,
+        {
+          method: "POST",
+          cache: "no-store",
+          credentials:
+            "include",
+          headers: {
+            "Content-Type":
+              "application/json",
+            ...getSessionHeaders()
+          },
+          body: JSON.stringify({
+            action: "delete",
+            username
+          })
+        }
+      );
+
+    const payload =
+      await response
+        .json()
+        .catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(
+        payload?.error ||
+        "Не удалось удалить пользователя"
+      );
+    }
+
+    closeManagementEditor();
+
+    await Promise.all([
+      loadAccessManagement(),
+      loadAdminDashboard()
+    ]);
+  } catch (error) {
+    openModal({
+      type: "denied",
+      eyebrow:
+        "УПРАВЛЕНИЕ ПОЛЬЗОВАТЕЛЯМИ",
+      title:
+        "Не удалось удалить пользователя",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Попробуйте ещё раз."
+    });
   }
 }
 
@@ -3384,6 +3702,11 @@ async function deleteCustomRole(
     });
   }
 }
+
+createUserButton.addEventListener(
+  "click",
+  openCreateUserEditor
+);
 
 createRoleButton.addEventListener(
   "click",
