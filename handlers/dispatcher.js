@@ -8,11 +8,8 @@ import {
 } from "../lib/access-control.js";
 
 import {
-  DISPATCHER_GROUP_REGISTRY,
-  getDispatcherGroup,
-  getDispatcherUnit,
-  getDispatcherUnitsForGroup
-} from "../lib/dispatcher-registry.js";
+  getDispatcherStructure
+} from "../lib/dispatcher-structure.js";
 
 import {
   getDispatcherUnitConfig
@@ -88,7 +85,22 @@ export default {
       );
     }
 
-    const isDeveloper = Boolean(access.isDeveloper);
+    const structure =
+      await getDispatcherStructure();
+
+    const groups = structure.groups;
+    const units = structure.units;
+    const groupMap =
+      new Map(
+        groups.map((group) => [
+          group.id,
+          group
+        ])
+      );
+
+    const isDeveloper =
+      Boolean(access.isDeveloper);
+
     const hasAllDispatcherGroups =
       isDeveloper ||
       Boolean(
@@ -115,11 +127,7 @@ export default {
             )
             .filter(
               (groupId) =>
-                Boolean(
-                  getDispatcherGroup(
-                    groupId
-                  )
-                )
+                groupMap.has(groupId)
             )
         )
       ];
@@ -136,7 +144,7 @@ export default {
           allowed: false,
           code: "DISPATCHER_SCOPE_NOT_CONFIGURED",
           message:
-            "Для вашей диспетчерской роли не назначено подразделение. Обратитесь к разработчику."
+            "Для вашей диспетчерской роли не назначено действующее подразделение. Обратитесь к разработчику."
         },
         403
       );
@@ -154,14 +162,14 @@ export default {
         .toLowerCase();
 
     /*
-      ВАЖНО: это серверное ограничение, а не только фильтр UI.
-      Обычный диспетчер физически получает только подразделения своих ролей.
-      Роль с «Все подразделения» и системный Разработчик получают полный список.
+      Серверное ограничение области доступа.
+      Удалённые подразделения автоматически перестают быть доступны,
+      даже если старый ID остался в роли.
     */
     const availableGroups =
       hasAllDispatcherGroups
-        ? DISPATCHER_GROUP_REGISTRY
-        : DISPATCHER_GROUP_REGISTRY.filter(
+        ? groups
+        : groups.filter(
             (group) =>
               assignedGroupIds.includes(
                 group.id
@@ -169,7 +177,11 @@ export default {
           );
 
     const allowedGroupIds =
-      new Set(availableGroups.map((group) => group.id));
+      new Set(
+        availableGroups.map(
+          (group) => group.id
+        )
+      );
 
     if (
       requestedGroupId &&
@@ -197,21 +209,32 @@ export default {
       );
 
     const selectedGroup =
-      getDispatcherGroup(selectedGroupId) ||
+      groupMap.get(selectedGroupId) ||
       availableGroups[0] ||
       null;
 
-    const availableUnits = selectedGroup
-      ? getDispatcherUnitsForGroup(selectedGroup.id)
-      : [];
+    const availableUnits =
+      selectedGroup
+        ? units.filter(
+            (unit) =>
+              unit.groupId ===
+              selectedGroup.id
+          )
+        : [];
 
     const requestedUnitId =
-      String(url.searchParams.get("unit") || "")
+      String(
+        url.searchParams.get("unit") ||
+        ""
+      )
         .trim()
         .toLowerCase();
 
     const selectedUnit =
-      availableUnits.find((unit) => unit.id === requestedUnitId) ||
+      availableUnits.find(
+        (unit) =>
+          unit.id === requestedUnitId
+      ) ||
       availableUnits[0] ||
       null;
 
@@ -220,17 +243,36 @@ export default {
         {
           allowed: true,
           code: "NO_UNITS",
+          isDeveloper,
+          hasAllDispatcherGroups,
+          assignedGroupId,
+          assignedGroupIds,
+          assignedGroupName:
+            hasAllDispatcherGroups
+              ? "Все подразделения"
+              : assignedGroupIds
+                  .map(
+                    (groupId) =>
+                      groupMap.get(
+                        groupId
+                      )?.name
+                  )
+                  .filter(Boolean)
+                  .join(" · "),
           group: selectedGroup,
           availableGroups,
           availableUnits: [],
-          message: "Для выбранного подразделения пока не настроены РЭС/районы."
+          message:
+            "Для выбранного подразделения пока не настроены РЭС/районы."
         },
         200
       );
     }
 
     const unitConfig =
-      await getDispatcherUnitConfig(selectedUnit.id);
+      await getDispatcherUnitConfig(
+        selectedUnit.id
+      );
 
     const snapshotState =
       await getLatestDispatcherSnapshot();
@@ -254,7 +296,7 @@ export default {
           : assignedGroupIds
               .map(
                 (groupId) =>
-                  getDispatcherGroup(groupId)?.name
+                  groupMap.get(groupId)?.name
               )
               .filter(Boolean)
               .join(" · "),
@@ -272,7 +314,9 @@ export default {
         matched:
           aggregation.matchedSources,
         missing:
-          aggregation.missingSources
+          aggregation.missingSources,
+        breakdown:
+          aggregation.sourceBreakdown
       },
       requests: {
         review:

@@ -152,6 +152,7 @@ const dispatcherDataNotice = document.getElementById("dispatcherDataNotice");
 const dispatcherUnitTitle = document.getElementById("dispatcherUnitTitle");
 const dispatcherSourceMeta = document.getElementById("dispatcherSourceMeta");
 const dispatcherSourcesText = document.getElementById("dispatcherSourcesText");
+const dispatcherSourceBreakdown = document.getElementById("dispatcherSourceBreakdown");
 const dispatcherLiveBadge = document.getElementById("dispatcherLiveBadge");
 const dispatcherReqReview = document.getElementById("dispatcherReqReview");
 const dispatcherReqApproved = document.getElementById("dispatcherReqApproved");
@@ -159,9 +160,13 @@ const dispatcherReqOpen = document.getElementById("dispatcherReqOpen");
 const dispatcherReqClosed = document.getElementById("dispatcherReqClosed");
 const dispatcherReqAcknowledged = document.getElementById("dispatcherReqAcknowledged");
 const dispatcherReqTotal = document.getElementById("dispatcherReqTotal");
+const dispatcherReqTotalCaption = document.getElementById("dispatcherReqTotalCaption");
 
 const dispatcherSourceManagementPanel = document.getElementById("dispatcherSourceManagementPanel");
 const dispatcherConfigGroupSelect = document.getElementById("dispatcherConfigGroupSelect");
+const dispatcherCreateGroupButton = document.getElementById("dispatcherCreateGroupButton");
+const dispatcherCreateUnitButton = document.getElementById("dispatcherCreateUnitButton");
+const dispatcherDeleteGroupButton = document.getElementById("dispatcherDeleteGroupButton");
 const dispatcherConfigStatus = document.getElementById("dispatcherConfigStatus");
 const dispatcherConfigList = document.getElementById("dispatcherConfigList");
 
@@ -190,6 +195,9 @@ let divisionCardsRendered = false;
 let selectedSystemMode = "normal";
 let selectedDispatcherGroupId = "";
 let selectedDispatcherUnitId = "";
+let dispatcherBreakdownUnitId = "";
+let dispatcherBreakdownSelection = "__all__";
+let dispatcherBreakdownExpanded = false;
 
 let accessCatalog = {
   panels: [],
@@ -971,6 +979,186 @@ function renderDispatcherSelectOptions(
     ).join("");
 }
 
+function setDispatcherRequestCounts(
+  counts
+) {
+  dispatcherReqReview.textContent =
+    counts?.review ?? 0;
+  dispatcherReqApproved.textContent =
+    counts?.approved ?? 0;
+  dispatcherReqOpen.textContent =
+    counts?.open ?? 0;
+  dispatcherReqClosed.textContent =
+    counts?.closed ?? 0;
+  dispatcherReqAcknowledged.textContent =
+    counts?.acknowledged ?? 0;
+  dispatcherReqTotal.textContent =
+    counts?.total ?? 0;
+}
+
+function renderDispatcherSourceBreakdown(
+  payload
+) {
+  const breakdown =
+    Array.isArray(
+      payload?.sources?.breakdown
+    )
+      ? payload.sources.breakdown
+      : [];
+
+  const unitId =
+    String(
+      payload?.unit?.id || ""
+    );
+
+  if (
+    dispatcherBreakdownUnitId !==
+    unitId
+  ) {
+    dispatcherBreakdownUnitId =
+      unitId;
+    dispatcherBreakdownSelection =
+      "__all__";
+    dispatcherBreakdownExpanded =
+      false;
+  }
+
+  if (breakdown.length <= 1) {
+    dispatcherSourceBreakdown.hidden =
+      true;
+    dispatcherSourceBreakdown.innerHTML =
+      "";
+    dispatcherBreakdownSelection =
+      "__all__";
+    setDispatcherRequestCounts(
+      payload?.requests
+    );
+    dispatcherReqTotalCaption.textContent =
+      "Сумма по подключённым строкам СК-11";
+    return;
+  }
+
+  const selectedRow =
+    dispatcherBreakdownSelection ===
+      "__all__"
+      ? null
+      : breakdown.find(
+          (item, index) =>
+            String(index) ===
+            dispatcherBreakdownSelection
+        ) || null;
+
+  if (
+    dispatcherBreakdownSelection !==
+      "__all__" &&
+    !selectedRow
+  ) {
+    dispatcherBreakdownSelection =
+      "__all__";
+  }
+
+  setDispatcherRequestCounts(
+    selectedRow ||
+    payload?.requests
+  );
+
+  const selectedTitle =
+    selectedRow
+      ? selectedRow.label ||
+        selectedRow.source
+      : "Общая сумма";
+
+  dispatcherReqTotalCaption.textContent =
+    selectedRow
+      ? "Всего по выбранной строке СК-11"
+      : "Сумма по подключённым строкам СК-11";
+
+  dispatcherSourceBreakdown.hidden =
+    false;
+
+  dispatcherSourceBreakdown.innerHTML = `
+    <button
+      class="dispatcher-breakdown-toggle"
+      type="button"
+      data-breakdown-toggle
+    >
+      <span>
+        Детализация по источникам
+        <small>Сейчас: ${escapeHtml(selectedTitle)}</small>
+      </span>
+      <svg viewBox="0 0 24 24" aria-hidden="true" class="${dispatcherBreakdownExpanded ? "is-open" : ""}">
+        <path d="m7 10 5 5 5-5"></path>
+      </svg>
+    </button>
+
+    <div
+      class="dispatcher-breakdown-options"
+      ${dispatcherBreakdownExpanded ? "" : "hidden"}
+    >
+      <button
+        class="dispatcher-breakdown-chip ${dispatcherBreakdownSelection === "__all__" ? "is-active" : ""}"
+        type="button"
+        data-breakdown-source="__all__"
+      >
+        <strong>Общая сумма</strong>
+        <span>${payload?.requests?.total ?? 0} всего</span>
+      </button>
+
+      ${breakdown.map(
+        (item, index) => `
+          <button
+            class="dispatcher-breakdown-chip ${dispatcherBreakdownSelection === String(index) ? "is-active" : ""} ${item.matched ? "" : "is-missing"}"
+            type="button"
+            data-breakdown-source="${index}"
+          >
+            <strong>${escapeHtml(item.label || item.source)}</strong>
+            <span>
+              ${item.matched ? `${item.total ?? 0} всего` : "Строка не найдена · 0"}
+            </span>
+          </button>
+        `
+      ).join("")}
+    </div>
+  `;
+
+  dispatcherSourceBreakdown
+    .querySelector(
+      "[data-breakdown-toggle]"
+    )
+    ?.addEventListener(
+      "click",
+      () => {
+        dispatcherBreakdownExpanded =
+          !dispatcherBreakdownExpanded;
+        renderDispatcherSourceBreakdown(
+          payload
+        );
+      }
+    );
+
+  dispatcherSourceBreakdown
+    .querySelectorAll(
+      "[data-breakdown-source]"
+    )
+    .forEach(
+      (button) => {
+        button.addEventListener(
+          "click",
+          () => {
+            dispatcherBreakdownSelection =
+              button.dataset
+                .breakdownSource ||
+              "__all__";
+
+            renderDispatcherSourceBreakdown(
+              payload
+            );
+          }
+        );
+      }
+    );
+}
+
 function renderDispatcherDashboard(payload) {
   const groups =
     Array.isArray(
@@ -1047,18 +1235,9 @@ function renderDispatcherDashboard(payload) {
       ? `${payload.unit.name} · ${payload?.group?.name || ""}`
       : "Оперативный счётчик";
 
-  dispatcherReqReview.textContent =
-    payload?.requests?.review ?? 0;
-  dispatcherReqApproved.textContent =
-    payload?.requests?.approved ?? 0;
-  dispatcherReqOpen.textContent =
-    payload?.requests?.open ?? 0;
-  dispatcherReqClosed.textContent =
-    payload?.requests?.closed ?? 0;
-  dispatcherReqAcknowledged.textContent =
-    payload?.requests?.acknowledged ?? 0;
-  dispatcherReqTotal.textContent =
-    payload?.requests?.total ?? 0;
+  setDispatcherRequestCounts(
+    payload?.requests
+  );
 
   const configuredSources =
     Array.isArray(
@@ -1078,6 +1257,10 @@ function renderDispatcherDashboard(payload) {
     configuredSources.length
       ? `Источники: ${configuredSources.join(" + ")}`
       : "Источники не настроены · все значения = 0";
+
+  renderDispatcherSourceBreakdown(
+    payload
+  );
 
   const sourceData =
     payload?.sourceData || {};
@@ -2256,10 +2439,21 @@ function renderDispatcherConfigList() {
         unit.groupId === selectedGroupId
     );
 
+  dispatcherCreateUnitButton.disabled =
+    !selectedGroupId ||
+    !dispatcherConfigCatalog.storageConfigured;
+
+  dispatcherDeleteGroupButton.disabled =
+    !selectedGroupId ||
+    !dispatcherConfigCatalog.storageConfigured;
+
   if (!units.length) {
     dispatcherConfigList.innerHTML = `
-      <div class="access-empty">
-        Для выбранного подразделения РЭС/районы не настроены.
+      <div class="access-empty dispatcher-structure-empty">
+        <strong>В подразделении пока нет РЭС / районов</strong>
+        <span>
+          Нажмите «+ РЭС / район», чтобы добавить первый элемент.
+        </span>
       </div>
     `;
     return;
@@ -2288,7 +2482,7 @@ function renderDispatcherConfigList() {
               </div>
 
               <span class="dispatcher-config-state ${unit.customized ? "is-custom" : ""}">
-                ${unit.customized ? "ИЗМЕНЕНО" : "ПО УМОЛЧАНИЮ"}
+                ${unit.customized ? "ИЗМЕНЕНО" : unit.builtin ? "ПО УМОЛЧАНИЮ" : "НОВЫЙ"}
               </span>
             </div>
 
@@ -2310,13 +2504,24 @@ function renderDispatcherConfigList() {
               }
             </div>
 
-            <button
-              class="role-action dispatcher-config-edit"
-              type="button"
-              data-dispatcher-unit="${escapeHtml(unit.id)}"
-            >
-              Настроить источники
-            </button>
+            <div class="dispatcher-config-card-actions">
+              <button
+                class="role-action dispatcher-config-edit"
+                type="button"
+                data-dispatcher-unit="${escapeHtml(unit.id)}"
+              >
+                Настроить источники
+              </button>
+
+              <button
+                class="role-action is-danger"
+                type="button"
+                data-delete-dispatcher-unit="${escapeHtml(unit.id)}"
+                data-delete-dispatcher-unit-name="${escapeHtml(unit.name)}"
+              >
+                Удалить
+              </button>
+            </div>
           </article>
         `;
       }
@@ -2338,6 +2543,25 @@ function renderDispatcherConfigList() {
         );
       }
     );
+
+  dispatcherConfigList
+    .querySelectorAll(
+      "[data-delete-dispatcher-unit]"
+    )
+    .forEach(
+      (button) => {
+        button.addEventListener(
+          "click",
+          () =>
+            deleteDispatcherUnitFromAdmin(
+              button.dataset
+                .deleteDispatcherUnit,
+              button.dataset
+                .deleteDispatcherUnitName
+            )
+        );
+      }
+    );
 }
 
 function renderDispatcherConfigGroups() {
@@ -2348,13 +2572,15 @@ function renderDispatcherConfigGroups() {
     dispatcherConfigGroupSelect.value;
 
   dispatcherConfigGroupSelect.innerHTML =
-    groups.map(
-      (group) => `
-        <option value="${escapeHtml(group.id)}">
-          ${escapeHtml(group.name)} — ${escapeHtml(group.description || "")}
-        </option>
-      `
-    ).join("");
+    groups.length
+      ? groups.map(
+          (group) => `
+            <option value="${escapeHtml(group.id)}">
+              ${escapeHtml(group.name)}${group.description ? ` — ${escapeHtml(group.description)}` : ""}
+            </option>
+          `
+        ).join("")
+      : `<option value="">Нет подразделений</option>`;
 
   if (
     groups.some(
@@ -2365,6 +2591,20 @@ function renderDispatcherConfigGroups() {
     dispatcherConfigGroupSelect.value =
       oldValue;
   }
+
+  const hasGroups =
+    groups.length > 0;
+
+  dispatcherConfigGroupSelect.disabled =
+    !hasGroups;
+  dispatcherCreateGroupButton.disabled =
+    !dispatcherConfigCatalog.storageConfigured;
+  dispatcherCreateUnitButton.disabled =
+    !hasGroups ||
+    !dispatcherConfigCatalog.storageConfigured;
+  dispatcherDeleteGroupButton.disabled =
+    !hasGroups ||
+    !dispatcherConfigCatalog.storageConfigured;
 
   renderDispatcherConfigList();
 }
@@ -2432,8 +2672,8 @@ async function loadDispatcherConfigManagement() {
 
     dispatcherConfigStatus.textContent =
       dispatcherConfigCatalog.storageConfigured
-        ? `Настройки сохраняются в Redis. Одна строка источника = одна строка из сообщения СК-11.${sourceSuffix}`
-        : `Redis не подключён: отображаются только настройки по умолчанию, изменения сохранить нельзя.${sourceSuffix}`;
+        ? `Структура подразделений, РЭС / районов и источники сохраняются в Redis. Одна строка источника = одна строка из сообщения СК-11.${sourceSuffix}`
+        : `Redis не подключён: отображается только базовая структура, изменения сохранить нельзя.${sourceSuffix}`;
 
     dispatcherConfigStatus.classList.toggle(
       "is-warning",
@@ -2452,6 +2692,255 @@ async function loadDispatcherConfigManagement() {
     );
 
     dispatcherConfigList.innerHTML = "";
+  }
+}
+
+async function postDispatcherStructureAction(
+  payload
+) {
+  const response =
+    await fetch(
+      API_ADMIN_DISPATCHER_CONFIG,
+      {
+        method: "POST",
+        cache: "no-store",
+        credentials: "include",
+        headers: {
+          "Content-Type":
+            "application/json",
+          ...getSessionHeaders()
+        },
+        body: JSON.stringify(payload)
+      }
+    );
+
+  const data =
+    await response
+      .json()
+      .catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(
+      data?.error ||
+      "Не удалось изменить структуру диспетчерского интерфейса"
+    );
+  }
+
+  return data;
+}
+
+function openCreateDispatcherGroupEditor() {
+  if (!currentUser?.isDeveloper) {
+    return;
+  }
+
+  openManagementModal({
+    eyebrow:
+      "СТРУКТУРА ДИСПЕТЧЕРСКОГО ИНТЕРФЕЙСА",
+    title:
+      "Новое подразделение",
+    saveLabel:
+      "Создать подразделение",
+    context: {
+      type:
+        "dispatcher-group-create"
+    },
+    bodyHtml: `
+      <label class="management-field">
+        <span>Название подразделения</span>
+        <input
+          id="dispatcherNewGroupName"
+          maxlength="80"
+          placeholder="Например: ЗЭС"
+        />
+      </label>
+
+      <label class="management-field">
+        <span>Описание</span>
+        <input
+          id="dispatcherNewGroupDescription"
+          maxlength="160"
+          placeholder="Например: Западные электрические сети"
+        />
+      </label>
+
+      <div class="management-note">
+        После создания подразделение автоматически появится в настройках ролей
+        и в диспетчерском интерфейсе у Разработчика и ролей с доступом
+        «Все подразделения». РЭС / районы добавляются отдельно.
+      </div>
+    `
+  });
+
+  document.getElementById(
+    "dispatcherNewGroupName"
+  )?.focus();
+}
+
+function openCreateDispatcherUnitEditor() {
+  if (!currentUser?.isDeveloper) {
+    return;
+  }
+
+  const groups =
+    dispatcherConfigCatalog.groups || [];
+
+  if (!groups.length) {
+    openModal({
+      type: "denied",
+      eyebrow: "СТРУКТУРА",
+      title: "Сначала создайте подразделение",
+      message:
+        "Чтобы добавить РЭС / район, в системе должно быть хотя бы одно подразделение."
+    });
+    return;
+  }
+
+  const selectedGroupId =
+    dispatcherConfigGroupSelect.value ||
+    groups[0]?.id ||
+    "";
+
+  const options =
+    groups.map(
+      (group) => `
+        <option
+          value="${escapeHtml(group.id)}"
+          ${group.id === selectedGroupId ? "selected" : ""}
+        >
+          ${escapeHtml(group.name)}
+        </option>
+      `
+    ).join("");
+
+  openManagementModal({
+    eyebrow:
+      "СТРУКТУРА ДИСПЕТЧЕРСКОГО ИНТЕРФЕЙСА",
+    title:
+      "Новый РЭС / район",
+    saveLabel:
+      "Создать РЭС / район",
+    context: {
+      type:
+        "dispatcher-unit-create"
+    },
+    bodyHtml: `
+      <label class="management-field">
+        <span>Подразделение</span>
+        <select
+          id="dispatcherNewUnitGroup"
+          class="dispatcher-select"
+        >
+          ${options}
+        </select>
+      </label>
+
+      <label class="management-field">
+        <span>Название РЭС / района</span>
+        <input
+          id="dispatcherNewUnitName"
+          maxlength="80"
+          placeholder="Например: Волосовский РЭС"
+        />
+      </label>
+
+      <div class="management-note">
+        Новый РЭС / район создаётся без источников СК-11. После создания
+        откройте его карточку и назначьте нужные строки через «Настроить источники».
+      </div>
+    `
+  });
+
+  document.getElementById(
+    "dispatcherNewUnitName"
+  )?.focus();
+}
+
+async function deleteDispatcherUnitFromAdmin(
+  unitId,
+  unitName
+) {
+  const confirmed =
+    window.confirm(
+      `Удалить «${unitName}»? РЭС / район исчезнет из диспетчерского интерфейса. Это разрешено и для элементов, которые были в системе изначально.`
+    );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await postDispatcherStructureAction({
+      action: "delete_unit",
+      unitId
+    });
+
+    await Promise.all([
+      loadDispatcherConfigManagement(),
+      loadAccessManagement()
+    ]);
+  } catch (error) {
+    openModal({
+      type: "denied",
+      eyebrow: "СТРУКТУРА",
+      title: "Не удалось удалить РЭС / район",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Попробуйте ещё раз."
+    });
+  }
+}
+
+async function deleteSelectedDispatcherGroup() {
+  const groupId =
+    dispatcherConfigGroupSelect.value;
+
+  const group =
+    dispatcherConfigCatalog.groups.find(
+      (item) => item.id === groupId
+    );
+
+  if (!group) {
+    return;
+  }
+
+  const unitCount =
+    dispatcherConfigCatalog.units.filter(
+      (unit) =>
+        unit.groupId === group.id
+    ).length;
+
+  const confirmed =
+    window.confirm(
+      `Удалить подразделение «${group.name}»? Вместе с ним из интерфейса будут удалены все его РЭС / районы (${unitCount}). Роли, ограниченные этим подразделением, потеряют диспетчерский контур до перенастройки.`
+    );
+
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await postDispatcherStructureAction({
+      action: "delete_group",
+      groupId: group.id
+    });
+
+    await Promise.all([
+      loadDispatcherConfigManagement(),
+      loadAccessManagement(),
+      loadAdminDashboard()
+    ]);
+  } catch (error) {
+    openModal({
+      type: "denied",
+      eyebrow: "СТРУКТУРА",
+      title: "Не удалось удалить подразделение",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Попробуйте ещё раз."
+    });
   }
 }
 
@@ -3398,6 +3887,48 @@ async function saveManagementEditor() {
 
     if (
       managementContext.type ===
+      "dispatcher-group-create"
+    ) {
+      const name =
+        document.getElementById(
+          "dispatcherNewGroupName"
+        )?.value.trim() || "";
+
+      const description =
+        document.getElementById(
+          "dispatcherNewGroupDescription"
+        )?.value.trim() || "";
+
+      await postDispatcherStructureAction({
+        action: "create_group",
+        name,
+        description
+      });
+    }
+
+    if (
+      managementContext.type ===
+      "dispatcher-unit-create"
+    ) {
+      const groupId =
+        document.getElementById(
+          "dispatcherNewUnitGroup"
+        )?.value || "";
+
+      const name =
+        document.getElementById(
+          "dispatcherNewUnitName"
+        )?.value.trim() || "";
+
+      await postDispatcherStructureAction({
+        action: "create_unit",
+        groupId,
+        name
+      });
+    }
+
+    if (
+      managementContext.type ===
       "user"
     ) {
       const roleIds =
@@ -3717,6 +4248,21 @@ createRoleButton.addEventListener(
 dispatcherConfigGroupSelect.addEventListener(
   "change",
   renderDispatcherConfigList
+);
+
+dispatcherCreateGroupButton.addEventListener(
+  "click",
+  openCreateDispatcherGroupEditor
+);
+
+dispatcherCreateUnitButton.addEventListener(
+  "click",
+  openCreateDispatcherUnitEditor
+);
+
+dispatcherDeleteGroupButton.addEventListener(
+  "click",
+  deleteSelectedDispatcherGroup
 );
 
 closeManagementModal.addEventListener(

@@ -7,14 +7,18 @@ import {
 } from "../../lib/access-control.js";
 
 import {
-  DISPATCHER_GROUP_REGISTRY
-} from "../../lib/dispatcher-registry.js";
-
-import {
   getDispatcherSourceConfig,
   setDispatcherUnitSources,
   resetDispatcherUnitSources
 } from "../../lib/dispatcher-config.js";
+
+import {
+  getDispatcherStructure,
+  createDispatcherGroup,
+  deleteDispatcherGroup,
+  createDispatcherUnit,
+  deleteDispatcherUnit
+} from "../../lib/dispatcher-structure.js";
 
 import {
   isRuntimeStoreConfigured
@@ -41,11 +45,25 @@ function json(data, status = 200) {
 
 async function requireDeveloper(request) {
   const session = getSession(request);
-  if (!session) return { error: json({ error: "Требуется авторизация" }, 401) };
+  if (!session) {
+    return {
+      error: json(
+        { error: "Требуется авторизация" },
+        401
+      )
+    };
+  }
 
-  const access = await resolveSessionAccess(session);
+  const access =
+    await resolveSessionAccess(session);
+
   if (!access?.isDeveloper) {
-    return { error: json({ error: "Недостаточно прав" }, 403) };
+    return {
+      error: json(
+        { error: "Недостаточно прав" },
+        403
+      )
+    };
   }
 
   return { access };
@@ -53,24 +71,31 @@ async function requireDeveloper(request) {
 
 export default {
   async fetch(request) {
-    const auth = await requireDeveloper(request);
-    if (auth.error) return auth.error;
+    const auth =
+      await requireDeveloper(request);
+
+    if (auth.error) {
+      return auth.error;
+    }
 
     if (request.method === "GET") {
       try {
         const [
           units,
-          sourceState
-        ] = await Promise.all([
-          getDispatcherSourceConfig(),
-          getLatestDispatcherSnapshot()
-        ]);
+          sourceState,
+          structure
+        ] =
+          await Promise.all([
+            getDispatcherSourceConfig(),
+            getLatestDispatcherSnapshot(),
+            getDispatcherStructure()
+          ]);
 
         return json({
           storageConfigured:
             isRuntimeStoreConfigured(),
           groups:
-            DISPATCHER_GROUP_REGISTRY,
+            structure.groups,
           units,
           availableSourceLabels:
             Array.isArray(
@@ -99,7 +124,7 @@ export default {
             error:
               error instanceof Error
                 ? error.message
-                : "Не удалось загрузить источники РЭС"
+                : "Не удалось загрузить структуру диспетчерского интерфейса"
           },
           500
         );
@@ -107,41 +132,108 @@ export default {
     }
 
     if (request.method !== "POST") {
-      return json({ error: "Method not allowed" }, 405);
+      return json(
+        { error: "Method not allowed" },
+        405
+      );
     }
 
     let body;
-    try { body = await request.json(); }
-    catch { return json({ error: "Некорректный запрос" }, 400); }
+    try {
+      body = await request.json();
+    } catch {
+      return json(
+        { error: "Некорректный запрос" },
+        400
+      );
+    }
 
     const action =
-      String(body?.action || "save").trim().toLowerCase();
+      String(body?.action || "save")
+        .trim()
+        .toLowerCase();
 
     try {
-      if (action === "reset") {
-        const unit = await resetDispatcherUnitSources({
-          unitId: body?.unitId
+      if (action === "create_group") {
+        const group =
+          await createDispatcherGroup({
+            name: body?.name,
+            description:
+              body?.description,
+            actor: auth.access
+          });
+
+        return json({
+          ok: true,
+          group
         });
-        return json({ ok: true, unit });
       }
 
-      const unit = await setDispatcherUnitSources({
-        unitId: body?.unitId,
-        sources:
-          Array.isArray(body?.sources)
-            ? body.sources
-            : [],
-        actor: auth.access
-      });
+      if (action === "delete_group") {
+        await deleteDispatcherGroup({
+          groupId: body?.groupId,
+          actor: auth.access
+        });
 
-      return json({ ok: true, unit });
+        return json({ ok: true });
+      }
+
+      if (action === "create_unit") {
+        const unit =
+          await createDispatcherUnit({
+            groupId: body?.groupId,
+            name: body?.name,
+            actor: auth.access
+          });
+
+        return json({
+          ok: true,
+          unit
+        });
+      }
+
+      if (action === "delete_unit") {
+        await deleteDispatcherUnit({
+          unitId: body?.unitId,
+          actor: auth.access
+        });
+
+        return json({ ok: true });
+      }
+
+      if (action === "reset") {
+        const unit =
+          await resetDispatcherUnitSources({
+            unitId: body?.unitId
+          });
+
+        return json({
+          ok: true,
+          unit
+        });
+      }
+
+      const unit =
+        await setDispatcherUnitSources({
+          unitId: body?.unitId,
+          sources:
+            Array.isArray(body?.sources)
+              ? body.sources
+              : [],
+          actor: auth.access
+        });
+
+      return json({
+        ok: true,
+        unit
+      });
     } catch (error) {
       return json(
         {
           error:
             error instanceof Error
               ? error.message
-              : "Не удалось сохранить источники РЭС"
+              : "Не удалось изменить настройки диспетчерского интерфейса"
         },
         400
       );

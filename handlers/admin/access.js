@@ -4,11 +4,14 @@ import {
 
 import {
   PANEL_REGISTRY,
-  DISPATCHER_RES_REGISTRY,
   getRoleDefinitions,
   getUsersWithAccess,
   resolveSessionAccess
 } from "../../lib/access-control.js";
+
+import {
+  getDispatcherStructure
+} from "../../lib/dispatcher-structure.js";
 
 function json(
   data,
@@ -62,19 +65,50 @@ export default {
     try {
       const [
         roles,
-        users
+        users,
+        structure
       ] =
         await Promise.all([
           getRoleDefinitions(),
-          getUsersWithAccess()
+          getUsersWithAccess(),
+          getDispatcherStructure()
         ]);
+
+      const groupMap =
+        new Map(
+          structure.groups.map(
+            (group) => [
+              group.id,
+              group
+            ]
+          )
+        );
+
+      const enrichedRoles =
+        roles.map((role) => ({
+          ...role,
+          dispatcherDivisionName:
+            role.dispatcherAllDivisions
+              ? "Все подразделения"
+              : (
+                  groupMap.get(
+                    role.dispatcherDivisionId
+                  )?.name ||
+                  (
+                    role.dispatcherDivisionId
+                      ? `Удалено: ${role.dispatcherDivisionName || role.dispatcherDivisionId}`
+                      : ""
+                  )
+                )
+        }));
 
       return json({
         panels:
           PANEL_REGISTRY,
         dispatcherDivisions:
-          DISPATCHER_RES_REGISTRY,
-        roles,
+          structure.groups,
+        roles:
+          enrichedRoles,
         users,
         currentUser:
           access

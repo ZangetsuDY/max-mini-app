@@ -432,6 +432,12 @@
               <span id="dispatcherSourcesText">Источники: —</span>
             </div>
 
+            <div
+              id="dispatcherSourceBreakdown"
+              class="dispatcher-source-breakdown"
+              hidden
+            ></div>
+
             <div class="dispatcher-request-grid dispatcher-request-grid-v2">
               <div class="dispatcher-request-card">
                 <span>В рассмотрении</span>
@@ -461,7 +467,7 @@
               <div class="dispatcher-request-card is-primary">
                 <span>Всего</span>
                 <strong id="dispatcherReqTotal">—</strong>
-                <small>Сумма по подключённым строкам СК-11</small>
+                <small id="dispatcherReqTotalCaption">Сумма по подключённым строкам СК-11</small>
               </div>
               <div class="dispatcher-request-card dispatcher-ending-card">
                 <div class="dispatcher-ending-blur" aria-hidden="true">12</div>
@@ -474,27 +480,56 @@
             </div>
           </article>
 
-          <article class="dispatcher-panel glass-panel">
-            <div class="dispatcher-panel-head">
-              <div>
-                <span class="micro-label">ДЕФЕКТЫ</span>
-                <h2>Контур дефектов</h2>
+          <div class="dispatcher-side-stack">
+            <article class="dispatcher-panel glass-panel">
+              <div class="dispatcher-panel-head">
+                <div>
+                  <span class="micro-label">ДЕФЕКТЫ</span>
+                  <h2>Контур дефектов</h2>
+                </div>
+                <div class="dispatcher-dev-badge">МОДУЛЬ</div>
               </div>
-              <div class="dispatcher-dev-badge">МОДУЛЬ</div>
-            </div>
 
-            <div class="dispatcher-defects-lockup">
-              <div class="dispatcher-defects-blur"></div>
-              <div class="dispatcher-defects-copy">
-                <div class="dispatcher-defects-icon">!</div>
-                <strong>В разработке</strong>
-                <span>
-                  Раздел дефектов будет подключён в следующих версиях
-                  диспетчерского интерфейса.
-                </span>
+              <div class="dispatcher-defects-lockup">
+                <div class="dispatcher-defects-blur"></div>
+                <div class="dispatcher-defects-copy">
+                  <div class="dispatcher-defects-icon">!</div>
+                  <strong>В разработке</strong>
+                  <span>
+                    Раздел дефектов будет подключён в следующих версиях
+                    диспетчерского интерфейса.
+                  </span>
+                </div>
               </div>
-            </div>
-          </article>
+            </article>
+
+            <article class="dispatcher-panel glass-panel">
+              <div class="dispatcher-panel-head">
+                <div>
+                  <span class="micro-label">НАРЯД / РАСПОРЯЖЕНИЕ</span>
+                  <h2>Наряд распоряжений</h2>
+                </div>
+                <div class="dispatcher-dev-badge">МОДУЛЬ</div>
+              </div>
+
+              <div class="dispatcher-workorders-lockup">
+                <div class="dispatcher-workorders-blur"></div>
+                <div class="dispatcher-workorders-copy">
+                  <div class="dispatcher-workorders-icon">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M7 3h10a2 2 0 0 1 2 2v16H5V5a2 2 0 0 1 2-2Z"></path>
+                      <path d="M9 7h6M9 11h6M9 15h4"></path>
+                    </svg>
+                  </div>
+                  <strong>В разработке</strong>
+                  <span>
+                    Учёт нарядов и распоряжений будет подключён
+                    в следующих версиях диспетчерского интерфейса.
+                  </span>
+                </div>
+              </div>
+            </article>
+          </div>
         </div>
       </div>
     </section>
@@ -691,15 +726,41 @@
             <span class="micro-label">ИСТОЧНИКИ СК-11</span>
             <h2>Настройка строк для РЭС / районов</h2>
             <p class="access-heading-copy">
-              Для каждого РЭС можно добавить одну или несколько строк из сообщения СК-11.
-              Значения строк суммируются. Если список пуст — все счётчики будут равны нулю.
+              Управляйте структурой подразделений и РЭС / районов, а также их строками СК-11.
+              Можно добавлять и удалять даже элементы, которые были в системе изначально.
             </p>
           </div>
 
-          <label class="dispatcher-config-filter">
-            <span>Подразделение</span>
-            <select id="dispatcherConfigGroupSelect" class="dispatcher-select"></select>
-          </label>
+          <div class="dispatcher-config-toolbar">
+            <button
+              id="dispatcherCreateGroupButton"
+              class="secondary-action dispatcher-structure-action"
+              type="button"
+            >
+              + Подразделение
+            </button>
+
+            <button
+              id="dispatcherCreateUnitButton"
+              class="secondary-action dispatcher-structure-action"
+              type="button"
+            >
+              + РЭС / район
+            </button>
+
+            <label class="dispatcher-config-filter">
+              <span>Подразделение</span>
+              <select id="dispatcherConfigGroupSelect" class="dispatcher-select"></select>
+            </label>
+
+            <button
+              id="dispatcherDeleteGroupButton"
+              class="role-action is-danger dispatcher-delete-group"
+              type="button"
+            >
+              Удалить подразделение
+            </button>
+          </div>
         </div>
 
         <div id="dispatcherConfigStatus" class="dispatcher-config-status"></div>

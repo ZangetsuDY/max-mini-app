@@ -3474,3 +3474,311 @@ body.auth-pending {
     width: 100%;
   }
 }
+
+
+/* =========================================================
+   DISPATCHER — DEFECTS + WORK ORDERS SIDE STACK
+   ========================================================= */
+
+.dispatcher-side-stack {
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  min-width: 0;
+}
+
+.dispatcher-side-stack .dispatcher-panel {
+  min-height: 0;
+}
+
+.dispatcher-side-stack .dispatcher-panel-head h2 {
+  font-size: clamp(20px, 2.3vw, 26px);
+}
+
+.dispatcher-side-stack .dispatcher-defects-copy,
+.dispatcher-workorders-copy {
+  min-height: 210px;
+}
+
+.dispatcher-workorders-lockup {
+  position: relative;
+  min-height: 100%;
+  margin-top: 18px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.05);
+  background:
+    linear-gradient(145deg, rgba(4, 20, 38, 0.88), rgba(3, 13, 25, 0.98));
+}
+
+.dispatcher-workorders-blur {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 25%, rgba(35, 181, 223, 0.12), transparent 30%),
+    radial-gradient(circle at 80% 75%, rgba(112, 138, 255, 0.12), transparent 32%),
+    linear-gradient(145deg, rgba(10, 24, 44, 0.8), rgba(4, 11, 22, 0.96));
+  filter: blur(14px) saturate(.9);
+  transform: scale(1.08);
+}
+
+.dispatcher-workorders-copy {
+  position: relative;
+  z-index: 1;
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.dispatcher-workorders-icon {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  color: #9fd8ec;
+  background: rgba(37, 161, 207, 0.10);
+  border: 1px solid rgba(88, 193, 229, 0.15);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+}
+
+.dispatcher-workorders-icon svg {
+  width: 30px;
+  height: 30px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dispatcher-workorders-copy strong {
+  margin-top: 17px;
+  color: #edf5fb;
+  font-size: 22px;
+}
+
+.dispatcher-workorders-copy span {
+  max-width: 300px;
+  margin-top: 9px;
+  color: #89a4b9;
+  line-height: 1.55;
+}
+
+@media (max-width: 940px) {
+  .dispatcher-side-stack {
+    grid-template-rows: auto;
+  }
+
+  .dispatcher-side-stack .dispatcher-defects-copy,
+  .dispatcher-workorders-copy {
+    min-height: 240px;
+  }
+}
+
+/* =========================================================
+   DISPATCHER SOURCE BREAKDOWN
+   ========================================================= */
+
+.dispatcher-source-breakdown {
+  margin-top: 12px;
+  border: 1px solid rgba(100, 201, 234, .10);
+  border-radius: 14px;
+  background: rgba(3, 17, 33, .36);
+  overflow: hidden;
+}
+
+.dispatcher-breakdown-toggle {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 0;
+  color: #dceaf3;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.dispatcher-breakdown-toggle > span {
+  display: grid;
+  gap: 3px;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.dispatcher-breakdown-toggle small {
+  color: #6d879d;
+  font-size: 7px;
+  font-weight: 600;
+}
+
+.dispatcher-breakdown-toggle svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: #6baac0;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform .2s ease;
+}
+
+.dispatcher-breakdown-toggle svg.is-open {
+  transform: rotate(180deg);
+}
+
+.dispatcher-breakdown-options {
+  padding: 0 10px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.dispatcher-breakdown-chip {
+  min-width: 130px;
+  padding: 9px 11px;
+  display: grid;
+  gap: 3px;
+  border: 1px solid rgba(255,255,255,.055);
+  border-radius: 10px;
+  color: #8ca5b9;
+  background: rgba(255,255,255,.025);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color .18s ease,
+    background .18s ease,
+    transform .18s ease;
+}
+
+.dispatcher-breakdown-chip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(92, 201, 234, .15);
+}
+
+.dispatcher-breakdown-chip strong {
+  color: #dbe8f1;
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.dispatcher-breakdown-chip span {
+  color: #6f899e;
+  font-size: 7px;
+}
+
+.dispatcher-breakdown-chip.is-active {
+  border-color: rgba(73, 204, 235, .28);
+  background: rgba(24, 132, 169, .10);
+  box-shadow: inset 0 0 0 1px rgba(67, 198, 232, .03);
+}
+
+.dispatcher-breakdown-chip.is-missing {
+  border-style: dashed;
+  opacity: .72;
+}
+
+/* =========================================================
+   DEVELOPER — DYNAMIC DISPATCHER STRUCTURE
+   ========================================================= */
+
+.dispatcher-config-toolbar {
+  min-width: min(100%, 650px);
+  display: grid;
+  grid-template-columns: auto auto minmax(230px, 1fr);
+  gap: 8px;
+  align-items: end;
+}
+
+.dispatcher-structure-action {
+  width: auto;
+  min-width: 128px;
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.dispatcher-delete-group {
+  grid-column: 3;
+  justify-self: end;
+  min-height: 30px;
+  margin-top: -2px;
+}
+
+.dispatcher-config-card-actions {
+  margin-top: 13px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.dispatcher-config-card-actions .dispatcher-config-edit {
+  flex: 1 1 170px;
+}
+
+.dispatcher-config-card-actions .is-danger {
+  flex: 0 0 auto;
+}
+
+.dispatcher-structure-empty {
+  display: grid;
+  gap: 6px;
+}
+
+.dispatcher-structure-empty strong {
+  color: #cbdbe7;
+  font-size: 10px;
+}
+
+.dispatcher-structure-empty span {
+  color: #688298;
+  font-size: 8px;
+}
+
+@media (max-width: 1050px) {
+  .dispatcher-config-toolbar {
+    min-width: 0;
+    width: 100%;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .dispatcher-config-filter {
+    grid-column: 1 / -1;
+  }
+
+  .dispatcher-delete-group {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 640px) {
+  .dispatcher-config-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .dispatcher-config-filter,
+  .dispatcher-delete-group {
+    grid-column: 1;
+  }
+
+  .dispatcher-structure-action,
+  .dispatcher-delete-group {
+    width: 100%;
+  }
+
+  .dispatcher-breakdown-options {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .dispatcher-breakdown-chip {
+    width: 100%;
+  }
+}
