@@ -11,6 +11,7 @@ import adminSystem from "../handlers/admin/system.js";
 import adminAccess from "../handlers/admin/access.js";
 import adminRoles from "../handlers/admin/roles.js";
 import adminUserRoles from "../handlers/admin/user-roles.js";
+import adminDispatcherConfig from "../handlers/admin/dispatcher-config.js";
 
 const ROUTES = new Map([
   ["login", login],
@@ -24,7 +25,8 @@ const ROUTES = new Map([
   ["admin/system", adminSystem],
   ["admin/access", adminAccess],
   ["admin/roles", adminRoles],
-  ["admin/user-roles", adminUserRoles]
+  ["admin/user-roles", adminUserRoles],
+  ["admin/dispatcher-config", adminDispatcherConfig]
 ]);
 
 function json(data, status = 200) {

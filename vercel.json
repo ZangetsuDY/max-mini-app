@@ -1,22 +1,76 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "functions": {
-    "api/router.js": {
-      "includeFiles": "certs/**"
+import {
+  getSession
+} from "../lib/security.js";
+
+import {
+  resolveSessionAccess
+} from "../lib/access-control.js";
+
+function json(data, status = 200) {
+  return new Response(
+    JSON.stringify(data),
+    {
+      status,
+      headers: {
+        "Content-Type":
+          "application/json; charset=utf-8",
+        "Cache-Control":
+          "no-store"
+      }
     }
-  },
-  "rewrites": [
-    { "source": "/api/login", "destination": "/api/router?route=login" },
-    { "source": "/api/logout", "destination": "/api/router?route=logout" },
-    { "source": "/api/me", "destination": "/api/router?route=me" },
-    { "source": "/api/outages", "destination": "/api/router?route=outages" },
-    { "source": "/api/dispatcher", "destination": "/api/router?route=dispatcher" },
-    { "source": "/api/heartbeat", "destination": "/api/router?route=heartbeat" },
-    { "source": "/api/system", "destination": "/api/router?route=system" },
-    { "source": "/api/admin/dashboard", "destination": "/api/router?route=admin/dashboard" },
-    { "source": "/api/admin/system", "destination": "/api/router?route=admin/system" },
-    { "source": "/api/admin/access", "destination": "/api/router?route=admin/access" },
-    { "source": "/api/admin/roles", "destination": "/api/router?route=admin/roles" },
-    { "source": "/api/admin/user-roles", "destination": "/api/router?route=admin/user-roles" }
-  ]
+  );
 }
+
+export default {
+  async fetch(request) {
+    if (request.method !== "GET") {
+      return json(
+        { error: "Method not allowed" },
+        405
+      );
+    }
+
+    try {
+      const session =
+        getSession(request);
+
+      if (!session) {
+        return json(
+          {
+            authenticated: false
+          },
+          401
+        );
+      }
+
+      const access =
+        await resolveSessionAccess(
+          session
+        );
+
+      if (!access) {
+        return json(
+          {
+            authenticated: false
+          },
+          401
+        );
+      }
+
+      return json({
+        authenticated: true,
+        user: access
+      });
+    } catch (error) {
+      return json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Ошибка авторизации"
+        },
+        500
+      );
+    }
+  }
+};

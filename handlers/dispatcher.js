@@ -4,9 +4,24 @@ import {
 
 import {
   resolveSessionAccess,
-  hasPanel,
-  DISPATCHER_RES_REGISTRY
+  hasPanel
 } from "../lib/access-control.js";
+
+import {
+  DISPATCHER_GROUP_REGISTRY,
+  getDispatcherGroup,
+  getDispatcherUnit,
+  getDispatcherUnitsForGroup
+} from "../lib/dispatcher-registry.js";
+
+import {
+  getDispatcherUnitConfig
+} from "../lib/dispatcher-config.js";
+
+import {
+  getLatestDispatcherSnapshot,
+  aggregateDispatcherSources
+} from "../lib/dispatcher-data.js";
 
 function json(data, status = 200) {
   return new Response(
@@ -23,36 +38,6 @@ function json(data, status = 200) {
   );
 }
 
-const DISPATCHER_DATA = Object.freeze({
-  ves: {
-    requests: {
-      open: 2,
-      approvedShift: 8,
-      ending: 10,
-      total: 20,
-      closed: 2
-    }
-  },
-  yues: {
-    requests: {
-      open: 1,
-      approvedShift: 6,
-      ending: 4,
-      total: 11,
-      closed: 1
-    }
-  },
-  gtes: {
-    requests: {
-      open: 3,
-      approvedShift: 7,
-      ending: 5,
-      total: 15,
-      closed: 4
-    }
-  }
-});
-
 export default {
   async fetch(request) {
     if (request.method !== "GET") {
@@ -65,8 +50,7 @@ export default {
     let session;
 
     try {
-      session =
-        getSession(request);
+      session = getSession(request);
     } catch (error) {
       return json(
         {
@@ -87,16 +71,11 @@ export default {
     }
 
     const access =
-      await resolveSessionAccess(
-        session
-      );
+      await resolveSessionAccess(session);
 
     if (
       !access ||
-      !hasPanel(
-        access,
-        "dispatcher"
-      )
+      !hasPanel(access, "dispatcher")
     ) {
       return json(
         {
@@ -109,64 +88,196 @@ export default {
       );
     }
 
-    const url =
-      new URL(request.url);
+    const isDeveloper = Boolean(access.isDeveloper);
 
-    const requestedDivisionId =
+    const assignedGroupIds =
+      [
+        ...new Set(
+          (
+            Array.isArray(
+              access.dispatcherDivisionIds
+            )
+              ? access.dispatcherDivisionIds
+              : [
+                  access.dispatcherDivisionId
+                ]
+          )
+            .map(
+              (value) =>
+                String(value || "")
+                  .trim()
+                  .toLowerCase()
+            )
+            .filter(
+              (groupId) =>
+                Boolean(
+                  getDispatcherGroup(
+                    groupId
+                  )
+                )
+            )
+        )
+      ];
+
+    const assignedGroupId =
+      assignedGroupIds[0] || "";
+
+    if (!isDeveloper && !assignedGroupIds.length) {
+      return json(
+        {
+          allowed: false,
+          code: "DISPATCHER_SCOPE_NOT_CONFIGURED",
+          message:
+            "Для вашей диспетчерской роли не назначено подразделение. Обратитесь к разработчику."
+        },
+        403
+      );
+    }
+
+    const url = new URL(request.url);
+
+    const requestedGroupId =
       String(
-        url.searchParams.get(
-          "division"
-        ) || ""
+        url.searchParams.get("group") ||
+        url.searchParams.get("division") ||
+        ""
       )
         .trim()
         .toLowerCase();
 
-    const validDivisionIds =
-      new Set(
-        DISPATCHER_RES_REGISTRY.map(
-          (division) =>
-            division.id
-        )
-      );
+    const availableGroups = isDeveloper
+      ? DISPATCHER_GROUP_REGISTRY
+      : DISPATCHER_GROUP_REGISTRY.filter(
+          (group) =>
+            assignedGroupIds.includes(
+              group.id
+            )
+        );
 
-    const selectedDivisionId =
-      validDivisionIds.has(
-        requestedDivisionId
-      )
-        ? requestedDivisionId
+    const allowedGroupIds =
+      new Set(availableGroups.map((group) => group.id));
+
+    const selectedGroupId =
+      allowedGroupIds.has(requestedGroupId)
+        ? requestedGroupId
         : (
-            access.dispatcherDivisionId ||
-            DISPATCHER_RES_REGISTRY[0]?.id ||
-            "ves"
+            isDeveloper
+              ? availableGroups[0]?.id
+              : assignedGroupId
           );
 
-    const selectedDivision =
-      DISPATCHER_RES_REGISTRY.find(
-        (division) =>
-          division.id ===
-          selectedDivisionId
-      ) ||
-      DISPATCHER_RES_REGISTRY[0];
+    const selectedGroup =
+      getDispatcherGroup(selectedGroupId) ||
+      availableGroups[0] ||
+      null;
 
-    const data =
-      DISPATCHER_DATA[
-        selectedDivisionId
-      ] ||
-      DISPATCHER_DATA.ves;
+    const availableUnits = selectedGroup
+      ? getDispatcherUnitsForGroup(selectedGroup.id)
+      : [];
+
+    const requestedUnitId =
+      String(url.searchParams.get("unit") || "")
+        .trim()
+        .toLowerCase();
+
+    const selectedUnit =
+      availableUnits.find((unit) => unit.id === requestedUnitId) ||
+      availableUnits[0] ||
+      null;
+
+    if (!selectedUnit) {
+      return json(
+        {
+          allowed: true,
+          code: "NO_UNITS",
+          group: selectedGroup,
+          availableGroups,
+          availableUnits: [],
+          message: "Для выбранного подразделения пока не настроены РЭС/районы."
+        },
+        200
+      );
+    }
+
+    const unitConfig =
+      await getDispatcherUnitConfig(selectedUnit.id);
+
+    const snapshotState =
+      await getLatestDispatcherSnapshot();
+
+    const aggregation =
+      aggregateDispatcherSources(
+        snapshotState.snapshot,
+        unitConfig?.sources || []
+      );
 
     return json({
       allowed: true,
       code: "READY",
-      division:
-        selectedDivision,
-      assignedDivisionId:
-        access.dispatcherDivisionId || "",
-      assignedDivisionName:
-        access.dispatcherDivisionName || "",
-      availableDivisions:
-        DISPATCHER_RES_REGISTRY,
-      requests:
-        data.requests,
+      isDeveloper,
+      assignedGroupId,
+      assignedGroupIds,
+      assignedGroupName:
+        assignedGroupIds
+          .map(
+            (groupId) =>
+              getDispatcherGroup(groupId)?.name
+          )
+          .filter(Boolean)
+          .join(" · "),
+      group: selectedGroup,
+      unit: selectedUnit,
+      availableGroups,
+      availableUnits,
+      sources: {
+        configured:
+          unitConfig?.sources || [],
+        defaults:
+          unitConfig?.defaultSources || [],
+        customized:
+          Boolean(unitConfig?.customized),
+        matched:
+          aggregation.matchedSources,
+        missing:
+          aggregation.missingSources
+      },
+      requests: {
+        review:
+          aggregation.review,
+        approved:
+          aggregation.approved,
+        open:
+          aggregation.open,
+        closed:
+          aggregation.closed,
+        acknowledged:
+          aggregation.acknowledged,
+        total:
+          aggregation.total,
+        ending: null
+      },
+      sourceData: {
+        configured:
+          Boolean(snapshotState.configured),
+        status:
+          snapshotState.status,
+        message:
+          snapshotState.message || "",
+        stale:
+          Boolean(snapshotState.stale),
+        cached:
+          Boolean(snapshotState.cached),
+        period:
+          snapshotState.snapshot?.period || "",
+        sourceUpdatedAt:
+          snapshotState.snapshot?.sourceUpdatedAt || "",
+        messageTimestamp:
+          snapshotState.snapshot?.messageTimestamp || null,
+        rowCount:
+          snapshotState.snapshot?.rowCount || 0,
+        reportedTotal:
+          snapshotState.snapshot?.reportedTotal ?? null
+      },
       defects: {
         available: false,
         message: "В разработке"
