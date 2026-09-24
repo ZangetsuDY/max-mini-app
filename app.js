@@ -333,6 +333,10 @@ function setUserUi(user) {
     dispatcherDivisionName:
       String(
         user?.dispatcherDivisionName || ""
+      ),
+    dispatcherAllDivisions:
+      Boolean(
+        user?.dispatcherAllDivisions
       )
   };
 
@@ -371,9 +375,11 @@ function setUserUi(user) {
       "dispatcher"
     )
       ? (
-          currentUser?.dispatcherDivisionName
-            ? `КОНТУР: ${currentUser.dispatcherDivisionName}`
-            : "ДОСТУП РАЗРЕШЁН"
+          currentUser?.dispatcherAllDivisions
+            ? "КОНТУР: ВСЕ ПОДРАЗДЕЛЕНИЯ"
+            : currentUser?.dispatcherDivisionName
+              ? `КОНТУР: ${currentUser.dispatcherDivisionName}`
+              : "ДОСТУП РАЗРЕШЁН"
         )
       : "ДОСТУП ПО РОЛИ";
 
@@ -1013,8 +1019,13 @@ function renderDispatcherDashboard(payload) {
   dispatcherGroupSelectWrap.hidden =
     groups.length <= 1;
 
+  const fullDispatcherScope =
+    Boolean(
+      payload?.hasAllDispatcherGroups
+    );
+
   dispatcherAssignedDivision.textContent =
-    payload?.isDeveloper
+    fullDispatcherScope
       ? "Все подразделения"
       : (
           payload?.assignedGroupName ||
@@ -1025,7 +1036,9 @@ function renderDispatcherDashboard(payload) {
   dispatcherAssignedHint.textContent =
     payload?.isDeveloper
       ? "Системная роль Разработчик · полный доступ"
-      : "Пользователь видит только РЭС своего подразделения";
+      : fullDispatcherScope
+        ? "Роль разрешает переключение между всеми подразделениями"
+        : "Доступ ограничен подразделением назначенной роли";
 
   dispatcherUnitTitle.textContent =
     payload?.unit
@@ -2055,15 +2068,21 @@ function renderRoleList() {
                 `
             }
             ${
-              role.dispatcherDivisionName
+              role.dispatcherAllDivisions
                 ? `
                   <span class="role-panel-chip role-panel-chip-dispatcher">
-                    Контур: ${escapeHtml(
-                      role.dispatcherDivisionName
-                    )}
+                    Контур: Все подразделения
                   </span>
                 `
-                : ""
+                : role.dispatcherDivisionName
+                  ? `
+                    <span class="role-panel-chip role-panel-chip-dispatcher">
+                      Контур: ${escapeHtml(
+                        role.dispatcherDivisionName
+                      )}
+                    </span>
+                  `
+                  : ""
             }
           </div>
 
@@ -2686,7 +2705,8 @@ function panelCheckboxes(
 }
 
 function renderDispatcherRoleScope(
-  selectedDivisionId = ""
+  selectedDivisionId = "",
+  allDivisions = false
 ) {
   const host =
     document.getElementById(
@@ -2729,14 +2749,16 @@ function renderDispatcherRoleScope(
       <span>Подразделение / филиал</span>
       <select id="dispatcherRoleDivisionSelect" class="dispatcher-select dispatcher-role-select">
         <option value="">Выберите подразделение</option>
+        <option value="__all__" ${allDivisions ? "selected" : ""}>Все подразделения</option>
         ${options}
       </select>
     </label>
 
     <div class="management-note">
-      Выбранное подразделение задаёт контур диспетчера. Например, роль
-      «Диспетчер ВЭС» с контуром ВЭС увидит только Выборгский, Приозерский,
-      Рощинский и Сосновский РЭС. Другие подразделения ему недоступны.
+      Обычный контур жёстко ограничивает доступ на сервере. Например, роль
+      «Диспетчер ВЭС» увидит только ВЭС и не сможет открыть ЮЭС, КС и другие
+      подразделения даже прямым запросом к API. Опция «Все подразделения»
+      подходит, например, для роли «Главный диспетчер».
     </div>
   `;
 }
@@ -2754,11 +2776,18 @@ function bindDispatcherRoleScope(
       document.getElementById(
         "dispatcherRoleDivisionSelect"
       )?.value ||
-      role?.dispatcherDivisionId ||
+      (
+        role?.dispatcherAllDivisions
+          ? "__all__"
+          : role?.dispatcherDivisionId
+      ) ||
       "";
 
     renderDispatcherRoleScope(
-      currentValue
+      currentValue === "__all__"
+        ? ""
+        : currentValue,
+      currentValue === "__all__"
     );
   };
 
@@ -2943,15 +2972,21 @@ async function openUserRoleEditor(
                 </span>
 
                 ${
-                  role.dispatcherDivisionName
+                  role.dispatcherAllDivisions
                     ? `
                       <span class="role-choice-panels">
-                        Подразделение: ${escapeHtml(
-                          role.dispatcherDivisionName
-                        )}
+                        Подразделения: Все
                       </span>
                     `
-                    : ""
+                    : role.dispatcherDivisionName
+                      ? `
+                        <span class="role-choice-panels">
+                          Подразделение: ${escapeHtml(
+                            role.dispatcherDivisionName
+                          )}
+                        </span>
+                      `
+                      : ""
                 }
 
                 <span class="role-choice-panels">
@@ -3055,10 +3090,19 @@ async function saveManagementEditor() {
             input.value
         );
 
-      const dispatcherDivisionId =
+      const dispatcherScopeValue =
         document.getElementById(
           "dispatcherRoleDivisionSelect"
         )?.value || "";
+
+      const dispatcherAllDivisions =
+        dispatcherScopeValue ===
+        "__all__";
+
+      const dispatcherDivisionId =
+        dispatcherAllDivisions
+          ? ""
+          : dispatcherScopeValue;
 
       const response =
         await fetch(
@@ -3085,7 +3129,8 @@ async function saveManagementEditor() {
               name,
               description,
               panelIds,
-              dispatcherDivisionId
+              dispatcherDivisionId,
+              dispatcherAllDivisions
             })
           }
         );

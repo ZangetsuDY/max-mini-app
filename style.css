@@ -2766,7 +2766,7 @@ body.auth-pending {
 
 .dispatcher-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 260px;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 400px);
   gap: 16px;
   align-items: stretch;
 }
@@ -2792,6 +2792,8 @@ body.auth-pending {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: flex-start;
+  min-width: 0;
 }
 
 .dispatcher-assigned-tile span,
@@ -2801,8 +2803,13 @@ body.auth-pending {
 
 .dispatcher-assigned-tile strong {
   margin: 8px 0 10px;
-  font-size: clamp(26px, 3.4vw, 36px);
+  font-size: clamp(28px, 2.5vw, 42px);
+  line-height: 1.08;
+  max-width: 100%;
   color: #edf5fb;
+  word-break: normal;
+  overflow-wrap: normal;
+  text-wrap: balance;
 }
 
 .dispatcher-select-wrap {
@@ -3002,6 +3009,16 @@ body.auth-pending {
 
 .dispatcher-role-select {
   min-height: 46px;
+}
+
+@media (max-width: 1280px) {
+  .dispatcher-hero {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 340px);
+  }
+
+  .dispatcher-assigned-tile strong {
+    font-size: clamp(26px, 2.6vw, 36px);
+  }
 }
 
 @media (max-width: 940px) {

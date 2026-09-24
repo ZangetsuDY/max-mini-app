@@ -89,6 +89,11 @@ export default {
     }
 
     const isDeveloper = Boolean(access.isDeveloper);
+    const hasAllDispatcherGroups =
+      isDeveloper ||
+      Boolean(
+        access.dispatcherAllDivisions
+      );
 
     const assignedGroupIds =
       [
@@ -122,7 +127,10 @@ export default {
     const assignedGroupId =
       assignedGroupIds[0] || "";
 
-    if (!isDeveloper && !assignedGroupIds.length) {
+    if (
+      !hasAllDispatcherGroups &&
+      !assignedGroupIds.length
+    ) {
       return json(
         {
           allowed: false,
@@ -145,26 +153,48 @@ export default {
         .trim()
         .toLowerCase();
 
-    const availableGroups = isDeveloper
-      ? DISPATCHER_GROUP_REGISTRY
-      : DISPATCHER_GROUP_REGISTRY.filter(
-          (group) =>
-            assignedGroupIds.includes(
-              group.id
-            )
-        );
+    /*
+      ВАЖНО: это серверное ограничение, а не только фильтр UI.
+      Обычный диспетчер физически получает только подразделения своих ролей.
+      Роль с «Все подразделения» и системный Разработчик получают полный список.
+    */
+    const availableGroups =
+      hasAllDispatcherGroups
+        ? DISPATCHER_GROUP_REGISTRY
+        : DISPATCHER_GROUP_REGISTRY.filter(
+            (group) =>
+              assignedGroupIds.includes(
+                group.id
+              )
+          );
 
     const allowedGroupIds =
       new Set(availableGroups.map((group) => group.id));
 
+    if (
+      requestedGroupId &&
+      !allowedGroupIds.has(
+        requestedGroupId
+      )
+    ) {
+      return json(
+        {
+          allowed: false,
+          code: "DISPATCHER_SCOPE_DENIED",
+          message:
+            "У вашей роли нет доступа к выбранному подразделению"
+        },
+        403
+      );
+    }
+
     const selectedGroupId =
-      allowedGroupIds.has(requestedGroupId)
-        ? requestedGroupId
-        : (
-            isDeveloper
-              ? availableGroups[0]?.id
-              : assignedGroupId
-          );
+      requestedGroupId ||
+      (
+        hasAllDispatcherGroups
+          ? availableGroups[0]?.id
+          : assignedGroupId
+      );
 
     const selectedGroup =
       getDispatcherGroup(selectedGroupId) ||
@@ -215,16 +245,19 @@ export default {
       allowed: true,
       code: "READY",
       isDeveloper,
+      hasAllDispatcherGroups,
       assignedGroupId,
       assignedGroupIds,
       assignedGroupName:
-        assignedGroupIds
-          .map(
-            (groupId) =>
-              getDispatcherGroup(groupId)?.name
-          )
-          .filter(Boolean)
-          .join(" · "),
+        hasAllDispatcherGroups
+          ? "Все подразделения"
+          : assignedGroupIds
+              .map(
+                (groupId) =>
+                  getDispatcherGroup(groupId)?.name
+              )
+              .filter(Boolean)
+              .join(" · "),
       group: selectedGroup,
       unit: selectedUnit,
       availableGroups,

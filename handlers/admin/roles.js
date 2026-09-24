@@ -89,6 +89,10 @@ export default {
               body?.panelIds,
             dispatcherDivisionId:
               body?.dispatcherDivisionId,
+            dispatcherAllDivisions:
+              Boolean(
+                body?.dispatcherAllDivisions
+              ),
             actor:
               access
           });
@@ -112,6 +116,10 @@ export default {
               body?.panelIds,
             dispatcherDivisionId:
               body?.dispatcherDivisionId,
+            dispatcherAllDivisions:
+              Boolean(
+                body?.dispatcherAllDivisions
+              ),
             actor:
               access
           });
