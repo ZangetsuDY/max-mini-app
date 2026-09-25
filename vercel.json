@@ -1,66 +1,8 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "functions": {
-    "api/router.js": {
-      "includeFiles": "certs/**"
-    }
-  },
   "rewrites": [
     {
-      "source": "/api/login",
-      "destination": "/api/router?route=login"
-    },
-    {
-      "source": "/api/logout",
-      "destination": "/api/router?route=logout"
-    },
-    {
-      "source": "/api/me",
-      "destination": "/api/router?route=me"
-    },
-    {
-      "source": "/api/outages",
-      "destination": "/api/router?route=outages"
-    },
-    {
-      "source": "/api/dispatcher",
-      "destination": "/api/router?route=dispatcher"
-    },
-    {
-      "source": "/api/heartbeat",
-      "destination": "/api/router?route=heartbeat"
-    },
-    {
-      "source": "/api/system",
-      "destination": "/api/router?route=system"
-    },
-    {
-      "source": "/api/admin/dashboard",
-      "destination": "/api/router?route=admin/dashboard"
-    },
-    {
-      "source": "/api/admin/system",
-      "destination": "/api/router?route=admin/system"
-    },
-    {
-      "source": "/api/admin/access",
-      "destination": "/api/router?route=admin/access"
-    },
-    {
-      "source": "/api/admin/roles",
-      "destination": "/api/router?route=admin/roles"
-    },
-    {
-      "source": "/api/admin/user-roles",
-      "destination": "/api/router?route=admin/user-roles"
-    },
-    {
-      "source": "/api/admin/users",
-      "destination": "/api/router?route=admin/users"
-    },
-    {
-      "source": "/api/admin/dispatcher-config",
-      "destination": "/api/router?route=admin/dispatcher-config"
+      "source": "/api/ping",
+      "destination": "/api/ping"
     }
   ]
 }
