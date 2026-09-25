@@ -42,7 +42,7 @@ body {
   min-height: 100dvh;
   overflow-x: hidden;
   color: var(--text);
-  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   background:
     radial-gradient(circle at 15% -10%, rgba(0, 132, 200, 0.16), transparent 32%),
     linear-gradient(145deg, #03101f 0%, #041326 46%, #061a30 100%);
@@ -185,11 +185,15 @@ button {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  display: none;
+}
+
+.logo-surface.is-logo-loaded .company-logo {
   display: block;
 }
 
 .logo-fallback {
-  display: none;
+  display: flex;
   flex-direction: column;
   align-items: flex-start;
   color: #0874b7;
@@ -3781,4 +3785,79 @@ body.auth-pending {
   .dispatcher-breakdown-chip {
     width: 100%;
   }
+}
+
+
+/* Dispatcher structure — edit existing subdivision */
+.dispatcher-edit-group {
+  grid-column: 3;
+  justify-self: start;
+  min-height: 30px;
+  margin-top: -2px;
+}
+
+@media (max-width: 1050px) {
+  .dispatcher-edit-group {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+}
+
+@media (max-width: 640px) {
+  .dispatcher-edit-group {
+    grid-column: 1;
+    width: 100%;
+  }
+}
+
+
+/* =========================================================
+   MOBILE STARTUP / LOW BANDWIDTH OPTIMIZATION
+   ========================================================= */
+
+/*
+  На первом экране логотип сначала показывается локальным fallback.
+  Внешнее изображение подгружается после события window.load и
+  только затем заменяет fallback.
+*/
+.logo-surface.is-logo-loaded .logo-fallback {
+  display: none;
+}
+
+/*
+  На небольших экранах уменьшаем стоимость декоративной графики.
+  Это не меняет функциональность, но снижает нагрузку на мобильный WebView.
+*/
+@media (max-width: 720px) {
+  .scene-grid,
+  .scene-orb,
+  .scene-beam {
+    animation: none !important;
+  }
+
+  .auth-panel {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
+/*
+  При Save-Data / 2G приложение добавляет low-bandwidth через JS.
+  В этом режиме оставляем статичный профессиональный фон без тяжёлых эффектов.
+*/
+body.low-bandwidth .scene-orb,
+body.low-bandwidth .scene-beam,
+body.low-bandwidth .scene-grid {
+  animation: none !important;
+}
+
+body.low-bandwidth .scene-noise {
+  display: none;
+}
+
+body.low-bandwidth .auth-panel,
+body.low-bandwidth .topbar,
+body.low-bandwidth .glass-panel {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }

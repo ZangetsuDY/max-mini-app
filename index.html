@@ -36,11 +36,11 @@
       <div class="auth-logo-row">
         <div class="logo-surface logo-surface-large">
           <img
-            src="https://spbinvestment.ru/content/pages/dd/ddeaa42bbbda60ff4f9ccecc048b49dd.jpg"
+            data-logo-src="https://spbinvestment.ru/content/pages/dd/ddeaa42bbbda60ff4f9ccecc048b49dd.jpg"
             class="company-logo"
             alt="Россети Ленэнерго"
             referrerpolicy="no-referrer"
-            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            decoding="async"
           />
           <div class="logo-fallback">
             <span>РОССЕТИ</span>
@@ -134,11 +134,11 @@
       <button id="brandHomeButton" class="brand-home" type="button">
         <div class="logo-surface logo-surface-header">
           <img
-            src="https://spbinvestment.ru/content/pages/dd/ddeaa42bbbda60ff4f9ccecc048b49dd.jpg"
+            data-logo-src="https://spbinvestment.ru/content/pages/dd/ddeaa42bbbda60ff4f9ccecc048b49dd.jpg"
             class="company-logo"
             alt="Россети Ленэнерго"
             referrerpolicy="no-referrer"
-            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            decoding="async"
           />
           <div class="logo-fallback">
             <span>РОССЕТИ</span>
@@ -754,6 +754,14 @@
             </label>
 
             <button
+              id="dispatcherEditGroupButton"
+              class="role-action dispatcher-edit-group"
+              type="button"
+            >
+              Редактировать подразделение
+            </button>
+
+            <button
               id="dispatcherDeleteGroupButton"
               class="role-action is-danger dispatcher-delete-group"
               type="button"
@@ -850,7 +858,6 @@
     </div>
   </div>
 
-  <script src="https://st.max.ru/js/max-web-app.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

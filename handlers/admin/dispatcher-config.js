@@ -15,6 +15,7 @@ import {
 import {
   getDispatcherStructure,
   createDispatcherGroup,
+  updateDispatcherGroup,
   deleteDispatcherGroup,
   createDispatcherUnit,
   deleteDispatcherUnit
@@ -157,6 +158,22 @@ export default {
       if (action === "create_group") {
         const group =
           await createDispatcherGroup({
+            name: body?.name,
+            description:
+              body?.description,
+            actor: auth.access
+          });
+
+        return json({
+          ok: true,
+          group
+        });
+      }
+
+      if (action === "update_group") {
+        const group =
+          await updateDispatcherGroup({
+            groupId: body?.groupId,
             name: body?.name,
             description:
               body?.description,

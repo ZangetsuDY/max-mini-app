@@ -23,6 +23,10 @@ const HEARTBEAT_INTERVAL_MS = 45_000;
 const ADMIN_REFRESH_INTERVAL_MS = 30_000;
 const DISPATCHER_REFRESH_INTERVAL_MS = 20_000;
 const SESSION_STORAGE_KEY = "le_app_session";
+const MAX_BRIDGE_URL = "https://st.max.ru/js/max-web-app.js";
+const STARTUP_REQUEST_TIMEOUT_MS = 7_000;
+const LOGIN_REQUEST_TIMEOUT_MS = 18_000;
+const MAX_BRIDGE_TIMEOUT_MS = 10_000;
 
 const DIVISIONS = [
   { id: "ves", name: "ВЭС" },
@@ -166,6 +170,7 @@ const dispatcherSourceManagementPanel = document.getElementById("dispatcherSourc
 const dispatcherConfigGroupSelect = document.getElementById("dispatcherConfigGroupSelect");
 const dispatcherCreateGroupButton = document.getElementById("dispatcherCreateGroupButton");
 const dispatcherCreateUnitButton = document.getElementById("dispatcherCreateUnitButton");
+const dispatcherEditGroupButton = document.getElementById("dispatcherEditGroupButton");
 const dispatcherDeleteGroupButton = document.getElementById("dispatcherDeleteGroupButton");
 const dispatcherConfigStatus = document.getElementById("dispatcherConfigStatus");
 const dispatcherConfigList = document.getElementById("dispatcherConfigList");
@@ -241,6 +246,289 @@ function getMaxInitData() {
     return "";
   }
 }
+
+
+let maxBridgePromise = null;
+
+function isLowBandwidthConnection() {
+  try {
+    const connection =
+      navigator.connection ||
+      navigator.mozConnection ||
+      navigator.webkitConnection;
+
+    if (!connection) {
+      return false;
+    }
+
+    return Boolean(
+      connection.saveData ||
+      ["slow-2g", "2g"].includes(
+        String(connection.effectiveType || "")
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
+function applyConnectionMode() {
+  if (isLowBandwidthConnection()) {
+    document.body.classList.add(
+      "low-bandwidth"
+    );
+  }
+}
+
+function fetchWithTimeout(
+  url,
+  options = {},
+  timeoutMs = STARTUP_REQUEST_TIMEOUT_MS
+) {
+  const controller =
+    new AbortController();
+
+  const timer =
+    setTimeout(
+      () => controller.abort(),
+      timeoutMs
+    );
+
+  return fetch(
+    url,
+    {
+      ...options,
+      signal: controller.signal
+    }
+  ).finally(
+    () => clearTimeout(timer)
+  );
+}
+
+function loadMaxBridge(
+  timeoutMs = MAX_BRIDGE_TIMEOUT_MS
+) {
+  if (
+    window.WebApp?.initData
+  ) {
+    return Promise.resolve(
+      window.WebApp
+    );
+  }
+
+  if (maxBridgePromise) {
+    return maxBridgePromise;
+  }
+
+  maxBridgePromise =
+    new Promise(
+      (resolve, reject) => {
+        const existing =
+          document.querySelector(
+            'script[data-max-bridge="true"]'
+          );
+
+        if (existing) {
+          existing.remove();
+        }
+
+        const script =
+          document.createElement(
+            "script"
+          );
+
+        script.src =
+          MAX_BRIDGE_URL;
+
+        script.async = true;
+        script.dataset.maxBridge =
+          "true";
+
+        let settled = false;
+
+        const finish = (
+          callback,
+          value
+        ) => {
+          if (settled) {
+            return;
+          }
+
+          settled = true;
+          clearTimeout(timer);
+          callback(value);
+        };
+
+        script.onload = () => {
+          if (window.WebApp) {
+            finish(
+              resolve,
+              window.WebApp
+            );
+          } else {
+            finish(
+              reject,
+              new Error(
+                "MAX Bridge загрузился без WebApp."
+              )
+            );
+          }
+        };
+
+        script.onerror = () => {
+          finish(
+            reject,
+            new Error(
+              "Не удалось загрузить MAX Bridge."
+            )
+          );
+        };
+
+        const timer =
+          setTimeout(
+            () => {
+              script.remove();
+
+              finish(
+                reject,
+                new Error(
+                  "MAX Bridge загружается слишком долго."
+                )
+              );
+            },
+            timeoutMs
+          );
+
+        document.head.appendChild(
+          script
+        );
+      }
+    ).catch(
+      (error) => {
+        /*
+          Не кэшируем неудачу навсегда:
+          следующий клик «Войти» сможет повторить загрузку.
+        */
+        maxBridgePromise = null;
+        throw error;
+      }
+    );
+
+  return maxBridgePromise;
+}
+
+async function waitForMaxInitData() {
+  const current =
+    getMaxInitData();
+
+  if (current) {
+    return current;
+  }
+
+  try {
+    await loadMaxBridge();
+  } catch {
+    return "";
+  }
+
+  /*
+    На части мобильных WebView объект появляется чуть позже onload.
+  */
+  const startedAt =
+    Date.now();
+
+  while (
+    Date.now() - startedAt <
+    1_500
+  ) {
+    const initData =
+      getMaxInitData();
+
+    if (initData) {
+      return initData;
+    }
+
+    await new Promise(
+      (resolve) =>
+        setTimeout(resolve, 100)
+    );
+  }
+
+  return getMaxInitData();
+}
+
+function loadDeferredLogos() {
+  /*
+    Эти картинки НЕ участвуют в первоначальном window.load,
+    поэтому медленный внешний сервер логотипа больше не может
+    держать запуск Mini App.
+  */
+  if (isLowBandwidthConnection()) {
+    return;
+  }
+
+  document
+    .querySelectorAll(
+      "img[data-logo-src]"
+    )
+    .forEach(
+      (image) => {
+        const source =
+          image.dataset.logoSrc;
+
+        if (!source) {
+          return;
+        }
+
+        image.onload = () => {
+          image
+            .closest(
+              ".logo-surface"
+            )
+            ?.classList.add(
+              "is-logo-loaded"
+            );
+        };
+
+        image.onerror = () => {
+          image.removeAttribute(
+            "src"
+          );
+        };
+
+        image.src = source;
+      }
+    );
+}
+
+function startNonBlockingExternalResources() {
+  /*
+    Сначала сообщаем WebView, что сама страница уже загружена.
+    После этого в фоне подключаем Bridge и необязательный логотип.
+  */
+  loadDeferredLogos();
+
+  loadMaxBridge()
+    .catch(() => {
+      /*
+        Это не ошибка запуска страницы.
+        При входе пользователь сможет повторить попытку.
+      */
+    });
+}
+
+applyConnectionMode();
+
+window.addEventListener(
+  "load",
+  () => {
+    setTimeout(
+      startNonBlockingExternalResources,
+      0
+    );
+  },
+  { once: true }
+);
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -921,20 +1209,22 @@ async function checkSession() {
     const sessionToken =
       getAppSessionToken();
 
-    const response = await fetch(
-      API_ME,
-      {
-        method: "GET",
-        cache: "no-store",
-        credentials: "include",
-        headers: sessionToken
-          ? {
-              "X-App-Session":
-                sessionToken
-            }
-          : {}
-      }
-    );
+    const response =
+      await fetchWithTimeout(
+        API_ME,
+        {
+          method: "GET",
+          cache: "no-store",
+          credentials: "include",
+          headers: sessionToken
+            ? {
+                "X-App-Session":
+                  sessionToken
+              }
+            : {}
+        },
+        STARTUP_REQUEST_TIMEOUT_MS
+      );
 
     if (!response.ok) {
       setAppSessionToken("");
@@ -1354,22 +1644,29 @@ loginForm.addEventListener(
       return;
     }
 
+    loginButton.disabled = true;
+    loginButton.querySelector("span").textContent =
+      "Подготовка MAX…";
+
     const initData =
-      getMaxInitData();
+      await waitForMaxInitData();
 
     if (!initData) {
+      loginButton.disabled = false;
+      loginButton.querySelector("span").textContent =
+        "Войти в систему";
+
       showLoginError(
-        "Авторизация доступна только внутри мини-приложения MAX."
+        "MAX Bridge не успел загрузиться. Проверьте интернет и нажмите «Войти» ещё раз."
       );
       return;
     }
 
-    loginButton.disabled = true;
     loginButton.querySelector("span").textContent =
       "Проверка доступа…";
 
     try {
-      const response = await fetch(
+      const response = await fetchWithTimeout(
         API_LOGIN,
         {
           method: "POST",
@@ -1385,7 +1682,8 @@ loginForm.addEventListener(
             username,
             password
           })
-        }
+        },
+        LOGIN_REQUEST_TIMEOUT_MS
       );
 
       const payload =
@@ -1407,10 +1705,16 @@ loginForm.addEventListener(
       passwordInput.value = "";
       showApplication(payload.user);
     } catch (error) {
+      const isTimeout =
+        error?.name ===
+        "AbortError";
+
       showLoginError(
-        error instanceof Error
-          ? error.message
-          : "Ошибка авторизации"
+        isTimeout
+          ? "Соединение слишком медленное. Приложение уже загружено — проверьте сеть и повторите вход."
+          : error instanceof Error
+            ? error.message
+            : "Ошибка авторизации"
       );
     } finally {
       loginButton.disabled = false;
@@ -2602,6 +2906,9 @@ function renderDispatcherConfigGroups() {
   dispatcherCreateUnitButton.disabled =
     !hasGroups ||
     !dispatcherConfigCatalog.storageConfigured;
+  dispatcherEditGroupButton.disabled =
+    !hasGroups ||
+    !dispatcherConfigCatalog.storageConfigured;
   dispatcherDeleteGroupButton.disabled =
     !hasGroups ||
     !dispatcherConfigCatalog.storageConfigured;
@@ -2774,6 +3081,70 @@ function openCreateDispatcherGroupEditor() {
 
   document.getElementById(
     "dispatcherNewGroupName"
+  )?.focus();
+}
+
+function openEditDispatcherGroupEditor() {
+  if (!currentUser?.isDeveloper) {
+    return;
+  }
+
+  const groupId =
+    dispatcherConfigGroupSelect.value;
+
+  const group =
+    dispatcherConfigCatalog.groups.find(
+      (item) => item.id === groupId
+    );
+
+  if (!group) {
+    return;
+  }
+
+  openManagementModal({
+    eyebrow:
+      "СТРУКТУРА ДИСПЕТЧЕРСКОГО ИНТЕРФЕЙСА",
+    title:
+      `Редактирование · ${group.name}`,
+    saveLabel:
+      "Сохранить изменения",
+    context: {
+      type:
+        "dispatcher-group-edit",
+      groupId:
+        group.id
+    },
+    bodyHtml: `
+      <label class="management-field">
+        <span>Название подразделения</span>
+        <input
+          id="dispatcherEditGroupName"
+          maxlength="80"
+          value="${escapeHtml(group.name)}"
+          placeholder="Название подразделения"
+        />
+      </label>
+
+      <label class="management-field">
+        <span>Описание</span>
+        <input
+          id="dispatcherEditGroupDescription"
+          maxlength="160"
+          value="${escapeHtml(group.description || "")}"
+          placeholder="Описание подразделения"
+        />
+      </label>
+
+      <div class="management-note">
+        Внутренний ID подразделения не меняется, поэтому существующие роли,
+        РЭС / районы и их источники продолжат работать. Изменится только
+        отображаемое название и описание во всём интерфейсе.
+      </div>
+    `
+  });
+
+  document.getElementById(
+    "dispatcherEditGroupName"
   )?.focus();
 }
 
@@ -3908,6 +4279,29 @@ async function saveManagementEditor() {
 
     if (
       managementContext.type ===
+      "dispatcher-group-edit"
+    ) {
+      const name =
+        document.getElementById(
+          "dispatcherEditGroupName"
+        )?.value.trim() || "";
+
+      const description =
+        document.getElementById(
+          "dispatcherEditGroupDescription"
+        )?.value.trim() || "";
+
+      await postDispatcherStructureAction({
+        action: "update_group",
+        groupId:
+          managementContext.groupId,
+        name,
+        description
+      });
+    }
+
+    if (
+      managementContext.type ===
       "dispatcher-unit-create"
     ) {
       const groupId =
@@ -4258,6 +4652,11 @@ dispatcherCreateGroupButton.addEventListener(
 dispatcherCreateUnitButton.addEventListener(
   "click",
   openCreateDispatcherUnitEditor
+);
+
+dispatcherEditGroupButton.addEventListener(
+  "click",
+  openEditDispatcherGroupEditor
 );
 
 dispatcherDeleteGroupButton.addEventListener(
