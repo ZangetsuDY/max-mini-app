@@ -166,6 +166,19 @@ const dispatcherReqAcknowledged = document.getElementById("dispatcherReqAcknowle
 const dispatcherReqTotal = document.getElementById("dispatcherReqTotal");
 const dispatcherReqTotalCaption = document.getElementById("dispatcherReqTotalCaption");
 
+const dispatcherWorkordersLiveBadge = document.getElementById("dispatcherWorkordersLiveBadge");
+const dispatcherWorkordersMeta = document.getElementById("dispatcherWorkordersMeta");
+const dispatcherWorkordersSourcesText = document.getElementById("dispatcherWorkordersSourcesText");
+const dispatcherWorkordersNotice = document.getElementById("dispatcherWorkordersNotice");
+const dispatcherWorkordersBreakdown = document.getElementById("dispatcherWorkordersBreakdown");
+const dispatcherWorkordersChart = document.getElementById("dispatcherWorkordersChart");
+const dispatcherWorkordersTotal = document.getElementById("dispatcherWorkordersTotal");
+const dispatcherWorkordersRegistered = document.getElementById("dispatcherWorkordersRegistered");
+const dispatcherWorkordersCreated = document.getElementById("dispatcherWorkordersCreated");
+const dispatcherWorkordersAdmission = document.getElementById("dispatcherWorkordersAdmission");
+const dispatcherWorkordersPreparation = document.getElementById("dispatcherWorkordersPreparation");
+const dispatcherWorkordersBreak = document.getElementById("dispatcherWorkordersBreak");
+
 const dispatcherSourceManagementPanel = document.getElementById("dispatcherSourceManagementPanel");
 const dispatcherConfigGroupSelect = document.getElementById("dispatcherConfigGroupSelect");
 const dispatcherCreateGroupButton = document.getElementById("dispatcherCreateGroupButton");
@@ -174,6 +187,11 @@ const dispatcherEditGroupButton = document.getElementById("dispatcherEditGroupBu
 const dispatcherDeleteGroupButton = document.getElementById("dispatcherDeleteGroupButton");
 const dispatcherConfigStatus = document.getElementById("dispatcherConfigStatus");
 const dispatcherConfigList = document.getElementById("dispatcherConfigList");
+
+const dispatcherWorkordersManagementPanel = document.getElementById("dispatcherWorkordersManagementPanel");
+const dispatcherWorkordersConfigGroupSelect = document.getElementById("dispatcherWorkordersConfigGroupSelect");
+const dispatcherWorkordersConfigStatus = document.getElementById("dispatcherWorkordersConfigStatus");
+const dispatcherWorkordersConfigList = document.getElementById("dispatcherWorkordersConfigList");
 
 const accessModal = document.getElementById("accessModal");
 const closeModalButton = document.getElementById("closeModalButton");
@@ -203,6 +221,9 @@ let selectedDispatcherUnitId = "";
 let dispatcherBreakdownUnitId = "";
 let dispatcherBreakdownSelection = "__all__";
 let dispatcherBreakdownExpanded = false;
+let dispatcherWorkordersBreakdownUnitId = "";
+let dispatcherWorkordersBreakdownSelection = "__all__";
+let dispatcherWorkordersBreakdownExpanded = false;
 
 let accessCatalog = {
   panels: [],
@@ -212,6 +233,14 @@ let accessCatalog = {
 };
 
 let dispatcherConfigCatalog = {
+  groups: [],
+  units: [],
+  availableSourceLabels: [],
+  sourceData: {},
+  storageConfigured: false
+};
+
+let dispatcherWorkordersConfigCatalog = {
   groups: [],
   units: [],
   availableSourceLabels: [],
@@ -1449,6 +1478,355 @@ function renderDispatcherSourceBreakdown(
     );
 }
 
+
+function setDispatcherWorkordersCounts(
+  counts
+) {
+  const values = {
+    registered:
+      Number(counts?.registered || 0),
+    created:
+      Number(counts?.created || 0),
+    admission:
+      Number(counts?.admission || 0),
+    preparation:
+      Number(counts?.preparation || 0),
+    break:
+      Number(counts?.break || 0),
+    total:
+      Number(counts?.total || 0)
+  };
+
+  dispatcherWorkordersRegistered.textContent =
+    values.registered;
+  dispatcherWorkordersCreated.textContent =
+    values.created;
+  dispatcherWorkordersAdmission.textContent =
+    values.admission;
+  dispatcherWorkordersPreparation.textContent =
+    values.preparation;
+  dispatcherWorkordersBreak.textContent =
+    values.break;
+  dispatcherWorkordersTotal.textContent =
+    values.total;
+
+  const segments = [
+    {
+      value: values.registered,
+      color: "#2dd4bf"
+    },
+    {
+      value: values.created,
+      color: "#3b82f6"
+    },
+    {
+      value: values.admission,
+      color: "#8b5cf6"
+    },
+    {
+      value: values.preparation,
+      color: "#f59e0b"
+    },
+    {
+      value: values.break,
+      color: "#f43f5e"
+    }
+  ];
+
+  const statusTotal =
+    segments.reduce(
+      (sum, item) =>
+        sum + Math.max(0, item.value),
+      0
+    );
+
+  if (!statusTotal) {
+    dispatcherWorkordersChart.style.background =
+      "conic-gradient(rgba(129, 156, 178, .18) 0 100%)";
+    return;
+  }
+
+  let cursor = 0;
+  const gradientParts = [];
+
+  for (const segment of segments) {
+    const size =
+      Math.max(0, segment.value) /
+      statusTotal * 100;
+    const end = cursor + size;
+
+    gradientParts.push(
+      `${segment.color} ${cursor.toFixed(3)}% ${end.toFixed(3)}%`
+    );
+
+    cursor = end;
+  }
+
+  dispatcherWorkordersChart.style.background =
+    `conic-gradient(${gradientParts.join(", ")})`;
+}
+
+function renderDispatcherWorkordersBreakdown(
+  payload
+) {
+  const workorders =
+    payload?.workorders || {};
+
+  const breakdown =
+    Array.isArray(
+      workorders?.sources?.breakdown
+    )
+      ? workorders.sources.breakdown
+      : [];
+
+  const unitId =
+    String(
+      payload?.unit?.id || ""
+    );
+
+  if (
+    dispatcherWorkordersBreakdownUnitId !==
+    unitId
+  ) {
+    dispatcherWorkordersBreakdownUnitId =
+      unitId;
+    dispatcherWorkordersBreakdownSelection =
+      "__all__";
+    dispatcherWorkordersBreakdownExpanded =
+      false;
+  }
+
+  if (breakdown.length <= 1) {
+    dispatcherWorkordersBreakdown.hidden =
+      true;
+    dispatcherWorkordersBreakdown.innerHTML =
+      "";
+    dispatcherWorkordersBreakdownSelection =
+      "__all__";
+    setDispatcherWorkordersCounts(
+      workorders?.counts
+    );
+    return;
+  }
+
+  let selectedRow =
+    dispatcherWorkordersBreakdownSelection ===
+      "__all__"
+      ? null
+      : breakdown.find(
+          (item, index) =>
+            String(index) ===
+            dispatcherWorkordersBreakdownSelection
+        ) || null;
+
+  if (
+    dispatcherWorkordersBreakdownSelection !==
+      "__all__" &&
+    !selectedRow
+  ) {
+    dispatcherWorkordersBreakdownSelection =
+      "__all__";
+    selectedRow = null;
+  }
+
+  setDispatcherWorkordersCounts(
+    selectedRow ||
+    workorders?.counts
+  );
+
+  const selectedTitle =
+    selectedRow
+      ? selectedRow.label ||
+        selectedRow.source
+      : "Общая сумма";
+
+  dispatcherWorkordersBreakdown.hidden =
+    false;
+
+  dispatcherWorkordersBreakdown.innerHTML = `
+    <button
+      class="dispatcher-breakdown-toggle"
+      type="button"
+      data-workorders-breakdown-toggle
+    >
+      <span>
+        Детализация по источникам НДР
+        <small>Сейчас: ${escapeHtml(selectedTitle)}</small>
+      </span>
+      <svg viewBox="0 0 24 24" aria-hidden="true" class="${dispatcherWorkordersBreakdownExpanded ? "is-open" : ""}">
+        <path d="m7 10 5 5 5-5"></path>
+      </svg>
+    </button>
+
+    <div
+      class="dispatcher-breakdown-options"
+      ${dispatcherWorkordersBreakdownExpanded ? "" : "hidden"}
+    >
+      <button
+        class="dispatcher-breakdown-chip ${dispatcherWorkordersBreakdownSelection === "__all__" ? "is-active" : ""}"
+        type="button"
+        data-workorders-breakdown-source="__all__"
+      >
+        <strong>Общая сумма</strong>
+        <span>${workorders?.counts?.total ?? 0} всего</span>
+      </button>
+
+      ${breakdown.map(
+        (item, index) => `
+          <button
+            class="dispatcher-breakdown-chip ${dispatcherWorkordersBreakdownSelection === String(index) ? "is-active" : ""} ${item.matched ? "" : "is-missing"}"
+            type="button"
+            data-workorders-breakdown-source="${index}"
+          >
+            <strong>${escapeHtml(item.label || item.source)}</strong>
+            <span>
+              ${item.matched ? `${item.total ?? 0} всего` : "Строка не найдена · 0"}
+            </span>
+          </button>
+        `
+      ).join("")}
+    </div>
+  `;
+
+  dispatcherWorkordersBreakdown
+    .querySelector(
+      "[data-workorders-breakdown-toggle]"
+    )
+    ?.addEventListener(
+      "click",
+      () => {
+        dispatcherWorkordersBreakdownExpanded =
+          !dispatcherWorkordersBreakdownExpanded;
+        renderDispatcherWorkordersBreakdown(
+          payload
+        );
+      }
+    );
+
+  dispatcherWorkordersBreakdown
+    .querySelectorAll(
+      "[data-workorders-breakdown-source]"
+    )
+    .forEach(
+      (button) => {
+        button.addEventListener(
+          "click",
+          () => {
+            dispatcherWorkordersBreakdownSelection =
+              button.dataset
+                .workordersBreakdownSource ||
+              "__all__";
+
+            renderDispatcherWorkordersBreakdown(
+              payload
+            );
+          }
+        );
+      }
+    );
+}
+
+function renderDispatcherWorkorders(
+  payload
+) {
+  const workorders =
+    payload?.workorders || {};
+
+  const configuredSources =
+    Array.isArray(
+      workorders?.sources?.configured
+    )
+      ? workorders.sources.configured
+      : [];
+
+  const missingSources =
+    Array.isArray(
+      workorders?.sources?.missing
+    )
+      ? workorders.sources.missing
+      : [];
+
+  dispatcherWorkordersSourcesText.textContent =
+    configuredSources.length
+      ? `Источники: ${configuredSources.join(" + ")}`
+      : "Источники НДР не настроены · все значения = 0";
+
+  renderDispatcherWorkordersBreakdown(
+    payload
+  );
+
+  const sourceData =
+    workorders?.sourceData || {};
+
+  const metaParts = [];
+
+  if (sourceData.sourceUpdatedAt) {
+    metaParts.push(
+      `СК-11: ${sourceData.sourceUpdatedAt}`
+    );
+  }
+
+  if (sourceData.period) {
+    metaParts.push(
+      `Период: ${sourceData.period}`
+    );
+  }
+
+  if (sourceData.rowCount) {
+    metaParts.push(
+      `журналов: ${sourceData.rowCount}`
+    );
+  }
+
+  if (sourceData.parts > 1) {
+    metaParts.push(
+      `частей: ${sourceData.parts}`
+    );
+  }
+
+  dispatcherWorkordersMeta.textContent =
+    metaParts.length
+      ? metaParts.join(" · ")
+      : "Данные НДР пока не получены";
+
+  dispatcherWorkordersNotice.hidden = true;
+  dispatcherWorkordersNotice.classList.remove(
+    "is-warning",
+    "is-error",
+    "is-stale"
+  );
+
+  if (
+    sourceData.status &&
+    sourceData.status !== "ok"
+  ) {
+    dispatcherWorkordersNotice.hidden = false;
+    dispatcherWorkordersNotice.textContent =
+      sourceData.message ||
+      "Источник данных НДР временно недоступен";
+
+    dispatcherWorkordersNotice.classList.add(
+      sourceData.status === "error"
+        ? "is-error"
+        : sourceData.stale
+          ? "is-stale"
+          : "is-warning"
+    );
+  } else if (missingSources.length) {
+    dispatcherWorkordersNotice.hidden = false;
+    dispatcherWorkordersNotice.classList.add(
+      "is-warning"
+    );
+    dispatcherWorkordersNotice.textContent =
+      `В последнем сообщении НДР не найдены строки: ${missingSources.join(", ")}`;
+  }
+
+  dispatcherWorkordersLiveBadge.classList.toggle(
+    "is-stale",
+    Boolean(sourceData.stale)
+  );
+}
+
 function renderDispatcherDashboard(payload) {
   const groups =
     Array.isArray(
@@ -1617,12 +1995,40 @@ function renderDispatcherDashboard(payload) {
     Boolean(sourceData.stale)
   );
 
-  dispatcherUpdatedAt.textContent =
-    sourceData.sourceUpdatedAt
-      ? `СК-11 обновлён ${sourceData.sourceUpdatedAt}`
-      : payload?.updatedAt
+  renderDispatcherWorkorders(
+    payload
+  );
+
+  const workordersUpdatedAt =
+    payload?.workorders?.sourceData?.sourceUpdatedAt ||
+    "";
+
+  if (
+    sourceData.sourceUpdatedAt ||
+    workordersUpdatedAt
+  ) {
+    const updateParts = [];
+
+    if (sourceData.sourceUpdatedAt) {
+      updateParts.push(
+        `Заявки: ${sourceData.sourceUpdatedAt}`
+      );
+    }
+
+    if (workordersUpdatedAt) {
+      updateParts.push(
+        `НДР: ${workordersUpdatedAt}`
+      );
+    }
+
+    dispatcherUpdatedAt.textContent =
+      updateParts.join(" · ");
+  } else {
+    dispatcherUpdatedAt.textContent =
+      payload?.updatedAt
         ? `Проверено ${formatDateTime(payload.updatedAt)}`
         : "Интерфейс готов";
+  }
 }
 
 loginForm.addEventListener(
@@ -2278,6 +2684,11 @@ function renderAdminDashboard(
       payload.canManageRoles
     );
 
+  dispatcherWorkordersManagementPanel.hidden =
+    !Boolean(
+      payload.canManageRoles
+    );
+
   if (
     payload.canManageRoles
   ) {
@@ -2916,6 +3327,274 @@ function renderDispatcherConfigGroups() {
   renderDispatcherConfigList();
 }
 
+
+function renderDispatcherWorkordersConfigList() {
+  const selectedGroupId =
+    dispatcherWorkordersConfigGroupSelect.value ||
+    dispatcherWorkordersConfigCatalog.groups[0]?.id ||
+    "";
+
+  const units =
+    dispatcherWorkordersConfigCatalog.units.filter(
+      (unit) =>
+        unit.groupId === selectedGroupId
+    );
+
+  if (!units.length) {
+    dispatcherWorkordersConfigList.innerHTML = `
+      <div class="access-empty dispatcher-structure-empty">
+        <strong>В подразделении пока нет РЭС / районов</strong>
+        <span>
+          Структура синхронизируется с основным блоком настройки диспетчера выше.
+        </span>
+      </div>
+    `;
+    return;
+  }
+
+  dispatcherWorkordersConfigList.innerHTML =
+    units.map(
+      (unit) => {
+        const sources =
+          Array.isArray(unit.sources)
+            ? unit.sources
+            : [];
+
+        return `
+          <article class="dispatcher-config-card dispatcher-workorders-config-card">
+            <div class="dispatcher-config-card-head">
+              <div>
+                <span class="micro-label">
+                  ${escapeHtml(
+                    dispatcherConfigGroupName(
+                      unit.groupId
+                    )
+                  )}
+                </span>
+                <h3>${escapeHtml(unit.name)}</h3>
+              </div>
+
+              <span class="dispatcher-config-state ${unit.customized ? "is-custom" : ""}">
+                ${unit.customized ? "НАСТРОЕНО" : "НЕ НАСТРОЕНО"}
+              </span>
+            </div>
+
+            <div class="dispatcher-config-sources">
+              ${
+                sources.length
+                  ? sources
+                      .map(
+                        (source) => `
+                          <span>${escapeHtml(source)}</span>
+                        `
+                      )
+                      .join("")
+                  : `
+                    <span class="is-empty">
+                      Источники НДР не выбраны · диаграмма будет по нулям
+                    </span>
+                  `
+              }
+            </div>
+
+            <div class="dispatcher-config-card-actions">
+              <button
+                class="role-action dispatcher-config-edit"
+                type="button"
+                data-workorders-unit="${escapeHtml(unit.id)}"
+              >
+                Настроить НДР
+              </button>
+            </div>
+          </article>
+        `;
+      }
+    ).join("");
+
+  dispatcherWorkordersConfigList
+    .querySelectorAll(
+      "[data-workorders-unit]"
+    )
+    .forEach(
+      (button) => {
+        button.addEventListener(
+          "click",
+          () =>
+            openDispatcherWorkordersSourceEditor(
+              button.dataset
+                .workordersUnit
+            )
+        );
+      }
+    );
+}
+
+function renderDispatcherWorkordersConfigGroups() {
+  const groups =
+    dispatcherWorkordersConfigCatalog.groups || [];
+
+  const oldValue =
+    dispatcherWorkordersConfigGroupSelect.value;
+
+  dispatcherWorkordersConfigGroupSelect.innerHTML =
+    groups.length
+      ? groups.map(
+          (group) => `
+            <option value="${escapeHtml(group.id)}">
+              ${escapeHtml(group.name)}${group.description ? ` — ${escapeHtml(group.description)}` : ""}
+            </option>
+          `
+        ).join("")
+      : `<option value="">Нет подразделений</option>`;
+
+  if (
+    groups.some(
+      (group) =>
+        group.id === oldValue
+    )
+  ) {
+    dispatcherWorkordersConfigGroupSelect.value =
+      oldValue;
+  }
+
+  dispatcherWorkordersConfigGroupSelect.disabled =
+    !groups.length;
+
+  renderDispatcherWorkordersConfigList();
+}
+
+function openDispatcherWorkordersSourceEditor(
+  unitId
+) {
+  const unit =
+    dispatcherWorkordersConfigCatalog.units.find(
+      (item) =>
+        item.id === unitId
+    );
+
+  if (!unit) {
+    return;
+  }
+
+  const sources =
+    Array.isArray(unit.sources)
+      ? unit.sources
+      : [];
+
+  const availableSourceLabels =
+    Array.isArray(
+      dispatcherWorkordersConfigCatalog.availableSourceLabels
+    )
+      ? dispatcherWorkordersConfigCatalog.availableSourceLabels
+      : [];
+
+  const sourceOptions =
+    availableSourceLabels
+      .map(
+        (label) => `
+          <option value="${escapeHtml(label)}">
+            ${escapeHtml(label)}
+          </option>
+        `
+      )
+      .join("");
+
+  openManagementModal({
+    eyebrow:
+      "НАРЯДЫ / РАСПОРЯЖЕНИЯ / ДОПУСКИ",
+    title:
+      `${dispatcherConfigGroupName(unit.groupId)} · ${unit.name}`,
+    context: {
+      type:
+        "dispatcher-workorders-source",
+      unitId:
+        unit.id
+    },
+    bodyHtml: `
+      <div class="management-note">
+        Выберите строки журналов из последнего сообщения «СК-11 • Наряды / допуски».
+        Если добавить несколько строк, их статусы суммируются. В интерфейсе диспетчера
+        по умолчанию будет показана общая сумма, а каждую строку можно открыть отдельно.
+      </div>
+
+      ${
+        availableSourceLabels.length
+          ? `
+            <div class="dispatcher-source-picker">
+              <label class="management-field">
+                <span>Быстро добавить журнал из последнего СК-11</span>
+                <select id="dispatcherWorkordersSourceSuggestion" class="dispatcher-select">
+                  ${sourceOptions}
+                </select>
+              </label>
+              <button id="dispatcherWorkordersAddSourceButton" class="role-action" type="button">
+                + Добавить
+              </button>
+            </div>
+          `
+          : `
+            <div class="management-note is-warning">
+              Пока нет распознанных строк НДР. Проверьте DISPATCHER_WORKORDERS_CHAT_ID
+              и наличие свежего сообщения в чате MAX.
+            </div>
+          `
+      }
+
+      <label class="management-field dispatcher-source-editor-field">
+        <span>Журналы-источники · по одному на строку</span>
+        <textarea
+          id="dispatcherWorkordersSourcesTextarea"
+          rows="10"
+          placeholder="Например:\nВЭС. Журнал учета работ по НДР. Выборгский РЭС"
+        >${escapeHtml(sources.join("\n"))}</textarea>
+      </label>
+
+      <div class="dispatcher-source-defaults">
+        <span>Если оставить поле пустым:</span>
+        <strong>все значения НДР для этого РЭС / района будут равны нулю</strong>
+      </div>
+    `
+  });
+
+  document.getElementById(
+    "dispatcherWorkordersAddSourceButton"
+  )?.addEventListener(
+    "click",
+    () => {
+      const select =
+        document.getElementById(
+          "dispatcherWorkordersSourceSuggestion"
+        );
+      const textarea =
+        document.getElementById(
+          "dispatcherWorkordersSourcesTextarea"
+        );
+
+      const value =
+        String(select?.value || "")
+          .trim();
+
+      if (!value || !textarea) {
+        return;
+      }
+
+      const current =
+        String(textarea.value || "")
+          .split("\n")
+          .map((item) => item.trim())
+          .filter(Boolean);
+
+      if (!current.includes(value)) {
+        current.push(value);
+      }
+
+      textarea.value =
+        current.join("\n");
+      textarea.focus();
+    }
+  );
+}
+
 async function loadDispatcherConfigManagement() {
   if (!currentUser?.isDeveloper) {
     return;
@@ -2967,6 +3646,29 @@ async function loadDispatcherConfigManagement() {
         Boolean(payload.storageConfigured)
     };
 
+    dispatcherWorkordersConfigCatalog = {
+      groups:
+        Array.isArray(payload.groups)
+          ? payload.groups
+          : [],
+      units:
+        Array.isArray(
+          payload?.workorders?.units
+        )
+          ? payload.workorders.units
+          : [],
+      availableSourceLabels:
+        Array.isArray(
+          payload?.workorders?.availableSourceLabels
+        )
+          ? payload.workorders.availableSourceLabels
+          : [],
+      sourceData:
+        payload?.workorders?.sourceData || {},
+      storageConfigured:
+        Boolean(payload.storageConfigured)
+    };
+
     const sourceInfo =
       dispatcherConfigCatalog.sourceData;
 
@@ -2987,7 +3689,29 @@ async function loadDispatcherConfigManagement() {
       !dispatcherConfigCatalog.storageConfigured
     );
 
+    const workordersInfo =
+      dispatcherWorkordersConfigCatalog.sourceData;
+
+    const workordersSuffix =
+      workordersInfo?.sourceUpdatedAt
+        ? ` Последний НДР: ${workordersInfo.sourceUpdatedAt}. Распознано журналов: ${workordersInfo.rowCount || 0}${workordersInfo.parts > 1 ? ` · частей: ${workordersInfo.parts}` : ""}.`
+        : workordersInfo?.message
+          ? ` ${workordersInfo.message}`
+          : "";
+
+    dispatcherWorkordersConfigStatus.textContent =
+      dispatcherWorkordersConfigCatalog.storageConfigured
+        ? `Источники НДР сохраняются отдельно в Redis и привязаны к той же структуре подразделений и РЭС / районов.${workordersSuffix}`
+        : `Redis не подключён: источники НДР сохранить нельзя.${workordersSuffix}`;
+
+    dispatcherWorkordersConfigStatus.classList.toggle(
+      "is-warning",
+      !dispatcherWorkordersConfigCatalog.storageConfigured ||
+      (workordersInfo?.status && workordersInfo.status !== "ok")
+    );
+
     renderDispatcherConfigGroups();
+    renderDispatcherWorkordersConfigGroups();
   } catch (error) {
     dispatcherConfigStatus.textContent =
       error instanceof Error
@@ -2999,6 +3723,15 @@ async function loadDispatcherConfigManagement() {
     );
 
     dispatcherConfigList.innerHTML = "";
+
+    dispatcherWorkordersConfigStatus.textContent =
+      error instanceof Error
+        ? error.message
+        : "Ошибка загрузки источников НДР";
+    dispatcherWorkordersConfigStatus.classList.add(
+      "is-warning"
+    );
+    dispatcherWorkordersConfigList.innerHTML = "";
   }
 }
 
@@ -4373,6 +5106,62 @@ async function saveManagementEditor() {
 
     if (
       managementContext.type ===
+      "dispatcher-workorders-source"
+    ) {
+      const textarea =
+        document.getElementById(
+          "dispatcherWorkordersSourcesTextarea"
+        );
+
+      const sources =
+        String(
+          textarea?.value || ""
+        )
+          .split("\n")
+          .map(
+            (value) =>
+              value.trim()
+          )
+          .filter(Boolean);
+
+      const response =
+        await fetch(
+          API_ADMIN_DISPATCHER_CONFIG,
+          {
+            method: "POST",
+            cache: "no-store",
+            credentials:
+              "include",
+            headers: {
+              "Content-Type":
+                "application/json",
+              ...getSessionHeaders()
+            },
+            body: JSON.stringify({
+              action: "save_workorders",
+              unitId:
+                managementContext
+                  .unitId,
+              sources
+            })
+          }
+        );
+
+      const payload =
+        await response
+          .json()
+          .catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          payload?.error ||
+          "Не удалось сохранить источники НДР"
+        );
+      }
+    }
+
+    if (
+      managementContext.type ===
       "dispatcher-source"
     ) {
       const textarea =
@@ -4642,6 +5431,11 @@ createRoleButton.addEventListener(
 dispatcherConfigGroupSelect.addEventListener(
   "change",
   renderDispatcherConfigList
+);
+
+dispatcherWorkordersConfigGroupSelect.addEventListener(
+  "change",
+  renderDispatcherWorkordersConfigList
 );
 
 dispatcherCreateGroupButton.addEventListener(

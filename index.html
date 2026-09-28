@@ -503,29 +503,74 @@
               </div>
             </article>
 
-            <article class="dispatcher-panel glass-panel">
+            <article class="dispatcher-panel glass-panel dispatcher-workorders-panel">
               <div class="dispatcher-panel-head">
                 <div>
-                  <span class="micro-label">НАРЯД / РАСПОРЯЖЕНИЕ</span>
-                  <h2>Наряд распоряжений</h2>
+                  <span class="micro-label">СК-11 · НДР</span>
+                  <h2>Наряды/Распоряжения/Допуски</h2>
                 </div>
-                <div class="dispatcher-dev-badge">МОДУЛЬ</div>
+                <div id="dispatcherWorkordersLiveBadge" class="dispatcher-live-badge">
+                  <i></i>
+                  LIVE
+                </div>
               </div>
 
-              <div class="dispatcher-workorders-lockup">
-                <div class="dispatcher-workorders-blur"></div>
-                <div class="dispatcher-workorders-copy">
-                  <div class="dispatcher-workorders-icon">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path d="M7 3h10a2 2 0 0 1 2 2v16H5V5a2 2 0 0 1 2-2Z"></path>
-                      <path d="M9 7h6M9 11h6M9 15h4"></path>
-                    </svg>
+              <div class="dispatcher-source-meta dispatcher-workorders-meta">
+                <span id="dispatcherWorkordersMeta">Ожидание данных СК-11</span>
+                <span id="dispatcherWorkordersSourcesText">Источники: —</span>
+              </div>
+
+              <div
+                id="dispatcherWorkordersNotice"
+                class="dispatcher-data-notice dispatcher-workorders-notice"
+                hidden
+              ></div>
+
+              <div
+                id="dispatcherWorkordersBreakdown"
+                class="dispatcher-source-breakdown dispatcher-workorders-breakdown"
+                hidden
+              ></div>
+
+              <div class="dispatcher-workorders-chart-layout">
+                <div
+                  id="dispatcherWorkordersChart"
+                  class="dispatcher-workorders-donut"
+                  role="img"
+                  aria-label="Распределение нарядов, распоряжений и допусков по статусам"
+                >
+                  <div class="dispatcher-workorders-donut-center">
+                    <strong id="dispatcherWorkordersTotal">0</strong>
+                    <span>Всего</span>
                   </div>
-                  <strong>В разработке</strong>
-                  <span>
-                    Учёт нарядов и распоряжений будет подключён
-                    в следующих версиях диспетчерского интерфейса.
-                  </span>
+                </div>
+
+                <div class="dispatcher-workorders-legend">
+                  <div class="dispatcher-workorders-legend-item is-registered">
+                    <i></i>
+                    <span>Зарегистрирован</span>
+                    <strong id="dispatcherWorkordersRegistered">0</strong>
+                  </div>
+                  <div class="dispatcher-workorders-legend-item is-created">
+                    <i></i>
+                    <span>Создано</span>
+                    <strong id="dispatcherWorkordersCreated">0</strong>
+                  </div>
+                  <div class="dispatcher-workorders-legend-item is-admission">
+                    <i></i>
+                    <span>Допуск</span>
+                    <strong id="dispatcherWorkordersAdmission">0</strong>
+                  </div>
+                  <div class="dispatcher-workorders-legend-item is-preparation">
+                    <i></i>
+                    <span>Подготовка р.м.</span>
+                    <strong id="dispatcherWorkordersPreparation">0</strong>
+                  </div>
+                  <div class="dispatcher-workorders-legend-item is-break">
+                    <i></i>
+                    <span>Перерыв</span>
+                    <strong id="dispatcherWorkordersBreak">0</strong>
+                  </div>
                 </div>
               </div>
             </article>
@@ -773,6 +818,35 @@
 
         <div id="dispatcherConfigStatus" class="dispatcher-config-status"></div>
         <div id="dispatcherConfigList" class="dispatcher-config-list"></div>
+      </article>
+
+      <article
+        id="dispatcherWorkordersManagementPanel"
+        class="admin-panel dispatcher-source-management"
+        hidden
+      >
+        <div class="admin-panel-heading access-heading">
+          <div>
+            <span class="micro-label">ИСТОЧНИКИ НАРЯДОВ / ДОПУСКОВ</span>
+            <h2>Настройка НДР для РЭС / районов</h2>
+            <p class="access-heading-copy">
+              Для каждого РЭС / района укажите строки из сообщения
+              «СК-11 • Наряды / допуски». Если строк несколько, в панели
+              диспетчера сначала показывается их общая сумма, а затем можно
+              открыть каждую запись отдельно.
+            </p>
+          </div>
+
+          <div class="dispatcher-config-toolbar dispatcher-workorders-config-toolbar">
+            <label class="dispatcher-config-filter">
+              <span>Подразделение</span>
+              <select id="dispatcherWorkordersConfigGroupSelect" class="dispatcher-select"></select>
+            </label>
+          </div>
+        </div>
+
+        <div id="dispatcherWorkordersConfigStatus" class="dispatcher-config-status"></div>
+        <div id="dispatcherWorkordersConfigList" class="dispatcher-config-list"></div>
       </article>
     </section>
   </main>

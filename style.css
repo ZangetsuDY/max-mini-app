@@ -3861,3 +3861,182 @@ body.low-bandwidth .glass-panel {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
+
+/* =========================================================
+   DISPATCHER — НАРЯДЫ / РАСПОРЯЖЕНИЯ / ДОПУСКИ
+   ========================================================= */
+
+.dispatcher-workorders-panel {
+  overflow: hidden;
+}
+
+.dispatcher-workorders-meta {
+  margin-top: 14px;
+}
+
+.dispatcher-workorders-notice {
+  margin-top: 12px;
+}
+
+.dispatcher-workorders-breakdown {
+  margin-top: 12px;
+}
+
+.dispatcher-workorders-chart-layout {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: minmax(150px, 190px) minmax(0, 1fr);
+  align-items: center;
+  gap: 20px;
+}
+
+.dispatcher-workorders-donut {
+  width: min(100%, 190px);
+  aspect-ratio: 1;
+  margin-inline: auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(rgba(129, 156, 178, .18) 0 100%);
+  box-shadow:
+    0 20px 45px rgba(0, 0, 0, .22),
+    inset 0 0 0 1px rgba(255, 255, 255, .05);
+  position: relative;
+}
+
+.dispatcher-workorders-donut::after {
+  content: "";
+  position: absolute;
+  inset: 22%;
+  border-radius: 50%;
+  background: rgba(3, 16, 31, .96);
+  border: 1px solid rgba(255,255,255,.06);
+  box-shadow: inset 0 8px 24px rgba(0, 0, 0, .28);
+}
+
+.dispatcher-workorders-donut-center {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+
+.dispatcher-workorders-donut-center strong {
+  color: #f5fbff;
+  font-size: clamp(30px, 4vw, 42px);
+  line-height: 1;
+  letter-spacing: -.04em;
+}
+
+.dispatcher-workorders-donut-center span {
+  color: #7f9ab0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.dispatcher-workorders-legend {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.dispatcher-workorders-legend-item {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(2, 15, 31, .34);
+  border: 1px solid rgba(255,255,255,.05);
+}
+
+.dispatcher-workorders-legend-item i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 10px currentColor;
+  background: currentColor;
+}
+
+.dispatcher-workorders-legend-item span {
+  min-width: 0;
+  color: #9ab2c5;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.dispatcher-workorders-legend-item strong {
+  color: #eef7fc;
+  font-size: 17px;
+}
+
+.dispatcher-workorders-legend-item.is-registered {
+  color: #2dd4bf;
+}
+
+.dispatcher-workorders-legend-item.is-created {
+  color: #3b82f6;
+}
+
+.dispatcher-workorders-legend-item.is-admission {
+  color: #8b5cf6;
+}
+
+.dispatcher-workorders-legend-item.is-preparation {
+  color: #f59e0b;
+}
+
+.dispatcher-workorders-legend-item.is-break {
+  color: #f43f5e;
+}
+
+.dispatcher-workorders-config-toolbar {
+  justify-content: flex-end;
+}
+
+.dispatcher-workorders-config-card .dispatcher-config-state:not(.is-custom) {
+  color: #8ba0b2;
+  border-color: rgba(139, 160, 178, .16);
+  background: rgba(139, 160, 178, .06);
+}
+
+@media (max-width: 1180px) {
+  .dispatcher-workorders-chart-layout {
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .dispatcher-workorders-donut {
+    width: 150px;
+  }
+}
+
+@media (max-width: 940px) {
+  .dispatcher-workorders-chart-layout {
+    grid-template-columns: minmax(160px, 210px) minmax(0, 1fr);
+  }
+
+  .dispatcher-workorders-donut {
+    width: min(100%, 210px);
+  }
+}
+
+@media (max-width: 620px) {
+  .dispatcher-workorders-chart-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .dispatcher-workorders-donut {
+    width: 190px;
+  }
+
+  .dispatcher-workorders-legend {
+    grid-template-columns: 1fr;
+  }
+}

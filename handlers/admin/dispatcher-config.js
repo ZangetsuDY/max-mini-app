@@ -13,6 +13,12 @@ import {
 } from "../../lib/dispatcher-config.js";
 
 import {
+  getWorkordersSourceConfig,
+  setWorkordersUnitSources,
+  resetWorkordersUnitSources
+} from "../../lib/dispatcher-workorders-config.js";
+
+import {
   getDispatcherStructure,
   createDispatcherGroup,
   updateDispatcherGroup,
@@ -28,6 +34,10 @@ import {
 import {
   getLatestDispatcherSnapshot
 } from "../../lib/dispatcher-data.js";
+
+import {
+  getLatestWorkordersSnapshot
+} from "../../lib/dispatcher-workorders-data.js";
 
 function json(data, status = 200) {
   return new Response(
@@ -84,12 +94,16 @@ export default {
         const [
           units,
           sourceState,
-          structure
+          structure,
+          workordersUnits,
+          workordersSourceState
         ] =
           await Promise.all([
             getDispatcherSourceConfig(),
             getLatestDispatcherSnapshot(),
-            getDispatcherStructure()
+            getDispatcherStructure(),
+            getWorkordersSourceConfig(),
+            getLatestWorkordersSnapshot()
           ]);
 
         return json({
@@ -117,6 +131,31 @@ export default {
               sourceState.snapshot?.sourceUpdatedAt || "",
             rowCount:
               sourceState.snapshot?.rowCount || 0
+          },
+          workorders: {
+            units: workordersUnits,
+            availableSourceLabels:
+              Array.isArray(
+                workordersSourceState.snapshot?.rowList
+              )
+                ? workordersSourceState.snapshot.rowList.map(
+                    (row) => row.label
+                  )
+                : [],
+            sourceData: {
+              configured:
+                Boolean(workordersSourceState.configured),
+              status:
+                workordersSourceState.status,
+              message:
+                workordersSourceState.message || "",
+              sourceUpdatedAt:
+                workordersSourceState.snapshot?.sourceUpdatedAt || "",
+              rowCount:
+                workordersSourceState.snapshot?.rowCount || 0,
+              parts:
+                workordersSourceState.snapshot?.parts || 0
+            }
           }
         });
       } catch (error) {
@@ -216,6 +255,35 @@ export default {
         });
 
         return json({ ok: true });
+      }
+
+      if (action === "reset_workorders") {
+        const unit =
+          await resetWorkordersUnitSources({
+            unitId: body?.unitId
+          });
+
+        return json({
+          ok: true,
+          unit
+        });
+      }
+
+      if (action === "save_workorders") {
+        const unit =
+          await setWorkordersUnitSources({
+            unitId: body?.unitId,
+            sources:
+              Array.isArray(body?.sources)
+                ? body.sources
+                : [],
+            actor: auth.access
+          });
+
+        return json({
+          ok: true,
+          unit
+        });
       }
 
       if (action === "reset") {

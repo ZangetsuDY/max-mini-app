@@ -16,9 +16,18 @@ import {
 } from "../lib/dispatcher-config.js";
 
 import {
+  getWorkordersUnitConfig
+} from "../lib/dispatcher-workorders-config.js";
+
+import {
   getLatestDispatcherSnapshot,
   aggregateDispatcherSources
 } from "../lib/dispatcher-data.js";
+
+import {
+  getLatestWorkordersSnapshot,
+  aggregateWorkordersSources
+} from "../lib/dispatcher-workorders-data.js";
 
 function json(data, status = 200) {
   return new Response(
@@ -269,18 +278,32 @@ export default {
       );
     }
 
-    const unitConfig =
-      await getDispatcherUnitConfig(
+    const [
+      unitConfig,
+      workordersUnitConfig,
+      snapshotState,
+      workordersSnapshotState
+    ] = await Promise.all([
+      getDispatcherUnitConfig(
         selectedUnit.id
-      );
-
-    const snapshotState =
-      await getLatestDispatcherSnapshot();
+      ),
+      getWorkordersUnitConfig(
+        selectedUnit.id
+      ),
+      getLatestDispatcherSnapshot(),
+      getLatestWorkordersSnapshot()
+    ]);
 
     const aggregation =
       aggregateDispatcherSources(
         snapshotState.snapshot,
         unitConfig?.sources || []
+      );
+
+    const workordersAggregation =
+      aggregateWorkordersSources(
+        workordersSnapshotState.snapshot,
+        workordersUnitConfig?.sources || []
       );
 
     return json({
@@ -354,6 +377,62 @@ export default {
           snapshotState.snapshot?.rowCount || 0,
         reportedTotal:
           snapshotState.snapshot?.reportedTotal ?? null
+      },
+      workorders: {
+        counts: {
+          registered:
+            workordersAggregation.registered,
+          created:
+            workordersAggregation.created,
+          admission:
+            workordersAggregation.admission,
+          preparation:
+            workordersAggregation.preparation,
+          break:
+            workordersAggregation.break,
+          total:
+            workordersAggregation.total
+        },
+        sources: {
+          configured:
+            workordersUnitConfig?.sources || [],
+          matched:
+            workordersAggregation.matchedSources,
+          missing:
+            workordersAggregation.missingSources,
+          breakdown:
+            workordersAggregation.sourceBreakdown
+        },
+        sourceData: {
+          configured:
+            Boolean(workordersSnapshotState.configured),
+          status:
+            workordersSnapshotState.status,
+          message:
+            workordersSnapshotState.message || "",
+          stale:
+            Boolean(workordersSnapshotState.stale),
+          cached:
+            Boolean(workordersSnapshotState.cached),
+          period:
+            workordersSnapshotState.snapshot?.period || "",
+          sourceUpdatedAt:
+            workordersSnapshotState.snapshot?.sourceUpdatedAt || "",
+          messageTimestamp:
+            workordersSnapshotState.snapshot?.messageTimestamp || null,
+          rowCount:
+            workordersSnapshotState.snapshot?.rowCount || 0,
+          parts:
+            workordersSnapshotState.snapshot?.parts || 0,
+          received:
+            workordersSnapshotState.snapshot?.received ?? null,
+          counted:
+            workordersSnapshotState.snapshot?.counted ?? null,
+          withoutJournal:
+            workordersSnapshotState.snapshot?.withoutJournal ?? null,
+          journals:
+            workordersSnapshotState.snapshot?.journals ?? null
+        }
       },
       defects: {
         available: false,
