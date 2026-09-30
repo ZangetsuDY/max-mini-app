@@ -438,43 +438,59 @@
               hidden
             ></div>
 
-            <div class="dispatcher-request-grid dispatcher-request-grid-v2">
-              <div class="dispatcher-request-card">
-                <span>В рассмотрении</span>
-                <strong id="dispatcherReqReview">—</strong>
-                <small>ВР</small>
+            <div class="dispatcher-requests-chart-layout">
+              <div
+                id="dispatcherRequestsChart"
+                class="dispatcher-workorders-donut dispatcher-requests-donut"
+                role="img"
+                aria-label="Распределение заявок по статусам"
+              >
+                <div class="dispatcher-workorders-donut-center dispatcher-requests-donut-center">
+                  <strong id="dispatcherReqTotal">0</strong>
+                  <span>Всего</span>
+                </div>
               </div>
-              <div class="dispatcher-request-card">
-                <span>Разрешена</span>
-                <strong id="dispatcherReqApproved">—</strong>
-                <small>РАЗР</small>
-              </div>
-              <div class="dispatcher-request-card">
-                <span>Открыта</span>
-                <strong id="dispatcherReqOpen">—</strong>
-                <small>ОТКР</small>
-              </div>
-              <div class="dispatcher-request-card">
-                <span>Закрыта</span>
-                <strong id="dispatcherReqClosed">—</strong>
-                <small>ЗАКР</small>
-              </div>
-              <div class="dispatcher-request-card">
-                <span>Принята к сведению</span>
-                <strong id="dispatcherReqAcknowledged">—</strong>
-                <small>КС</small>
-              </div>
-              <div class="dispatcher-request-card is-primary">
-                <span>Всего</span>
-                <strong id="dispatcherReqTotal">—</strong>
-                <small id="dispatcherReqTotalCaption">Сумма по подключённым строкам СК-11</small>
-              </div>
-              <div class="dispatcher-request-card dispatcher-ending-card">
-                <div class="dispatcher-ending-blur" aria-hidden="true">12</div>
-                <div class="dispatcher-ending-overlay">
-                  <span>Заканчиваются</span>
-                  <strong>!</strong>
-                  <small>В разработке</small>
+
+              <div class="dispatcher-requests-side">
+                <div class="dispatcher-workorders-legend dispatcher-requests-legend">
+                  <div class="dispatcher-workorders-legend-item is-review">
+                    <i></i>
+                    <span>В рассмотрении</span>
+                    <strong id="dispatcherReqReview">0</strong>
+                  </div>
+                  <div class="dispatcher-workorders-legend-item is-approved">
+                    <i></i>
+                    <span>Разрешена</span>
+                    <strong id="dispatcherReqApproved">0</strong>
+                  </div>
+                  <div class="dispatcher-workorders-legend-item is-open-status">
+                    <i></i>
+                    <span>Открыта</span>
+                    <strong id="dispatcherReqOpen">0</strong>
+                  </div>
+                  <div class="dispatcher-workorders-legend-item is-closed">
+                    <i></i>
+                    <span>Закрыта</span>
+                    <strong id="dispatcherReqClosed">0</strong>
+                  </div>
+                  <div class="dispatcher-workorders-legend-item is-acknowledged">
+                    <i></i>
+                    <span>Принята к сведению</span>
+                    <strong id="dispatcherReqAcknowledged">0</strong>
+                  </div>
+                </div>
+
+                <p id="dispatcherReqTotalCaption" class="dispatcher-requests-caption">
+                  Сумма по подключённым строкам СК-11
+                </p>
+
+                <div class="dispatcher-request-card dispatcher-ending-card dispatcher-ending-card-inline">
+                  <div class="dispatcher-ending-blur" aria-hidden="true">12</div>
+                  <div class="dispatcher-ending-overlay">
+                    <span>Заканчиваются</span>
+                    <strong>!</strong>
+                    <small>В разработке</small>
+                  </div>
                 </div>
               </div>
             </div>
@@ -507,7 +523,7 @@
               <div class="dispatcher-panel-head">
                 <div>
                   <span class="micro-label">СК-11 · НДР</span>
-                  <h2>Наряды/Распоряжения/Допуски</h2>
+                  <h2>Наряд - Допуск/Распоряжения</h2>
                 </div>
                 <div id="dispatcherWorkordersLiveBadge" class="dispatcher-live-badge">
                   <i></i>

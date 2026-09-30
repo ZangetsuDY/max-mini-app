@@ -144,6 +144,7 @@ const dispatcherSourceMeta = document.getElementById("dispatcherSourceMeta");
 const dispatcherSourcesText = document.getElementById("dispatcherSourcesText");
 const dispatcherSourceBreakdown = document.getElementById("dispatcherSourceBreakdown");
 const dispatcherLiveBadge = document.getElementById("dispatcherLiveBadge");
+const dispatcherRequestsChart = document.getElementById("dispatcherRequestsChart");
 const dispatcherReqReview = document.getElementById("dispatcherReqReview");
 const dispatcherReqApproved = document.getElementById("dispatcherReqApproved");
 const dispatcherReqOpen = document.getElementById("dispatcherReqOpen");
@@ -1296,21 +1297,138 @@ function renderDispatcherSelectOptions(
     ).join("");
 }
 
+function renderDispatcherDonutChart(
+  chartElement,
+  segments
+) {
+  if (!chartElement) {
+    return;
+  }
+
+  chartElement
+    .querySelectorAll(
+      ".dispatcher-donut-marker"
+    )
+    .forEach((item) => item.remove());
+
+  const normalized = Array.isArray(segments)
+    ? segments.map((segment) => ({
+        ...segment,
+        value: Number(segment?.value || 0)
+      }))
+    : [];
+
+  const statusTotal = normalized.reduce(
+    (sum, item) =>
+      sum + Math.max(0, item.value),
+    0
+  );
+
+  if (!statusTotal) {
+    chartElement.style.background =
+      "conic-gradient(rgba(129, 156, 178, .18) 0 100%)";
+    return;
+  }
+
+  let cursor = 0;
+  const gradientParts = [];
+
+  normalized.forEach((segment) => {
+    const safeValue = Math.max(0, segment.value);
+    const size =
+      (safeValue / statusTotal) * 100;
+    const start = cursor;
+    const end = cursor + size;
+
+    gradientParts.push(
+      `${segment.color} ${start.toFixed(3)}% ${end.toFixed(3)}%`
+    );
+
+    if (safeValue > 0) {
+      const angle =
+        ((start + end) / 2 / 100) *
+          Math.PI *
+          2 -
+        Math.PI / 2;
+      const marker =
+        document.createElement("div");
+
+      marker.className =
+        "dispatcher-donut-marker";
+      marker.textContent = String(safeValue);
+      marker.title = segment.label
+        ? `${segment.label}: ${safeValue}`
+        : String(safeValue);
+      marker.style.left = `${50 + Math.cos(angle) * 41}%`;
+      marker.style.top = `${50 + Math.sin(angle) * 41}%`;
+      marker.style.background = segment.color;
+      chartElement.appendChild(marker);
+    }
+
+    cursor = end;
+  });
+
+  chartElement.style.background =
+    `conic-gradient(${gradientParts.join(", ")})`;
+}
+
 function setDispatcherRequestCounts(
   counts
 ) {
+  const values = {
+    review: Number(counts?.review || 0),
+    approved: Number(counts?.approved || 0),
+    open: Number(counts?.open || 0),
+    closed: Number(counts?.closed || 0),
+    acknowledged: Number(
+      counts?.acknowledged || 0
+    ),
+    total: Number(counts?.total || 0)
+  };
+
   dispatcherReqReview.textContent =
-    counts?.review ?? 0;
+    values.review;
   dispatcherReqApproved.textContent =
-    counts?.approved ?? 0;
+    values.approved;
   dispatcherReqOpen.textContent =
-    counts?.open ?? 0;
+    values.open;
   dispatcherReqClosed.textContent =
-    counts?.closed ?? 0;
+    values.closed;
   dispatcherReqAcknowledged.textContent =
-    counts?.acknowledged ?? 0;
+    values.acknowledged;
   dispatcherReqTotal.textContent =
-    counts?.total ?? 0;
+    values.total;
+
+  renderDispatcherDonutChart(
+    dispatcherRequestsChart,
+    [
+      {
+        label: "В рассмотрении",
+        value: values.review,
+        color: "#38bdf8"
+      },
+      {
+        label: "Разрешена",
+        value: values.approved,
+        color: "#22c55e"
+      },
+      {
+        label: "Открыта",
+        value: values.open,
+        color: "#8b5cf6"
+      },
+      {
+        label: "Закрыта",
+        value: values.closed,
+        color: "#f59e0b"
+      },
+      {
+        label: "Принята к сведению",
+        value: values.acknowledged,
+        color: "#f43f5e"
+      }
+    ]
+  );
 }
 
 function renderDispatcherSourceBreakdown(
@@ -1508,60 +1626,36 @@ function setDispatcherWorkordersCounts(
   dispatcherWorkordersTotal.textContent =
     values.total;
 
-  const segments = [
-    {
-      value: values.registered,
-      color: "#2dd4bf"
-    },
-    {
-      value: values.created,
-      color: "#3b82f6"
-    },
-    {
-      value: values.admission,
-      color: "#8b5cf6"
-    },
-    {
-      value: values.preparation,
-      color: "#f59e0b"
-    },
-    {
-      value: values.break,
-      color: "#f43f5e"
-    }
-  ];
-
-  const statusTotal =
-    segments.reduce(
-      (sum, item) =>
-        sum + Math.max(0, item.value),
-      0
-    );
-
-  if (!statusTotal) {
-    dispatcherWorkordersChart.style.background =
-      "conic-gradient(rgba(129, 156, 178, .18) 0 100%)";
-    return;
-  }
-
-  let cursor = 0;
-  const gradientParts = [];
-
-  for (const segment of segments) {
-    const size =
-      Math.max(0, segment.value) /
-      statusTotal * 100;
-    const end = cursor + size;
-
-    gradientParts.push(
-      `${segment.color} ${cursor.toFixed(3)}% ${end.toFixed(3)}%`
-    );
-
-    cursor = end;
-  }
-
-  dispatcherWorkordersChart.style.background =
-    `conic-gradient(${gradientParts.join(", ")})`;
+  renderDispatcherDonutChart(
+    dispatcherWorkordersChart,
+    [
+      {
+        label: "Зарегистрирован",
+        value: values.registered,
+        color: "#2dd4bf"
+      },
+      {
+        label: "Создано",
+        value: values.created,
+        color: "#3b82f6"
+      },
+      {
+        label: "Допуск",
+        value: values.admission,
+        color: "#8b5cf6"
+      },
+      {
+        label: "Подготовка р.м.",
+        value: values.preparation,
+        color: "#f59e0b"
+      },
+      {
+        label: "Перерыв",
+        value: values.break,
+        color: "#f43f5e"
+      }
+    ]
+  );
 }
 
 function renderDispatcherWorkordersBreakdown(
