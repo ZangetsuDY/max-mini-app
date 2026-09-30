@@ -17,6 +17,7 @@ const API_ADMIN_ROLES = "/api/admin/roles";
 const API_ADMIN_USER_ROLES = "/api/admin/user-roles";
 const API_ADMIN_USERS = "/api/admin/users";
 const API_ADMIN_DISPATCHER_CONFIG = "/api/admin/dispatcher-config";
+const API_ADMIN_OUTAGE_CONFIG = "/api/admin/outage-config";
 
 const REFRESH_INTERVAL_MS = 120_000;
 const HEARTBEAT_INTERVAL_MS = 45_000;
@@ -28,22 +29,6 @@ const STARTUP_REQUEST_TIMEOUT_MS = 7_000;
 const LOGIN_REQUEST_TIMEOUT_MS = 18_000;
 const MAX_BRIDGE_TIMEOUT_MS = 10_000;
 
-const DIVISIONS = [
-  { id: "ves", name: "ВЭС" },
-  { id: "gtes", name: "ГтЭС" },
-  { id: "yues", name: "ЮЭС" },
-  { id: "ses", name: "СЭС" },
-  { id: "thes", name: "ТхЭС" },
-  { id: "ks", name: "КС" },
-  { id: "nles", name: "НлЭС" },
-  { id: "knes", name: "КнЭС" },
-  { id: "yuvvr", name: "ЮВВР" },
-  { id: "svvr", name: "СВВР" },
-  { id: "vvvr", name: "ВВВР" },
-  { id: "tsvvr", name: "ЦВВР" },
-  { id: "os", name: "ОС" },
-  { id: "volkhov", name: "Волхов" }
-];
 
 const authScreen = document.getElementById("authScreen");
 const loginForm = document.getElementById("loginForm");
@@ -144,6 +129,7 @@ const divisionGrid = document.getElementById("divisionGrid");
 const totalOutages = document.getElementById("totalOutages");
 const updatedAt = document.getElementById("updatedAt");
 const dashboardStatus = document.getElementById("dashboardStatus");
+const divisionCountCaption = document.getElementById("divisionCountCaption");
 
 const dispatcherAssignedDivision = document.getElementById("dispatcherAssignedDivision");
 const dispatcherAssignedHint = document.getElementById("dispatcherAssignedHint");
@@ -178,6 +164,11 @@ const dispatcherWorkordersCreated = document.getElementById("dispatcherWorkorder
 const dispatcherWorkordersAdmission = document.getElementById("dispatcherWorkordersAdmission");
 const dispatcherWorkordersPreparation = document.getElementById("dispatcherWorkordersPreparation");
 const dispatcherWorkordersBreak = document.getElementById("dispatcherWorkordersBreak");
+
+const outageManagementPanel = document.getElementById("outageManagementPanel");
+const outageCreateDivisionButton = document.getElementById("outageCreateDivisionButton");
+const outageConfigStatus = document.getElementById("outageConfigStatus");
+const outageConfigList = document.getElementById("outageConfigList");
 
 const dispatcherSourceManagementPanel = document.getElementById("dispatcherSourceManagementPanel");
 const dispatcherConfigGroupSelect = document.getElementById("dispatcherConfigGroupSelect");
@@ -214,7 +205,6 @@ let heartbeatTimer = null;
 let adminRefreshTimer = null;
 let dispatcherRefreshTimer = null;
 let loadVersion = 0;
-let divisionCardsRendered = false;
 let selectedSystemMode = "normal";
 let selectedDispatcherGroupId = "";
 let selectedDispatcherUnitId = "";
@@ -230,6 +220,13 @@ let accessCatalog = {
   roles: [],
   users: [],
   dispatcherDivisions: []
+};
+
+let outageConfigCatalog = {
+  divisions: [],
+  availableSourceLabels: [],
+  sourceData: {},
+  storageConfigured: false
 };
 
 let dispatcherConfigCatalog = {
@@ -859,10 +856,11 @@ function navigateMonitoring() {
 
   setView("monitoring");
 
-  if (!divisionCardsRendered) {
-    renderDivisionCards();
-    divisionCardsRendered = true;
-  }
+  divisionGrid.innerHTML = `
+    <div class="monitoring-loading-card">
+      Получение последней сводки СК-11 OMS…
+    </div>
+  `;
 
   loadAllDivisions();
   startAutoRefresh();
@@ -2680,6 +2678,11 @@ function renderAdminDashboard(
       payload.canManageRoles
     );
 
+  outageManagementPanel.hidden =
+    !Boolean(
+      payload.canManageRoles
+    );
+
   dispatcherSourceManagementPanel.hidden =
     !Boolean(
       payload.canManageRoles
@@ -2694,6 +2697,7 @@ function renderAdminDashboard(
     payload.canManageRoles
   ) {
     loadAccessManagement();
+    loadOutageConfigManagement();
     loadDispatcherConfigManagement();
   }
 
@@ -3130,6 +3134,397 @@ async function loadAccessManagement() {
   }
 }
 
+
+
+function renderOutageConfigList() {
+  const divisions =
+    Array.isArray(outageConfigCatalog.divisions)
+      ? outageConfigCatalog.divisions
+      : [];
+
+  outageCreateDivisionButton.disabled =
+    !outageConfigCatalog.storageConfigured;
+
+  if (!divisions.length) {
+    outageConfigList.innerHTML = `
+      <div class="access-empty dispatcher-structure-empty">
+        <strong>Подразделений пока нет</strong>
+        <span>
+          Нажмите «+ Подразделение», чтобы создать первый счётчик
+          аварийного мониторинга.
+        </span>
+      </div>
+    `;
+    return;
+  }
+
+  outageConfigList.innerHTML =
+    divisions.map(
+      (division) => {
+        const sources =
+          Array.isArray(division.sources)
+            ? division.sources
+            : [];
+
+        return `
+          <article class="dispatcher-config-card outage-config-card">
+            <div class="dispatcher-config-card-head">
+              <div>
+                <span class="micro-label">АВАРИЙНЫЙ МОНИТОРИНГ</span>
+                <h3>${escapeHtml(division.name)}</h3>
+              </div>
+
+              <span class="dispatcher-config-state ${sources.length ? "is-custom" : ""}">
+                ${sources.length ? `${sources.length} ИСТ.` : "НЕ НАСТРОЕНО"}
+              </span>
+            </div>
+
+            <div class="dispatcher-config-sources">
+              ${
+                sources.length
+                  ? sources
+                      .map(
+                        (source) => `
+                          <span>${escapeHtml(source)}</span>
+                        `
+                      )
+                      .join("")
+                  : `
+                    <span class="is-empty">
+                      Источники не выбраны · счётчик будет равен нулю
+                    </span>
+                  `
+              }
+            </div>
+
+            <div class="dispatcher-config-card-actions">
+              <button
+                class="role-action dispatcher-config-edit"
+                type="button"
+                data-outage-division="${escapeHtml(division.id)}"
+              >
+                Настроить
+              </button>
+
+              <button
+                class="role-action is-danger"
+                type="button"
+                data-delete-outage-division="${escapeHtml(division.id)}"
+                data-delete-outage-division-name="${escapeHtml(division.name)}"
+              >
+                Удалить
+              </button>
+            </div>
+          </article>
+        `;
+      }
+    ).join("");
+
+  outageConfigList
+    .querySelectorAll("[data-outage-division]")
+    .forEach((button) => {
+      button.addEventListener(
+        "click",
+        () => openOutageDivisionEditor(
+          button.dataset.outageDivision
+        )
+      );
+    });
+
+  outageConfigList
+    .querySelectorAll("[data-delete-outage-division]")
+    .forEach((button) => {
+      button.addEventListener(
+        "click",
+        () => deleteOutageDivisionFromAdmin(
+          button.dataset.deleteOutageDivision,
+          button.dataset.deleteOutageDivisionName
+        )
+      );
+    });
+}
+
+function outageSourceEditorHtml({
+  name = "",
+  sources = []
+} = {}) {
+  const availableSourceLabels =
+    Array.isArray(outageConfigCatalog.availableSourceLabels)
+      ? outageConfigCatalog.availableSourceLabels
+      : [];
+
+  const sourceOptions =
+    availableSourceLabels
+      .map(
+        (label) => `
+          <option value="${escapeHtml(label)}">
+            ${escapeHtml(label)}
+          </option>
+        `
+      )
+      .join("");
+
+  return `
+    <label class="management-field">
+      <span>Название подразделения</span>
+      <input
+        id="outageDivisionNameInput"
+        maxlength="80"
+        value="${escapeHtml(name)}"
+        placeholder="Например: ВЭС"
+      />
+    </label>
+
+    <div class="management-note">
+      Каждая выбранная строка соответствует названию подразделения из сообщения
+      «СК-11 OMS • Аварийные отключения». Если добавить несколько строк,
+      их значения «Активных аварийных» будут суммироваться в один счётчик.
+    </div>
+
+    ${
+      availableSourceLabels.length
+        ? `
+          <div class="dispatcher-source-picker">
+            <label class="management-field">
+              <span>Добавить строку из последнего сообщения</span>
+              <select id="outageSourceSuggestion" class="dispatcher-select">
+                ${sourceOptions}
+              </select>
+            </label>
+            <button id="outageAddSourceButton" class="role-action" type="button">
+              + Добавить
+            </button>
+          </div>
+        `
+        : `
+          <div class="management-note is-warning">
+            Пока строки из сообщения не получены. Проверьте OUTAGES_CHAT_ID
+            и наличие свежего сообщения «СК-11 OMS • Аварийные отключения».
+          </div>
+        `
+    }
+
+    <label class="management-field dispatcher-source-editor-field">
+      <span>Строки-источники · по одной на строку</span>
+      <textarea
+        id="outageSourcesTextarea"
+        rows="10"
+        placeholder="Например:\nВыборгский РЭС\nПриозерский РЭС"
+      >${escapeHtml(sources.join("\n"))}</textarea>
+    </label>
+  `;
+}
+
+function bindOutageSourcePicker() {
+  document.getElementById(
+    "outageAddSourceButton"
+  )?.addEventListener(
+    "click",
+    () => {
+      const select =
+        document.getElementById(
+          "outageSourceSuggestion"
+        );
+      const textarea =
+        document.getElementById(
+          "outageSourcesTextarea"
+        );
+
+      const value =
+        String(select?.value || "").trim();
+
+      if (!value || !textarea) return;
+
+      const current =
+        String(textarea.value || "")
+          .split("\n")
+          .map((item) => item.trim())
+          .filter(Boolean);
+
+      if (!current.includes(value)) {
+        current.push(value);
+      }
+
+      textarea.value = current.join("\n");
+      textarea.focus();
+    }
+  );
+}
+
+function openCreateOutageDivisionEditor() {
+  if (!currentUser?.isDeveloper) return;
+
+  openManagementModal({
+    eyebrow: "АВАРИЙНЫЕ ОТКЛЮЧЕНИЯ",
+    title: "Новое подразделение",
+    saveLabel: "Создать подразделение",
+    context: {
+      type: "outage-division-create"
+    },
+    bodyHtml: outageSourceEditorHtml()
+  });
+
+  bindOutageSourcePicker();
+  document.getElementById(
+    "outageDivisionNameInput"
+  )?.focus();
+}
+
+function openOutageDivisionEditor(divisionId) {
+  const division =
+    outageConfigCatalog.divisions.find(
+      (item) => item.id === divisionId
+    );
+
+  if (!division) return;
+
+  openManagementModal({
+    eyebrow: "АВАРИЙНЫЕ ОТКЛЮЧЕНИЯ",
+    title: `Настройка · ${division.name}`,
+    context: {
+      type: "outage-division-edit",
+      divisionId: division.id
+    },
+    bodyHtml: outageSourceEditorHtml({
+      name: division.name,
+      sources:
+        Array.isArray(division.sources)
+          ? division.sources
+          : []
+    })
+  });
+
+  bindOutageSourcePicker();
+}
+
+async function postOutageConfigAction(payload) {
+  const response = await fetch(
+    API_ADMIN_OUTAGE_CONFIG,
+    {
+      method: "POST",
+      cache: "no-store",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...getSessionHeaders()
+      },
+      body: JSON.stringify(payload)
+    }
+  );
+
+  const data = await response
+    .json()
+    .catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(
+      data?.error ||
+      "Не удалось изменить настройки аварийных отключений"
+    );
+  }
+
+  return data;
+}
+
+async function deleteOutageDivisionFromAdmin(
+  divisionId,
+  divisionName
+) {
+  const confirmed = window.confirm(
+    `Удалить подразделение «${divisionName}» из аварийного мониторинга?`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await postOutageConfigAction({
+      action: "delete",
+      divisionId
+    });
+
+    await loadOutageConfigManagement();
+  } catch (error) {
+    openModal({
+      type: "denied",
+      eyebrow: "АВАРИЙНЫЕ ОТКЛЮЧЕНИЯ",
+      title: "Не удалось удалить подразделение",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Попробуйте ещё раз."
+    });
+  }
+}
+
+async function loadOutageConfigManagement() {
+  if (!currentUser?.isDeveloper) return;
+
+  try {
+    const response = await fetch(
+      API_ADMIN_OUTAGE_CONFIG,
+      {
+        method: "GET",
+        cache: "no-store",
+        credentials: "include",
+        headers: getSessionHeaders()
+      }
+    );
+
+    const payload = await response
+      .json()
+      .catch(() => null);
+
+    if (!response.ok) {
+      throw new Error(
+        payload?.error ||
+        "Не удалось загрузить настройки аварийных отключений"
+      );
+    }
+
+    outageConfigCatalog = {
+      divisions:
+        Array.isArray(payload.divisions)
+          ? payload.divisions
+          : [],
+      availableSourceLabels:
+        Array.isArray(payload.availableSourceLabels)
+          ? payload.availableSourceLabels
+          : [],
+      sourceData:
+        payload.sourceData || {},
+      storageConfigured:
+        Boolean(payload.storageConfigured)
+    };
+
+    const sourceInfo = outageConfigCatalog.sourceData;
+    const sourceSuffix =
+      sourceInfo?.sourceUpdatedAt
+        ? ` Последняя сводка: ${sourceInfo.sourceUpdatedAt}. Распознано строк: ${sourceInfo.rowCount || 0}.`
+        : sourceInfo?.message
+          ? ` ${sourceInfo.message}`
+          : "";
+
+    outageConfigStatus.textContent =
+      outageConfigCatalog.storageConfigured
+        ? `Подразделения и их источники сохраняются в Redis. Один общий чат задаётся через OUTAGES_CHAT_ID.${sourceSuffix}`
+        : `Redis не подключён: изменения сохранить нельзя.${sourceSuffix}`;
+
+    outageConfigStatus.classList.toggle(
+      "is-warning",
+      !outageConfigCatalog.storageConfigured ||
+      (sourceInfo?.status && sourceInfo.status !== "ok")
+    );
+
+    renderOutageConfigList();
+  } catch (error) {
+    outageConfigStatus.textContent =
+      error instanceof Error
+        ? error.message
+        : "Ошибка загрузки аварийных отключений";
+    outageConfigStatus.classList.add("is-warning");
+    outageConfigList.innerHTML = "";
+  }
+}
 
 function dispatcherConfigGroupName(
   groupId
@@ -4992,6 +5387,40 @@ async function saveManagementEditor() {
 
     if (
       managementContext.type ===
+      "outage-division-create" ||
+      managementContext.type ===
+      "outage-division-edit"
+    ) {
+      const name =
+        document.getElementById(
+          "outageDivisionNameInput"
+        )?.value.trim() || "";
+
+      const sources =
+        String(
+          document.getElementById(
+            "outageSourcesTextarea"
+          )?.value || ""
+        )
+          .split("\n")
+          .map((value) => value.trim())
+          .filter(Boolean);
+
+      await postOutageConfigAction({
+        action:
+          managementContext.type ===
+          "outage-division-create"
+            ? "create"
+            : "update",
+        divisionId:
+          managementContext.divisionId || "",
+        name,
+        sources
+      });
+    }
+
+    if (
+      managementContext.type ===
       "dispatcher-group-create"
     ) {
       const name =
@@ -5222,6 +5651,7 @@ async function saveManagementEditor() {
     await Promise.all([
       loadAccessManagement(),
       loadAdminDashboard(),
+      loadOutageConfigManagement(),
       loadDispatcherConfigManagement()
     ]);
 
@@ -5429,6 +5859,11 @@ createRoleButton.addEventListener(
     openRoleEditor()
 );
 
+outageCreateDivisionButton.addEventListener(
+  "click",
+  openCreateOutageDivisionEditor
+);
+
 dispatcherConfigGroupSelect.addEventListener(
   "change",
   renderDispatcherConfigList
@@ -5544,26 +5979,41 @@ refreshAdminButton.addEventListener(
    АВАРИЙНЫЙ МОНИТОРИНГ
    ========================================================= */
 
-function renderDivisionCards() {
+function renderDivisionCards(divisions = []) {
+  const items =
+    Array.isArray(divisions)
+      ? divisions
+      : [];
+
+  divisionCountCaption.textContent =
+    `${items.length} ${pluralizeRu(
+      items.length,
+      "подразделение",
+      "подразделения",
+      "подразделений"
+    )}`;
+
+  if (!items.length) {
+    divisionGrid.innerHTML = `
+      <div class="monitoring-loading-card">
+        Подразделения аварийного мониторинга пока не настроены.
+      </div>
+    `;
+    return;
+  }
+
   divisionGrid.innerHTML =
-    DIVISIONS.map(
+    items.map(
       (division) => `
         <article
-          class="division-card"
-          id="card-${division.id}"
+          class="division-card outage-counter-card"
+          id="card-${escapeHtml(division.id)}"
         >
-          <button
-            class="division-header"
-            type="button"
-            aria-expanded="false"
-          >
+          <div class="division-header outage-counter-header">
             <div class="division-main">
               <div class="division-icon">
-                <svg
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path d="M13.2 2 5.5 13.1h5.3L9.9 22l8.6-12.2h-5.6L13.2 2Z"></path>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M13 2 4 14h7l-1 8 10-13h-7z"></path>
                 </svg>
               </div>
 
@@ -5571,471 +6021,85 @@ function renderDivisionCards() {
                 <div class="division-kicker">
                   ПОДРАЗДЕЛЕНИЕ
                 </div>
-                <h2>
-                  ${escapeHtml(
-                    division.name
-                  )}
-                </h2>
-                <p>
-                  Аварийные события и отключения
-                </p>
+                <h2>${escapeHtml(division.name)}</h2>
+                <p>Активные аварийные отключения</p>
               </div>
             </div>
 
             <div class="division-actions">
-              <div class="counter">
+              <div class="counter outage-counter-value">
                 <span>Отключений</span>
                 <strong class="division-count">
-                  —
+                  ${Number(division.count || 0)}
                 </strong>
               </div>
-
-              <span
-                class="chevron"
-                aria-hidden="true"
-              >
-                <svg viewBox="0 0 24 24">
-                  <path d="m7 9 5 5 5-5"></path>
-                </svg>
-              </span>
-            </div>
-          </button>
-
-          <div class="division-body">
-            <div class="section-heading">
-              <div>
-                <h3>Текущие отключения</h3>
-                <p class="division-description">
-                  Загрузка данных…
-                </p>
-              </div>
-
-              <div class="live-badge loading">
-                <span></span>
-                <b>LOAD</b>
-              </div>
-            </div>
-
-            <div class="outage-list"></div>
-
-            <div
-              class="empty-state"
-              hidden
-            >
-              <div class="empty-icon">
-                ✓
-              </div>
-              <h3>
-                Активных отключений нет
-              </h3>
-              <p>
-                Все зарегистрированные объекты
-                находятся во включённом состоянии.
-              </p>
             </div>
           </div>
         </article>
       `
     ).join("");
-
-  divisionGrid
-    .querySelectorAll(
-      ".division-card"
-    )
-    .forEach((card) => {
-      const header =
-        card.querySelector(
-          ".division-header"
-        );
-
-      header.addEventListener(
-        "click",
-        () => {
-          const willOpen =
-            !card.classList.contains(
-              "is-open"
-            );
-
-          card.classList.toggle(
-            "is-open",
-            willOpen
-          );
-
-          header.setAttribute(
-            "aria-expanded",
-            String(willOpen)
-          );
-        }
-      );
-    });
 }
 
-function setBadge(
-  card,
-  type,
-  text
+function pluralizeRu(
+  value,
+  one,
+  few,
+  many
 ) {
-  const badge =
-    card.querySelector(
-      ".live-badge"
-    );
+  const number = Math.abs(Number(value || 0));
+  const lastTwo = number % 100;
+  const last = number % 10;
 
-  badge.className =
-    `live-badge ${type || ""}`.trim();
+  if (lastTwo >= 11 && lastTwo <= 14) {
+    return many;
+  }
 
-  badge
-    .querySelector("b")
-    .textContent = text;
+  if (last === 1) return one;
+  if (last >= 2 && last <= 4) return few;
+  return many;
 }
 
-function renderDivisionLoading(
-  division
-) {
-  const card =
-    document.getElementById(
-      `card-${division.id}`
-    );
+function renderOutageLoadError(message) {
+  dashboardStatus.textContent =
+    message || "Данные недоступны";
 
-  if (!card) return;
+  totalOutages.textContent = "—";
 
-  card
-    .querySelector(
-      ".division-description"
-    )
-    .textContent =
-      "Получаем данные из чата…";
-
-  setBadge(
-    card,
-    "loading",
-    "LOAD"
-  );
-}
-
-function renderDivisionError(
-  division,
-  message
-) {
-  const card =
-    document.getElementById(
-      `card-${division.id}`
-    );
-
-  if (!card) return;
-
-  card
-    .querySelector(
-      ".division-count"
-    )
-    .textContent = "—";
-
-  card
-    .querySelector(
-      ".division-description"
-    )
-    .textContent =
-      message ||
-      "Данные недоступны";
-
-  card
-    .querySelector(
-      ".outage-list"
-    )
-    .innerHTML = `
-      <div
-        class="empty-state"
-        style="display:block"
-      >
-        <div
-          class="empty-icon"
-          style="
-            color:#ff8f98;
-            background:rgba(255,107,118,.07)
-          "
-        >
-          !
-        </div>
-        <h3>Данные недоступны</h3>
-        <p>
-          ${escapeHtml(
-            message ||
-            "Не удалось получить данные."
-          )}
-        </p>
+  if (!divisionGrid.children.length) {
+    divisionGrid.innerHTML = `
+      <div class="monitoring-loading-card is-error">
+        ${escapeHtml(message || "Не удалось получить аварийные отключения.")}
       </div>
     `;
-
-  card
-    .querySelector(
-      ".division-body > .empty-state"
-    )
-    ?.setAttribute(
-      "hidden",
-      ""
-    );
-
-  setBadge(
-    card,
-    "error",
-    "ERR"
-  );
-}
-
-function renderDivisionData(
-  division,
-  payload
-) {
-  const card =
-    document.getElementById(
-      `card-${division.id}`
-    );
-
-  if (!card) return;
-
-  const outages =
-    Array.isArray(
-      payload.outages
-    )
-      ? payload.outages
-      : [];
-
-  const count =
-    Number(
-      payload.count ??
-      outages.length
-    );
-
-  card
-    .querySelector(
-      ".division-count"
-    )
-    .textContent = count;
-
-  card
-    .querySelector(
-      ".division-description"
-    )
-    .textContent =
-      count
-        ? `Активных объектов: ${count}`
-        : "Активных отключений нет";
-
-  const list =
-    card.querySelector(
-      ".outage-list"
-    );
-
-  const empty =
-    card.querySelector(
-      ".division-body > .empty-state"
-    );
-
-  list.innerHTML = "";
-  empty.hidden = count !== 0;
-
-  setBadge(
-    card,
-    "",
-    "LIVE"
-  );
-
-  for (
-    const outage
-    of outages
-  ) {
-    const {
-      date,
-      time
-    } =
-      splitDateTime(
-        outage.eventTime
-      );
-
-    const item =
-      document.createElement(
-        "article"
-      );
-
-    item.className =
-      "outage-item";
-
-    item.innerHTML = `
-      <button
-        class="outage-summary"
-        type="button"
-        aria-expanded="false"
-      >
-        <div class="outage-object">
-          <span class="alert-dot"></span>
-
-          <div>
-            <span class="object-name">
-              ${escapeHtml(
-                outage.object
-              )}
-            </span>
-
-            <span class="object-author">
-              ${escapeHtml(
-                outage.author
-              )}
-            </span>
-          </div>
-        </div>
-
-        <div class="outage-time">
-          <strong>
-            ${escapeHtml(time)}
-          </strong>
-          <span>
-            ${escapeHtml(date)}
-          </span>
-        </div>
-
-        <span
-          class="item-chevron"
-          aria-hidden="true"
-        >
-          <svg viewBox="0 0 24 24">
-            <path d="m7 9 5 5 5-5"></path>
-          </svg>
-        </span>
-      </button>
-
-      <div class="outage-details">
-        <div class="details-panel">
-          <div class="detail-grid">
-            <div class="detail">
-              <span>Отключено</span>
-              <strong>
-                ${escapeHtml(
-                  outage.eventTime
-                )}
-              </strong>
-            </div>
-
-            <div class="detail">
-              <span>Добавлено</span>
-              <strong>
-                ${escapeHtml(
-                  outage.addedTime ||
-                  "—"
-                )}
-              </strong>
-            </div>
-
-            <div class="detail">
-              <span>Записал</span>
-              <strong>
-                ${escapeHtml(
-                  outage.author ||
-                  "—"
-                )}
-              </strong>
-            </div>
-
-            <div class="detail">
-              <span>Должность</span>
-              <strong>
-                ${escapeHtml(
-                  outage.role ||
-                  "—"
-                )}
-              </strong>
-            </div>
-
-            ${
-              outage.sourceObject
-                ? `
-                  <div class="detail">
-                    <span>
-                      Объект сообщения
-                    </span>
-                    <strong>
-                      ${escapeHtml(
-                        outage.sourceObject
-                      )}
-                    </strong>
-                  </div>
-                `
-                : ""
-            }
-          </div>
-
-          <div class="record-block">
-            <span>Запись</span>
-            <p>
-              ${escapeHtml(
-                outage.record ||
-                "—"
-              )}
-            </p>
-          </div>
-        </div>
-      </div>
-    `;
-
-    const summary =
-      item.querySelector(
-        ".outage-summary"
-      );
-
-    summary.addEventListener(
-      "click",
-      () => {
-        const willOpen =
-          !item.classList.contains(
-            "is-open"
-          );
-
-        item.classList.toggle(
-          "is-open",
-          willOpen
-        );
-
-        summary.setAttribute(
-          "aria-expanded",
-          String(willOpen)
-        );
-      }
-    );
-
-    list.appendChild(item);
   }
 }
 
-async function loadDivision(
-  division,
-  version
-) {
-  renderDivisionLoading(
-    division
-  );
+async function loadAllDivisions() {
+  const version = ++loadVersion;
 
-  const initData =
-    getMaxInitData();
+  dashboardStatus.textContent =
+    "Обновление сводки СК-11 OMS";
+
+  const initData = getMaxInitData();
 
   if (!initData) {
-    throw new Error(
+    renderOutageLoadError(
       "Откройте мини-приложение внутри MAX."
     );
+    return;
   }
 
-  const sessionToken =
-    getAppSessionToken();
+  const sessionToken = getAppSessionToken();
 
-  const response =
-    await fetch(
-      `${API_OUTAGES}?division=${encodeURIComponent(
-        division.id
-      )}`,
+  try {
+    const response = await fetch(
+      API_OUTAGES,
       {
         method: "GET",
         cache: "no-store",
         credentials: "include",
         headers: {
-          "X-Max-Init-Data":
-            initData,
+          "X-Max-Init-Data": initData,
           ...(
             sessionToken
               ? {
@@ -6048,158 +6112,95 @@ async function loadDivision(
       }
     );
 
-  if (
-    response.status === 401
-  ) {
-    setAppSessionToken("");
-    stopAutoRefresh();
-    showLoginScreen();
+    if (response.status === 401) {
+      setAppSessionToken("");
+      stopAutoRefresh();
+      showLoginScreen();
 
-    throw new Error(
-      "Сессия завершена. Авторизуйтесь снова."
-    );
-  }
+      throw new Error(
+        "Сессия завершена. Авторизуйтесь снова."
+      );
+    }
 
-  const payload =
-    await response
+    const payload = await response
       .json()
       .catch(() => null);
 
-  if (!response.ok) {
-    throw new Error(
-      payload?.error ||
-      `Сервер вернул ошибку ${response.status}`
-    );
-  }
-
-  if (
-    version !== loadVersion
-  ) {
-    return null;
-  }
-
-  renderDivisionData(
-    division,
-    payload
-  );
-
-  return Number(
-    payload.count || 0
-  );
-}
-
-async function loadAllDivisions() {
-  const version =
-    ++loadVersion;
-
-  dashboardStatus.textContent =
-    "Обновление данных";
-
-  totalOutages.textContent =
-    "—";
-
-  const results =
-    await Promise.allSettled(
-      DIVISIONS.map(
-        async (division) => {
-          try {
-            return await loadDivision(
-              division,
-              version
-            );
-          } catch (error) {
-            if (
-              version === loadVersion &&
-              currentView === "monitoring" &&
-              document.body.classList.contains(
-                "authenticated"
-              )
-            ) {
-              renderDivisionError(
-                division,
-                error instanceof Error
-                  ? error.message
-                  : "Ошибка загрузки"
-              );
-            }
-
-            throw error;
-          }
-        }
-      )
-    );
-
-  if (
-    version !== loadVersion
-  ) {
-    return;
-  }
-
-  let total = 0;
-  let successful = 0;
-
-  for (
-    const result
-    of results
-  ) {
-    if (
-      result.status ===
-        "fulfilled" &&
-      result.value !== null
-    ) {
-      successful += 1;
-      total +=
-        Number(
-          result.value || 0
-        );
+    if (!response.ok) {
+      throw new Error(
+        payload?.error ||
+        `Сервер вернул ошибку ${response.status}`
+      );
     }
+
+    if (version !== loadVersion) return;
+
+    const divisions =
+      Array.isArray(payload?.divisions)
+        ? payload.divisions
+        : [];
+
+    renderDivisionCards(divisions);
+
+    totalOutages.textContent =
+      payload?.total === null ||
+      payload?.total === undefined
+        ? "—"
+        : Number(payload.total || 0);
+
+    if (payload?.status === "ok") {
+      dashboardStatus.textContent =
+        "Все подразделения обновлены";
+    } else if (payload?.stale) {
+      dashboardStatus.textContent =
+        "Показаны последние сохранённые данные";
+    } else {
+      dashboardStatus.textContent =
+        payload?.message ||
+        "Сводка пока недоступна";
+    }
+
+    if (payload?.sourceUpdatedAt) {
+      updatedAt.textContent =
+        `СК-11 обновлено ${payload.sourceUpdatedAt}`;
+    } else {
+      const now = new Date();
+      updatedAt.textContent =
+        `Проверено ${now.toLocaleTimeString(
+          "ru-RU",
+          {
+            hour: "2-digit",
+            minute: "2-digit"
+          }
+        )}`;
+    }
+  } catch (error) {
+    if (version !== loadVersion) return;
+
+    renderOutageLoadError(
+      error instanceof Error
+        ? error.message
+        : "Ошибка загрузки аварийных отключений"
+    );
   }
-
-  totalOutages.textContent =
-    total;
-
-  dashboardStatus.textContent =
-    successful ===
-    DIVISIONS.length
-      ? "Все подразделения обновлены"
-      : `Доступно ${successful} из ${DIVISIONS.length}`;
-
-  const now =
-    new Date();
-
-  updatedAt.textContent =
-    `Обновлено ${now.toLocaleTimeString(
-      "ru-RU",
-      {
-        hour: "2-digit",
-        minute: "2-digit"
-      }
-    )}`;
 }
 
 function startAutoRefresh() {
   stopAutoRefresh();
 
-  refreshTimer =
-    setInterval(
-      () => {
-        if (
-          currentView ===
-          "monitoring"
-        ) {
-          loadAllDivisions();
-        }
-      },
-      REFRESH_INTERVAL_MS
-    );
+  refreshTimer = setInterval(
+    () => {
+      if (currentView === "monitoring") {
+        loadAllDivisions();
+      }
+    },
+    REFRESH_INTERVAL_MS
+  );
 }
 
 function stopAutoRefresh() {
   if (refreshTimer) {
-    clearInterval(
-      refreshTimer
-    );
-
+    clearInterval(refreshTimer);
     refreshTimer = null;
   }
 }

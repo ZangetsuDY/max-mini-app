@@ -323,14 +323,14 @@
           <span class="micro-label">АВАРИЙНЫЙ МОНИТОРИНГ</span>
           <h1>Оперативная сводка</h1>
           <p>
-            Текущие аварийные отключения по подключённым подразделениям.
+            Сводные счётчики из последнего сообщения «СК-11 OMS • Аварийные отключения».
           </p>
         </div>
 
         <div class="summary-tile">
           <span>Активных отключений</span>
           <strong id="totalOutages">—</strong>
-          <small>по доступным чатам</small>
+          <small>по последней сводке СК-11 OMS</small>
         </div>
       </div>
 
@@ -339,7 +339,7 @@
           <span class="micro-label">ПОДРАЗДЕЛЕНИЯ</span>
           <h2>Состояние сети</h2>
         </div>
-        <span class="section-caption">14 подразделений</span>
+        <span id="divisionCountCaption" class="section-caption">Подразделения</span>
       </div>
 
       <div id="divisionGrid" class="division-grid"></div>
@@ -759,6 +759,36 @@
         </div>
 
         <div id="roleList" class="role-list"></div>
+      </article>
+
+
+      <article
+        id="outageManagementPanel"
+        class="admin-panel outage-source-management"
+        hidden
+      >
+        <div class="admin-panel-heading access-heading">
+          <div>
+            <span class="micro-label">АВАРИЙНЫЕ ОТКЛЮЧЕНИЯ · СК-11 OMS</span>
+            <h2>Настройка подразделений аварийного мониторинга</h2>
+            <p class="access-heading-copy">
+              Для каждого подразделения укажите одну или несколько строк из общего сообщения
+              «СК-11 OMS • Аварийные отключения». Значения выбранных строк суммируются.
+              Здесь же можно создавать и удалять подразделения аварийного мониторинга.
+            </p>
+          </div>
+
+          <button
+            id="outageCreateDivisionButton"
+            class="secondary-action dispatcher-structure-action"
+            type="button"
+          >
+            + Подразделение
+          </button>
+        </div>
+
+        <div id="outageConfigStatus" class="dispatcher-config-status"></div>
+        <div id="outageConfigList" class="dispatcher-config-list outage-config-list"></div>
       </article>
 
       <article

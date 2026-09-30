@@ -61,6 +61,10 @@
     {
       "source": "/api/admin/dispatcher-config",
       "destination": "/api/router?route=admin/dispatcher-config"
+    },
+    {
+      "source": "/api/admin/outage-config",
+      "destination": "/api/router?route=admin/outage-config"
     }
   ]
 }

@@ -4077,3 +4077,92 @@ body.low-bandwidth .glass-panel {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   АВАРИЙНЫЙ МОНИТОРИНГ — СК-11 OMS / COMPACT COUNTERS
+   ========================================================= */
+
+.outage-counter-card {
+  min-height: 0;
+}
+
+.outage-counter-header {
+  min-height: 100px;
+  cursor: default;
+}
+
+.outage-counter-card:hover {
+  transform: none;
+}
+
+.outage-counter-value {
+  min-width: 92px;
+  text-align: center;
+  border-color: rgba(255, 107, 118, .11);
+  background: rgba(255, 107, 118, .035);
+}
+
+.outage-counter-value strong {
+  color: #f2f8fc;
+  font-size: 28px;
+}
+
+.monitoring-loading-card {
+  grid-column: 1 / -1;
+  min-height: 110px;
+  padding: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  color: #7590a7;
+  background: rgba(4, 20, 40, .62);
+  font-size: 11px;
+  text-align: center;
+}
+
+.monitoring-loading-card.is-error {
+  color: #d4939b;
+  border-color: rgba(255, 107, 118, .12);
+  background: rgba(99, 30, 41, .05);
+}
+
+.outage-source-management {
+  margin-top: 16px;
+}
+
+.outage-source-management .admin-panel-heading {
+  align-items: flex-start;
+}
+
+.outage-source-management .dispatcher-structure-action {
+  flex: 0 0 auto;
+}
+
+.outage-config-card {
+  min-height: 170px;
+}
+
+@media (min-width: 1180px) {
+  .division-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .outage-counter-header {
+    min-height: 92px;
+  }
+
+  .outage-counter-value {
+    min-width: 76px;
+  }
+
+  .outage-counter-value strong {
+    font-size: 24px;
+  }
+
+  .outage-source-management .admin-panel-heading {
+    align-items: stretch;
+  }
+}
