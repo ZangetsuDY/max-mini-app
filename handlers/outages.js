@@ -158,7 +158,9 @@ export default {
           matchedSources:
             aggregate.matchedSources,
           missingSources:
-            aggregate.missingSources
+            aggregate.missingSources,
+          sourceBreakdown:
+            aggregate.sourceBreakdown
         };
       });
 

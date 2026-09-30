@@ -4249,6 +4249,112 @@ body.low-bandwidth .glass-panel {
   font-size: 28px;
 }
 
+.outage-counter-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.outage-sources-toggle {
+  min-height: 42px;
+  padding: 0 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgba(78, 190, 224, .12);
+  border-radius: 12px;
+  color: #8fc5d7;
+  background: rgba(19, 104, 134, .055);
+  font: inherit;
+  font-size: 9px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: border-color .18s ease, background .18s ease, color .18s ease;
+}
+
+.outage-sources-toggle:hover {
+  color: #c9eef9;
+  border-color: rgba(83, 205, 241, .22);
+  background: rgba(26, 131, 166, .09);
+}
+
+.outage-sources-toggle svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform .18s ease;
+}
+
+.outage-sources-toggle svg.is-open {
+  transform: rotate(180deg);
+}
+
+.outage-sources-breakdown {
+  margin: 0 16px 16px;
+  padding: 10px;
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(255,255,255,.05);
+  border-radius: 14px;
+  background: rgba(2, 15, 31, .34);
+}
+
+.outage-sources-breakdown[hidden] {
+  display: none !important;
+}
+
+.outage-source-row {
+  min-width: 0;
+  padding: 9px 11px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(255,255,255,.045);
+  border-radius: 11px;
+  background: rgba(255,255,255,.018);
+}
+
+.outage-source-row-main {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.outage-source-row-main span {
+  min-width: 0;
+  color: #a8c2d3;
+  font-size: 10px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.outage-source-row-main small {
+  color: #8a6e78;
+  font-size: 8px;
+}
+
+.outage-source-row > strong {
+  min-width: 34px;
+  text-align: right;
+  color: #f1f7fb;
+  font-size: 19px;
+  line-height: 1;
+}
+
+.outage-source-row.is-missing {
+  opacity: .62;
+}
+
+.outage-source-row.is-missing > strong {
+  color: #8d7880;
+}
+
 .monitoring-loading-card {
   grid-column: 1 / -1;
   min-height: 110px;
@@ -4296,12 +4402,40 @@ body.low-bandwidth .glass-panel {
     min-height: 92px;
   }
 
+  .outage-counter-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
   .outage-counter-value {
     min-width: 76px;
   }
 
   .outage-counter-value strong {
     font-size: 24px;
+  }
+
+  .outage-sources-toggle {
+    min-height: 34px;
+    padding-inline: 9px;
+    font-size: 8px;
+  }
+
+  .outage-sources-breakdown {
+    margin: 0 10px 12px;
+    padding: 8px;
+  }
+
+  .outage-source-row {
+    padding: 8px 9px;
+  }
+
+  .outage-source-row-main span {
+    font-size: 9px;
+  }
+
+  .outage-source-row > strong {
+    font-size: 17px;
   }
 
   .outage-source-management .admin-panel-heading {

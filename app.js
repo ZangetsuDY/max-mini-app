@@ -215,6 +215,7 @@ let dispatcherBreakdownExpanded = false;
 let dispatcherWorkordersBreakdownUnitId = "";
 let dispatcherWorkordersBreakdownSelection = "__all__";
 let dispatcherWorkordersBreakdownExpanded = true;
+let expandedOutageDivisionIds = new Set();
 
 let accessCatalog = {
   panels: [],
@@ -6098,9 +6099,16 @@ function renderDivisionCards(divisions = []) {
 
   divisionGrid.innerHTML =
     items.map(
-      (division) => `
+      (division) => {
+        const breakdown = Array.isArray(division?.sourceBreakdown)
+          ? division.sourceBreakdown
+          : [];
+        const canExpand = breakdown.length > 1;
+        const isExpanded = canExpand && expandedOutageDivisionIds.has(String(division.id));
+
+        return `
         <article
-          class="division-card outage-counter-card"
+          class="division-card outage-counter-card ${isExpanded ? "is-expanded" : ""}"
           id="card-${escapeHtml(division.id)}"
         >
           <div class="division-header outage-counter-header">
@@ -6120,18 +6128,73 @@ function renderDivisionCards(divisions = []) {
               </div>
             </div>
 
-            <div class="division-actions">
+            <div class="division-actions outage-counter-actions">
               <div class="counter outage-counter-value">
                 <span>Отключений</span>
                 <strong class="division-count">
                   ${Number(division.count || 0)}
                 </strong>
               </div>
+
+              ${canExpand ? `
+                <button
+                  class="outage-sources-toggle"
+                  type="button"
+                  data-outage-sources-toggle="${escapeHtml(division.id)}"
+                  aria-expanded="${isExpanded ? "true" : "false"}"
+                  aria-controls="outage-sources-${escapeHtml(division.id)}"
+                  title="Показать отключения по источникам"
+                >
+                  <span>${breakdown.length} ${pluralizeRu(breakdown.length, "источник", "источника", "источников")}</span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true" class="${isExpanded ? "is-open" : ""}">
+                    <path d="m7 10 5 5 5-5"></path>
+                  </svg>
+                </button>
+              ` : ""}
             </div>
           </div>
+
+          ${canExpand ? `
+            <div
+              id="outage-sources-${escapeHtml(division.id)}"
+              class="outage-sources-breakdown"
+              ${isExpanded ? "" : "hidden"}
+            >
+              ${breakdown.map((source) => `
+                <div class="outage-source-row ${source?.matched ? "" : "is-missing"}">
+                  <div class="outage-source-row-main">
+                    <span>${escapeHtml(source?.label || source?.source || "Источник")}</span>
+                    ${source?.matched ? "" : "<small>Строка не найдена</small>"}
+                  </div>
+                  <strong>${Number(source?.count || 0)}</strong>
+                </div>
+              `).join("")}
+            </div>
+          ` : ""}
         </article>
-      `
+      `;
+      }
     ).join("");
+
+  divisionGrid
+    .querySelectorAll("[data-outage-sources-toggle]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        const divisionId = String(
+          button.dataset.outageSourcesToggle || ""
+        );
+
+        if (!divisionId) return;
+
+        if (expandedOutageDivisionIds.has(divisionId)) {
+          expandedOutageDivisionIds.delete(divisionId);
+        } else {
+          expandedOutageDivisionIds.add(divisionId);
+        }
+
+        renderDivisionCards(items);
+      });
+    });
 }
 
 function pluralizeRu(
