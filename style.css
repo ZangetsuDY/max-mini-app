@@ -2856,6 +2856,9 @@ body.auth-pending {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(280px, .8fr);
   gap: 16px;
+  /* Panels must keep their own natural height.
+     A tall NDR block must not stretch neighboring panels. */
+  align-items: start;
 }
 
 .dispatcher-panel {
@@ -3486,7 +3489,11 @@ body.auth-pending {
 
 .dispatcher-side-stack {
   display: grid;
-  grid-template-rows: repeat(2, minmax(0, 1fr));
+  /* Do not split the total column height 50/50.
+     Each side panel uses only the height its content needs. */
+  grid-template-rows: auto auto;
+  align-content: start;
+  align-self: start;
   gap: 16px;
   min-width: 0;
 }
@@ -3887,6 +3894,27 @@ body.low-bandwidth .glass-panel {
   margin-top: 12px;
 }
 
+/* NDR may contain dozens of configured sources. Keep the page compact:
+   the source list scrolls inside the NDR panel instead of making the whole
+   dispatcher dashboard several screens tall. */
+.dispatcher-workorders-breakdown .dispatcher-breakdown-options {
+  max-height: 280px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.dispatcher-workorders-breakdown .dispatcher-breakdown-options::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dispatcher-workorders-breakdown .dispatcher-breakdown-options::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(101, 184, 211, .28);
+  background-clip: padding-box;
+}
+
 .dispatcher-workorders-chart-layout {
   margin-top: 20px;
   display: grid;
@@ -4033,6 +4061,10 @@ body.low-bandwidth .glass-panel {
 }
 
 @media (max-width: 620px) {
+  .dispatcher-workorders-breakdown .dispatcher-breakdown-options {
+    max-height: 360px;
+  }
+
   .dispatcher-workorders-chart-layout {
     grid-template-columns: 1fr;
   }
