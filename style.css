@@ -3645,6 +3645,11 @@ body.auth-pending {
   gap: 7px;
 }
 
+/* Explicitly honor the collapsed state in MAX WebView and browsers. */
+.dispatcher-breakdown-options[hidden] {
+  display: none !important;
+}
+
 .dispatcher-breakdown-chip {
   min-width: 130px;
   padding: 9px 11px;

@@ -223,7 +223,7 @@ let dispatcherBreakdownSelection = "__all__";
 let dispatcherBreakdownExpanded = false;
 let dispatcherWorkordersBreakdownUnitId = "";
 let dispatcherWorkordersBreakdownSelection = "__all__";
-let dispatcherWorkordersBreakdownExpanded = false;
+let dispatcherWorkordersBreakdownExpanded = true;
 
 let accessCatalog = {
   panels: [],
@@ -1593,7 +1593,7 @@ function renderDispatcherWorkordersBreakdown(
     dispatcherWorkordersBreakdownSelection =
       "__all__";
     dispatcherWorkordersBreakdownExpanded =
-      false;
+      true;
   }
 
   if (breakdown.length <= 1) {
@@ -1648,6 +1648,7 @@ function renderDispatcherWorkordersBreakdown(
       class="dispatcher-breakdown-toggle"
       type="button"
       data-workorders-breakdown-toggle
+      aria-expanded="${dispatcherWorkordersBreakdownExpanded ? "true" : "false"}"
     >
       <span>
         Детализация по источникам НДР
