@@ -5160,3 +5160,195 @@ select:focus {
   mask: none;
   pointer-events: none;
 }
+
+/* =========================================================
+   UI FIX · 2026-09-30
+   Prevent outage-card text collisions and give the dispatcher
+   hero copy its own proper padded surface.
+   ========================================================= */
+
+/* Dispatcher hero: the text column previously sat directly on the
+   outer edge of the hero, so the background/border looked as if it
+   cut through the copy. Keep the decorative background, but give the
+   copy a real content area and keep it above decorative rings. */
+.dispatcher-hero {
+  gap: 0;
+  align-items: stretch;
+}
+
+.dispatcher-hero > div:first-child {
+  position: relative;
+  z-index: 2;
+  min-width: 0;
+  padding: 30px 32px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.dispatcher-hero > div:first-child h1,
+.dispatcher-hero > div:first-child p,
+.dispatcher-hero > div:first-child .micro-label {
+  position: relative;
+  z-index: 1;
+}
+
+.dispatcher-assigned-tile {
+  z-index: 2;
+  margin: 0;
+  border-top-left-radius: 24px;
+  border-bottom-left-radius: 24px;
+}
+
+/* OMS outage cards: at three columns there was not enough horizontal
+   room for title + counter + sources button in one row. Reserve a
+   stable right column for controls and allow the text block to shrink
+   and wrap only inside its own area. */
+.outage-counter-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 122px;
+}
+
+.outage-counter-header .division-main {
+  min-width: 0;
+  width: 100%;
+  align-items: center;
+}
+
+.outage-counter-header .division-main > div:last-child {
+  min-width: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.outage-counter-header .division-main h2 {
+  max-width: 100%;
+  font-size: clamp(18px, 1.45vw, 22px);
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+  word-break: normal;
+  text-wrap: balance;
+}
+
+.outage-counter-header .division-main p {
+  max-width: 170px;
+  margin-top: 6px;
+  font-size: 8px;
+  line-height: 1.35;
+  overflow-wrap: normal;
+}
+
+.outage-counter-actions {
+  flex: 0 0 94px;
+  width: 94px;
+  min-width: 94px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 8px;
+}
+
+.outage-counter-value {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 8px;
+}
+
+.outage-counter-value span {
+  white-space: nowrap;
+  text-align: center;
+}
+
+.outage-counter-value strong {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.outage-sources-toggle {
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 6px 8px;
+  line-height: 1.15;
+}
+
+.outage-sources-toggle > span {
+  min-width: 0;
+  text-align: center;
+  white-space: normal;
+}
+
+@media (max-width: 1180px) {
+  .outage-counter-header .division-main h2 {
+    font-size: 20px;
+  }
+
+  .outage-counter-header .division-main p {
+    max-width: 210px;
+  }
+}
+
+@media (max-width: 940px) {
+  .dispatcher-hero {
+    gap: 12px;
+  }
+
+  .dispatcher-hero > div:first-child {
+    padding: 26px 26px 20px;
+  }
+
+  .dispatcher-assigned-tile {
+    margin: 0 12px 12px;
+    border-radius: 18px;
+  }
+}
+
+@media (max-width: 620px) {
+  .dispatcher-hero > div:first-child {
+    padding: 22px 18px 16px;
+  }
+
+  .dispatcher-assigned-tile {
+    margin: 0 10px 10px;
+    padding: 18px;
+  }
+
+  .outage-counter-header {
+    min-height: 112px;
+    grid-template-columns: minmax(0, 1fr) 82px;
+    gap: 10px;
+  }
+
+  .outage-counter-header .division-main {
+    gap: 10px;
+  }
+
+  .outage-counter-header .division-icon {
+    width: 44px;
+    height: 44px;
+    flex-basis: 44px;
+  }
+
+  .outage-counter-header .division-main h2 {
+    font-size: 18px;
+  }
+
+  .outage-counter-header .division-main p {
+    max-width: 150px;
+    font-size: 7.5px;
+  }
+
+  .outage-counter-actions {
+    flex-basis: 82px;
+    width: 82px;
+    min-width: 82px;
+  }
+
+  .outage-sources-toggle {
+    font-size: 7.5px;
+  }
+}
