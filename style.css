@@ -4442,3 +4442,721 @@ body.low-bandwidth .glass-panel {
     align-items: stretch;
   }
 }
+
+/* =========================================================
+   COMMAND CENTER 2026 · ROSSETI LENENERGO INSPIRED REDESIGN
+   Visual-only layer. Existing IDs, JS contracts and API logic stay intact.
+   ========================================================= */
+
+:root {
+  --le-brand: #0a78b9;
+  --le-brand-2: #12a7d8;
+  --le-electric: #42d5ef;
+  --le-navy: #031527;
+  --le-navy-2: #061d33;
+  --le-panel: rgba(5, 24, 43, .90);
+  --le-panel-soft: rgba(8, 31, 54, .78);
+  --le-border: rgba(105, 186, 221, .16);
+  --le-border-hot: rgba(82, 207, 239, .34);
+  --le-text: #f2f8fc;
+  --le-muted: #8ca8ba;
+  --le-success: #42d6a4;
+  --le-warning: #f4c15d;
+  --le-danger: #ff687d;
+}
+
+html {
+  background: #020d18;
+}
+
+body {
+  font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  letter-spacing: -.01em;
+  background:
+    radial-gradient(circle at 76% 8%, rgba(0, 156, 214, .13), transparent 25%),
+    radial-gradient(circle at 11% 45%, rgba(10, 112, 181, .10), transparent 30%),
+    linear-gradient(135deg, #020d18 0%, #031526 44%, #041a2e 100%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 49.95%, rgba(95, 197, 230, .025) 50%, transparent 50.05%),
+    linear-gradient(transparent 49.95%, rgba(95, 197, 230, .025) 50%, transparent 50.05%);
+  background-size: 96px 96px;
+  mask-image: radial-gradient(circle at 50% 30%, #000 0%, rgba(0,0,0,.55) 48%, transparent 88%);
+}
+
+.scene-grid {
+  opacity: .095;
+  background-size: 64px 64px;
+  animation-duration: 40s;
+}
+
+.scene-orb {
+  opacity: .12;
+  filter: blur(130px);
+}
+
+.scene-beam {
+  opacity: .35;
+}
+
+/* Corporate wordmark: do not rely on a remote image for the main identity. */
+.company-logo {
+  display: none !important;
+}
+
+.logo-fallback {
+  opacity: 1 !important;
+  display: grid !important;
+  align-content: center;
+  justify-items: start;
+  gap: 0;
+  color: white;
+}
+
+.logo-fallback::before {
+  content: "";
+  position: absolute;
+  width: 9px;
+  height: 34px;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%) skewX(-19deg);
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--le-electric), var(--le-brand));
+  box-shadow: 10px 0 0 rgba(30, 174, 221, .42);
+}
+
+.logo-fallback span,
+.logo-fallback small {
+  padding-left: 34px;
+}
+
+.logo-fallback span {
+  color: #f6fbfe;
+  font-size: 13px;
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: .035em;
+}
+
+.logo-fallback small {
+  margin-top: 2px;
+  color: #54c7eb;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+
+.logo-surface {
+  position: relative;
+  border-radius: 10px;
+  background: linear-gradient(145deg, rgba(7, 44, 75, .88), rgba(3, 23, 42, .96));
+  border: 1px solid rgba(96, 196, 229, .16);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.025);
+}
+
+/* Top navigation */
+.topbar {
+  min-height: 74px;
+  padding: 10px clamp(18px, 3vw, 42px);
+  background: rgba(2, 14, 26, .88);
+  border-bottom: 1px solid rgba(104, 186, 219, .12);
+  backdrop-filter: blur(22px) saturate(130%);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, .16);
+}
+
+.topbar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 2%, rgba(65, 206, 239, .58) 18%, rgba(8, 122, 185, .18) 70%, transparent 98%);
+}
+
+.brand-home {
+  flex: 0 0 auto;
+}
+
+.brand-context {
+  margin-left: 14px;
+  margin-right: auto;
+  display: grid;
+  gap: 2px;
+  padding-left: 16px;
+  border-left: 1px solid rgba(103, 188, 221, .13);
+}
+
+.brand-context span {
+  color: #cfe8f3;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+.brand-context small {
+  color: #58768a;
+  font-size: 9px;
+}
+
+.identity span {
+  color: #557287;
+}
+
+.identity strong {
+  color: #e8f4fa;
+  font-weight: 700;
+}
+
+.role-badge,
+.toolbar-status,
+.dispatcher-live-badge,
+.module-status,
+.admin-system-badge {
+  border: 1px solid rgba(83, 193, 227, .15);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.02);
+}
+
+/* Main canvas */
+.app-view {
+  width: min(1500px, calc(100% - clamp(22px, 5vw, 84px)));
+  margin-inline: auto;
+}
+
+.home-hero,
+.monitoring-hero,
+.dispatcher-hero,
+.admin-hero {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(125deg, rgba(6, 34, 60, .94), rgba(3, 22, 41, .94) 57%, rgba(4, 29, 52, .94));
+  border: 1px solid rgba(80, 183, 219, .14);
+  box-shadow:
+    0 22px 70px rgba(0, 0, 0, .22),
+    inset 0 1px 0 rgba(255,255,255,.025);
+}
+
+.home-hero::after,
+.monitoring-hero::after,
+.dispatcher-hero::after,
+.admin-hero::after {
+  content: "";
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  right: -250px;
+  top: -310px;
+  border-radius: 50%;
+  border: 1px solid rgba(61, 197, 234, .12);
+  box-shadow:
+    0 0 0 54px rgba(44, 175, 219, .026),
+    0 0 0 108px rgba(44, 175, 219, .018);
+  pointer-events: none;
+}
+
+.home-hero-copy .micro-label,
+.monitoring-hero .micro-label,
+.dispatcher-hero .micro-label,
+.admin-hero .micro-label,
+.section-intro .micro-label,
+.dispatcher-panel-head .micro-label {
+  color: #5cc6e7;
+  letter-spacing: .14em;
+}
+
+.home-hero h1,
+.monitoring-hero h1,
+.dispatcher-hero h1,
+.admin-hero h1 {
+  color: #f6fbfe;
+  font-weight: 760;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+
+.home-hero p,
+.monitoring-hero p,
+.dispatcher-hero p,
+.admin-hero p {
+  color: #8da9bb;
+  max-width: 720px;
+}
+
+.system-line {
+  width: fit-content;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(70, 194, 225, .12);
+  background: rgba(0, 12, 25, .34);
+}
+
+/* Replace decorative radar with a cleaner dispatch/energy visual. */
+.hero-visual {
+  opacity: .95;
+}
+
+.radar-ring {
+  border-color: rgba(57, 191, 228, .15);
+}
+
+.radar-core {
+  background:
+    radial-gradient(circle at 38% 28%, rgba(92, 226, 247, .25), transparent 24%),
+    linear-gradient(145deg, #0a719f, #054766);
+  border: 1px solid rgba(100, 222, 244, .28);
+  box-shadow:
+    0 0 60px rgba(41, 190, 226, .18),
+    inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+/* Module selection */
+.module-grid {
+  gap: 18px;
+}
+
+.module-card {
+  position: relative;
+  min-height: 238px;
+  border-radius: 20px;
+  background:
+    linear-gradient(145deg, rgba(6, 29, 52, .96), rgba(3, 19, 35, .96));
+  border: 1px solid rgba(105, 185, 216, .12);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, .16);
+  transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease, background .22s ease;
+}
+
+.module-card::before {
+  width: 3px;
+  inset: 18px auto 18px 0;
+  border-radius: 0 6px 6px 0;
+  opacity: .58;
+  background: linear-gradient(180deg, var(--le-electric), var(--le-brand));
+}
+
+.module-card::after {
+  opacity: .14;
+}
+
+.module-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(78, 202, 235, .30);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .24), 0 0 0 1px rgba(79, 205, 239, .04);
+}
+
+.module-icon {
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(10, 123, 174, .22), rgba(4, 67, 104, .15));
+  border: 1px solid rgba(74, 198, 230, .15);
+}
+
+.module-card h3 {
+  color: #eaf5fa;
+  letter-spacing: -.025em;
+}
+
+.module-card p {
+  color: #7796aa;
+}
+
+/* Universal operational panels */
+.glass-panel,
+.admin-card,
+.division-card,
+.outage-counter-card,
+.dispatcher-config-card,
+.role-card,
+.user-card {
+  background:
+    linear-gradient(145deg, rgba(5, 27, 48, .94), rgba(3, 19, 35, .96));
+  border: 1px solid rgba(95, 180, 213, .12);
+  box-shadow:
+    0 16px 45px rgba(0, 0, 0, .15),
+    inset 0 1px 0 rgba(255,255,255,.018);
+}
+
+.glass-panel:hover,
+.outage-counter-card:hover,
+.division-card:hover {
+  border-color: rgba(83, 199, 232, .22);
+}
+
+.dispatcher-panel {
+  border-radius: 18px;
+  overflow: clip;
+}
+
+.dispatcher-panel-head {
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(98, 178, 210, .08);
+}
+
+.dispatcher-panel-head h2 {
+  color: #edf7fb;
+  letter-spacing: -.03em;
+}
+
+.dispatcher-source-meta {
+  border-radius: 10px;
+  background: rgba(1, 13, 25, .36);
+  border-color: rgba(93, 174, 204, .09);
+}
+
+/* Charts */
+.dispatcher-workorders-donut,
+.dispatcher-requests-donut {
+  box-shadow:
+    0 24px 55px rgba(0, 0, 0, .27),
+    0 0 0 8px rgba(15, 108, 153, .035),
+    inset 0 0 0 1px rgba(255,255,255,.04);
+}
+
+.dispatcher-workorders-donut::after {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(21, 94, 128, .22), transparent 55%),
+    #031625;
+  border-color: rgba(100, 195, 224, .08);
+}
+
+.dispatcher-workorders-donut-center strong {
+  color: #f8fcff;
+  text-shadow: 0 0 24px rgba(78, 206, 235, .14);
+}
+
+.dispatcher-workorders-donut-center span {
+  color: #66869a;
+}
+
+.dispatcher-donut-marker {
+  border-width: 2px;
+  border-color: #031625;
+  box-shadow: 0 5px 18px rgba(0,0,0,.42);
+}
+
+.dispatcher-workorders-legend-item {
+  border-radius: 10px;
+  background: rgba(1, 14, 27, .43);
+  border-color: rgba(255,255,255,.035);
+}
+
+.dispatcher-workorders-legend-item:hover {
+  border-color: rgba(99, 187, 219, .13);
+  background: rgba(4, 27, 47, .56);
+}
+
+/* Outages: premium compact command cards */
+.outage-counter-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.outage-counter-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(53, 202, 235, .8), rgba(12, 112, 179, .2), transparent 80%);
+}
+
+.outage-counter-card strong {
+  color: #f1f8fc;
+}
+
+.outage-counter-card .outage-count,
+.outage-counter-card [class*="count"] {
+  font-variant-numeric: tabular-nums;
+}
+
+.outage-source-toggle,
+.dispatcher-breakdown-toggle,
+.dispatcher-breakdown-chip {
+  border-radius: 10px;
+}
+
+.outage-source-toggle,
+.dispatcher-breakdown-toggle {
+  background: rgba(1, 16, 29, .38);
+  border-color: rgba(76, 180, 216, .10);
+}
+
+.outage-source-row {
+  background: rgba(2, 18, 32, .46);
+  border-color: rgba(94, 175, 205, .07);
+}
+
+/* Buttons / forms */
+.primary-action {
+  border: 1px solid rgba(95, 220, 244, .18);
+  background:
+    linear-gradient(135deg, #0a89bd, #0871ad 58%, #075d96);
+  box-shadow: 0 12px 28px rgba(2, 111, 163, .25), inset 0 1px 0 rgba(255,255,255,.12);
+}
+
+.primary-action:hover {
+  filter: brightness(1.06);
+  box-shadow: 0 16px 34px rgba(2, 121, 176, .30), inset 0 1px 0 rgba(255,255,255,.14);
+}
+
+.secondary-action,
+.role-action,
+.back-button,
+.icon-button,
+.admin-refresh-button {
+  background: rgba(4, 25, 44, .72);
+  border-color: rgba(94, 181, 214, .12);
+}
+
+.secondary-action:hover,
+.role-action:hover,
+.back-button:hover,
+.icon-button:hover,
+.admin-refresh-button:hover {
+  border-color: rgba(72, 202, 235, .26);
+  background: rgba(7, 39, 66, .84);
+}
+
+.input-shell,
+.dispatcher-select,
+.form-field input,
+textarea,
+select {
+  background: rgba(1, 14, 27, .55);
+  border-color: rgba(105, 181, 210, .12);
+}
+
+.input-shell:focus-within,
+.form-field input:focus,
+textarea:focus,
+select:focus {
+  border-color: rgba(65, 201, 235, .42);
+  box-shadow: 0 0 0 3px rgba(50, 182, 220, .07);
+}
+
+/* Admin center */
+.admin-section,
+.dispatcher-source-management {
+  border-radius: 18px;
+}
+
+.admin-section-head,
+.dispatcher-config-toolbar {
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(96, 177, 209, .08);
+}
+
+.dispatcher-config-status,
+.storage-warning,
+.dispatcher-data-notice {
+  border-radius: 10px;
+}
+
+/* Authentication: utility console, not a generic landing page */
+.auth-screen {
+  background:
+    radial-gradient(circle at 65% 15%, rgba(15, 142, 193, .12), transparent 30%),
+    linear-gradient(145deg, rgba(1, 10, 19, .38), rgba(1, 13, 24, .08));
+}
+
+.auth-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  background:
+    linear-gradient(145deg, rgba(5, 29, 51, .97), rgba(2, 17, 31, .985));
+  border: 1px solid rgba(96, 191, 224, .16);
+  box-shadow: 0 34px 95px rgba(0,0,0,.42), inset 0 1px 0 rgba(255,255,255,.025);
+}
+
+.auth-panel::before {
+  content: "ОПЕРАТИВНЫЙ КОНТУР · 24/7";
+  position: absolute;
+  right: 18px;
+  top: 16px;
+  color: #4d7185;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.auth-copy h1 {
+  letter-spacing: -.04em;
+}
+
+.secure-note {
+  border-top-color: rgba(103, 181, 211, .08);
+}
+
+/* Micro-interactions kept restrained for an operational UI. */
+@media (prefers-reduced-motion: no-preference) {
+  .glass-panel,
+  .outage-counter-card,
+  .module-card,
+  .dispatcher-config-card {
+    transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  }
+
+  .outage-counter-card:hover,
+  .dispatcher-config-card:hover {
+    transform: translateY(-2px);
+  }
+}
+
+/* Tablet */
+@media (max-width: 940px) {
+  .brand-context {
+    display: none;
+  }
+
+  .app-view {
+    width: min(100% - 28px, 1500px);
+  }
+
+  .topbar {
+    padding-inline: 14px;
+  }
+
+  .home-hero,
+  .monitoring-hero,
+  .dispatcher-hero,
+  .admin-hero {
+    border-radius: 20px;
+  }
+}
+
+/* Mobile: denser, readable and designed for MAX WebView. */
+@media (max-width: 620px) {
+  body {
+    background:
+      radial-gradient(circle at 85% 4%, rgba(0, 159, 214, .12), transparent 24%),
+      linear-gradient(180deg, #020d18, #031729 55%, #02111f);
+  }
+
+  .topbar {
+    min-height: 64px;
+    padding-block: 8px;
+  }
+
+  .logo-surface-header {
+    width: 116px;
+    min-width: 116px;
+  }
+
+  .logo-fallback span {
+    font-size: 11px;
+  }
+
+  .logo-fallback small {
+    font-size: 8px;
+  }
+
+  .topbar-user {
+    gap: 7px;
+  }
+
+  .identity {
+    display: none;
+  }
+
+  .app-view {
+    width: calc(100% - 20px);
+  }
+
+  .home-hero,
+  .monitoring-hero,
+  .dispatcher-hero,
+  .admin-hero {
+    padding: 22px 18px;
+    border-radius: 16px;
+  }
+
+  .home-hero h1,
+  .monitoring-hero h1,
+  .dispatcher-hero h1,
+  .admin-hero h1 {
+    font-size: clamp(28px, 9vw, 38px);
+  }
+
+  .module-card {
+    min-height: 190px;
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .glass-panel,
+  .dispatcher-panel,
+  .admin-card,
+  .outage-counter-card,
+  .dispatcher-config-card {
+    border-radius: 14px;
+  }
+
+  .dispatcher-panel-head {
+    gap: 10px;
+  }
+
+  .dispatcher-panel-head h2 {
+    font-size: 20px;
+  }
+
+  .dispatcher-workorders-legend-item {
+    min-height: 32px;
+  }
+
+  .dispatcher-donut-marker {
+    box-shadow: 0 3px 12px rgba(0,0,0,.42);
+  }
+
+  .auth-panel {
+    margin-inline: 10px;
+    border-radius: 18px;
+  }
+
+  .auth-panel::before {
+    display: none;
+  }
+}
+
+/* Desktop large screens: give the dashboard more air, not more empty height. */
+@media (min-width: 1440px) {
+  .app-view {
+    width: min(1540px, calc(100% - 96px));
+  }
+
+  .module-grid {
+    gap: 22px;
+  }
+
+  .dispatcher-grid {
+    gap: 20px;
+  }
+}
+
+/* Login panel fix: the command-center label reused the old decorative
+   ::before outline. Reset all inherited pseudo-element geometry/mask so
+   the auth card has a single clean outer contour. */
+.auth-panel::before {
+  inset: auto;
+  left: auto;
+  bottom: auto;
+  right: 18px;
+  top: 16px;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  -webkit-mask: none;
+  mask: none;
+  pointer-events: none;
+}
