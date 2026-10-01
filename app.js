@@ -3,13 +3,29 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import apiRouter from "./api/router.js";
-
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.dirname(__filename);
 
 const HOST = "0.0.0.0";
-const PORT = Number(process.env.PORT || 3000);
+const requestedPort = Number.parseInt(String(process.env.PORT || "3000"), 10);
+const PORT = Number.isInteger(requestedPort) && requestedPort > 0 && requestedPort < 65536
+  ? requestedPort
+  : 3000;
+
+let apiRouterPromise = null;
+
+function getApiRouter() {
+  if (!apiRouterPromise) {
+    apiRouterPromise = import("./api/router.js")
+      .then((module) => module.default)
+      .catch((error) => {
+        apiRouterPromise = null;
+        throw error;
+      });
+  }
+
+  return apiRouterPromise;
+}
 
 const STATIC_FILES = new Map([
   ["/", "index.html"],
@@ -184,6 +200,8 @@ async function handleApi(
         url,
         options
       );
+
+    const apiRouter = await getApiRouter();
 
     const webResponse =
       await apiRouter.fetch(
