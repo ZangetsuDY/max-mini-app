@@ -73,25 +73,33 @@ function buildSourceLookup(unitSummary) {
   return lookup;
 }
 
-function matchOutageUnitCount(outageDivision, unitSummary) {
+function matchOutageUnitMetrics(outageDivision, unitSummary) {
   const breakdown = Array.isArray(outageDivision?.sourceBreakdown)
     ? outageDivision.sourceBreakdown
     : [];
   const lookup = buildSourceLookup(unitSummary);
 
   if (!lookup.size) {
-    return Number(outageDivision?.count || 0);
+    return {
+      outages: Number(outageDivision?.count || 0),
+      appeals: Number(outageDivision?.appeals || 0)
+    };
   }
 
-  return breakdown.reduce((sum, source) => {
+  return breakdown.reduce((result, source) => {
     const label = String(source?.label || source?.source || "").trim();
     const lower = label.toLowerCase();
     const matched = [...lookup].some(
       (token) => lower === token || lower.includes(token) || token.includes(lower)
     );
 
-    return sum + (matched ? Number(source?.count || 0) : 0);
-  }, 0);
+    if (matched) {
+      result.outages += Number(source?.count || 0);
+      result.appeals += Number(source?.appeals || 0);
+    }
+
+    return result;
+  }, { outages: 0, appeals: 0 });
 }
 
 function parseSourceTime(value) {
@@ -327,6 +335,12 @@ export default {
         const relatedOutageDivision =
           outageDivisionMap.get(cleanId(unit.groupId)) || null;
 
+        const outageMetrics = matchOutageUnitMetrics(relatedOutageDivision, {
+          unit,
+          requestSources: requestConfig?.sources || [],
+          workorderSources: workorderConfig?.sources || []
+        });
+
         return {
           id: unit.id,
           name: unit.name,
@@ -352,11 +366,8 @@ export default {
             total: Number(workorderAggregation.total || 0)
           },
           outages: {
-            total: matchOutageUnitCount(relatedOutageDivision, {
-              unit,
-              requestSources: requestConfig?.sources || [],
-              workorderSources: workorderConfig?.sources || []
-            })
+            total: Number(outageMetrics.outages || 0),
+            appeals: Number(outageMetrics.appeals || 0)
           }
         };
       })
@@ -372,12 +383,16 @@ export default {
       const outages = outageDivision
         ? Number(outageDivision.count || 0)
         : sumBy(groupUnits, (item) => item.outages.total);
+      const appeals = outageDivision
+        ? Number(outageDivision.appeals || 0)
+        : sumBy(groupUnits, (item) => item.outages.appeals);
 
       return {
         id: group.id,
         name: group.name,
         description: group.description || "",
         outages,
+        appeals,
         requests: requests.total,
         workorders: workorders.total,
         openRequests: requests.review + requests.open,
@@ -412,10 +427,12 @@ export default {
       if (selectedUnitId && filteredUnits.length) {
         return {
           total: sumBy(filteredUnits, (item) => item.outages.total),
+          appeals: sumBy(filteredUnits, (item) => item.outages.appeals),
           cards: filteredUnits.map((item) => ({
             id: item.id,
             name: `${item.groupName} · ${item.name}`,
-            count: item.outages.total
+            count: item.outages.total,
+            appeals: item.outages.appeals
           })),
           scopeLabel: `${filteredUnits[0].groupName} · ${filteredUnits[0].name}`
         };
@@ -427,10 +444,11 @@ export default {
 
         return {
           total: Number(division?.count ?? groupRow?.outages ?? 0),
+          appeals: Number(division?.appeals ?? groupRow?.appeals ?? 0),
           cards: division
             ? [division]
             : groupRow
-              ? [{ id: groupRow.id, name: groupRow.name, count: groupRow.outages }]
+              ? [{ id: groupRow.id, name: groupRow.name, count: groupRow.outages, appeals: groupRow.appeals }]
               : [],
           scopeLabel: selectedGroup?.name || "Подразделение"
         };
@@ -438,6 +456,7 @@ export default {
 
       return {
         total: sumBy(outageDivisionSummaries, (item) => item.count),
+        appeals: sumBy(outageDivisionSummaries, (item) => item.appeals),
         cards: outageDivisionSummaries,
         scopeLabel: "Все подразделения"
       };
@@ -446,6 +465,16 @@ export default {
     const rankedOutages = [...outagesSummary.cards]
       .sort((a, b) => Number(b.count || 0) - Number(a.count || 0))
       .slice(0, 8);
+
+    const rankedAppeals = [...outagesSummary.cards]
+      .sort((a, b) => Number(b.appeals || 0) - Number(a.appeals || 0))
+      .filter((item) => Number(item.appeals || 0) > 0)
+      .slice(0, 8)
+      .map((item) => ({
+        id: item.id,
+        name: item.name,
+        count: Number(item.appeals || 0)
+      }));
 
     const rankedRequests = [...filteredUnits]
       .sort((a, b) => Number(b.requests.total || 0) - Number(a.requests.total || 0))
@@ -468,6 +497,7 @@ export default {
     const requestLeader = rankedRequests[0] || null;
     const workorderLeader = rankedWorkorders[0] || null;
     const outageLeader = rankedOutages[0] || null;
+    const appealLeader = rankedAppeals[0] || null;
 
     const outageUpdatedAt = outageSnapshot?.sourceUpdatedAt || "";
     const requestsUpdatedAt =
@@ -486,6 +516,7 @@ export default {
       requestsUpdatedAt,
       workordersUpdatedAt,
       outageSnapshot?.reportedTotal ?? outageSnapshot?.emergencyTotal ?? "",
+      sumBy(outageDivisionSummaries, (item) => item.appeals),
       dispatcherSnapshotState.snapshot?.reportedTotal ?? "",
       workordersSnapshotState.snapshot?.counted ?? ""
     ].join("|");
@@ -495,6 +526,7 @@ export default {
         row.id,
         {
           outages: row.outages,
+          appeals: row.appeals,
           requests: row.requests,
           workorders: row.workorders
         }
@@ -506,6 +538,7 @@ export default {
         item.id,
         {
           outages: item.outages.total,
+          appeals: item.outages.appeals,
           requests: item.requests.total,
           workorders: item.workorders.total
         }
@@ -518,6 +551,7 @@ export default {
       label: historyLabel(pointTimestamp),
       global: {
         outages: sumBy(outageDivisionSummaries, (item) => item.count),
+        appeals: sumBy(outageDivisionSummaries, (item) => item.appeals),
         requests: summarizeRequestUnits(unitSummaries).total,
         workorders: summarizeWorkorderUnits(unitSummaries).total
       },
@@ -537,6 +571,10 @@ export default {
       outages: makeDelta(
         currentHistoryPoint?.outages ?? outagesSummary.total,
         previousHistoryPoint?.outages
+      ),
+      appeals: makeDelta(
+        currentHistoryPoint?.appeals ?? outagesSummary.appeals,
+        previousHistoryPoint?.appeals
       ),
       requests: makeDelta(
         currentHistoryPoint?.requests ?? requestSummary.total,
@@ -568,6 +606,7 @@ export default {
       },
       headline: {
         outagesTotal: Number(outagesSummary.total || 0),
+        appealsTotal: Number(outagesSummary.appeals || 0),
         requestsTotal: Number(requestSummary.total || 0),
         workordersTotal: Number(workorderSummary.total || 0),
         divisions: availableGroups.length,
@@ -585,9 +624,11 @@ export default {
         reportedTotal:
           outageSnapshot?.reportedTotal ?? outageSnapshot?.emergencyTotal ?? null,
         total: Number(outagesSummary.total || 0),
+        appeals: Number(outagesSummary.appeals || 0),
         scopeLabel: outagesSummary.scopeLabel,
         cards: outagesSummary.cards,
-        ranked: rankedOutages
+        ranked: rankedOutages,
+        rankedAppeals
       },
       requests: {
         status: dispatcherSnapshotState.status,
@@ -613,6 +654,7 @@ export default {
       },
       highlights: {
         outageLeader,
+        appealLeader,
         requestLeader,
         workorderLeader
       },

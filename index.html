@@ -397,7 +397,7 @@
             <span class="micro-label">РУКОВОДЯЩИЙ КОНТУР</span>
             <h1>Диспетчерский мониторинг</h1>
             <p>
-              Единая управленческая панель по аварийным отключениям, заявкам и наряд-допускам / распоряжениям.
+              Единая управленческая панель по аварийным отключениям, обращениям, заявкам и наряд-допускам / распоряжениям.
               Сводная инфографика помогает быстро увидеть общую картину и переключиться на нужное подразделение или РЭС.
             </p>
           </div>
@@ -409,6 +409,14 @@
               <div class="executive-kpi-foot">
                 <small>текущий актив</small>
                 <span id="executiveDeltaOutages" class="executive-delta is-neutral">—</span>
+              </div>
+            </div>
+            <div class="executive-kpi-tile executive-kpi-appeals">
+              <span>Обращения</span>
+              <strong id="executiveHeroAppeals">0</strong>
+              <div class="executive-kpi-foot">
+                <small>по активным аварийным отключениям</small>
+                <span id="executiveDeltaAppeals" class="executive-delta is-neutral">—</span>
               </div>
             </div>
             <div class="executive-kpi-tile executive-kpi-requests">
@@ -468,6 +476,11 @@
                 <small id="executiveHighlightOutageCount">0</small>
               </div>
               <div class="executive-highlight-card">
+                <span>Лидер по обращениям</span>
+                <strong id="executiveHighlightAppeal">—</strong>
+                <small id="executiveHighlightAppealCount">0</small>
+              </div>
+              <div class="executive-highlight-card">
                 <span>Лидер по заявкам</span>
                 <strong id="executiveHighlightRequest">—</strong>
                 <small id="executiveHighlightRequestCount">0</small>
@@ -490,6 +503,7 @@
                 <span id="executiveOutagesScope">Все подразделения</span>
                 <strong id="executiveOutagesTotal">0</strong>
                 <small>активных отключений</small>
+                <div class="executive-total-secondary"><span>Обращения</span><b id="executiveOutagesAppeals">0</b></div>
               </div>
             </div>
             <div id="executiveOutageMeta" class="executive-meta-line">Данные СК-11 OMS</div>
@@ -562,6 +576,10 @@
                 <h3>Топ по НДР</h3>
                 <div id="executiveWorkorderRanking" class="executive-ranking-list is-compact"></div>
               </div>
+              <div>
+                <h3>Топ по обращениям</h3>
+                <div id="executiveAppealRanking" class="executive-ranking-list is-compact"></div>
+              </div>
             </div>
           </article>
 
@@ -584,6 +602,16 @@
                   <span id="executiveTrendOutagesDelta" class="executive-delta is-neutral">—</span>
                 </div>
                 <div id="executiveTrendOutagesChart" class="executive-sparkline" aria-label="Динамика аварийных отключений"></div>
+              </div>
+              <div class="executive-trend-card executive-trend-appeals">
+                <div class="executive-trend-head">
+                  <div>
+                    <span>Обращения</span>
+                    <strong id="executiveTrendAppealsCurrent">0</strong>
+                  </div>
+                  <span id="executiveTrendAppealsDelta" class="executive-delta is-neutral">—</span>
+                </div>
+                <div id="executiveTrendAppealsChart" class="executive-sparkline" aria-label="Динамика обращений по аварийным отключениям"></div>
               </div>
 
               <div class="executive-trend-card executive-trend-requests">
@@ -616,7 +644,7 @@
                 <span class="micro-label">СВОДНЫЙ СТАТУС</span>
                 <h2>Подразделения в одном контуре</h2>
               </div>
-              <span class="executive-table-caption">Аварии · Заявки · НДР</span>
+              <span class="executive-table-caption">Аварии · Обращения · Заявки · НДР</span>
             </div>
 
             <div class="executive-table-wrap">
@@ -626,13 +654,14 @@
                     <th>Подразделение</th>
                     <th>Состояние</th>
                     <th>Отключения</th>
+                    <th>Обращения</th>
                     <th>Заявки</th>
                     <th>НДР</th>
                     <th>РЭС / районы</th>
                   </tr>
                 </thead>
                 <tbody id="executiveDivisionTableBody">
-                  <tr><td colspan="6">Ожидание данных…</td></tr>
+                  <tr><td colspan="7">Ожидание данных…</td></tr>
                 </tbody>
               </table>
             </div>

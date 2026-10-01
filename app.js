@@ -1163,10 +1163,17 @@ function renderExecutiveSparkline(targetId, history, metric, fallbackValue = 0) 
   if (!target) return;
 
   const list = (Array.isArray(history) ? history : [])
-    .map((item) => ({
-      label: String(item?.label || ""),
-      value: Number(item?.[metric] || 0)
-    }))
+    .map((item) => {
+      const raw = item?.[metric];
+      if (raw === null || raw === undefined || raw === "") return null;
+      const value = Number(raw);
+      if (!Number.isFinite(value)) return null;
+      return {
+        label: String(item?.label || ""),
+        value
+      };
+    })
+    .filter(Boolean)
     .slice(-16);
 
   if (!list.length) {
@@ -1231,7 +1238,7 @@ function renderExecutiveDivisionTable(rows, selectedGroupId = "") {
   const list = Array.isArray(rows) ? rows : [];
 
   if (!list.length) {
-    body.innerHTML = `<tr><td colspan="6" class="executive-table-empty">Нет доступных подразделений</td></tr>`;
+    body.innerHTML = `<tr><td colspan="7" class="executive-table-empty">Нет доступных подразделений</td></tr>`;
     return;
   }
 
@@ -1249,6 +1256,7 @@ function renderExecutiveDivisionTable(rows, selectedGroupId = "") {
         </td>
         <td><span class="executive-status-chip is-${escapeHtml(tone)}">${escapeHtml(row?.status?.label || "—")}</span></td>
         <td><strong class="executive-table-number is-outage">${Number(row?.outages || 0)}</strong></td>
+        <td><strong class="executive-table-number is-appeal">${Number(row?.appeals || 0)}</strong></td>
         <td><strong class="executive-table-number">${Number(row?.requests || 0)}</strong><small class="executive-table-sub">активно: ${Number(row?.openRequests || 0)}</small></td>
         <td><strong class="executive-table-number">${Number(row?.workorders || 0)}</strong><small class="executive-table-sub">перерыв: ${Number(row?.workBreaks || 0)}</small></td>
         <td><strong class="executive-table-number">${Number(row?.units || 0)}</strong></td>
@@ -1283,15 +1291,18 @@ function renderExecutiveDashboard(payload) {
 
   executiveEl("executiveScopeTitle").textContent = scopeTitle;
   executiveEl("executiveHeroOutages").textContent = Number(payload?.headline?.outagesTotal || 0);
+  executiveEl("executiveHeroAppeals").textContent = Number(payload?.headline?.appealsTotal || 0);
   executiveEl("executiveHeroRequests").textContent = Number(payload?.headline?.requestsTotal || 0);
   executiveEl("executiveHeroWorkorders").textContent = Number(payload?.headline?.workordersTotal || 0);
 
   renderExecutiveDelta("executiveDeltaOutages", payload?.deltas?.outages);
+  renderExecutiveDelta("executiveDeltaAppeals", payload?.deltas?.appeals);
   renderExecutiveDelta("executiveDeltaRequests", payload?.deltas?.requests);
   renderExecutiveDelta("executiveDeltaWorkorders", payload?.deltas?.workorders);
 
   executiveEl("executiveOutagesScope").textContent = payload?.outages?.scopeLabel || scopeTitle;
   executiveEl("executiveOutagesTotal").textContent = Number(payload?.outages?.total || 0);
+  executiveEl("executiveOutagesAppeals").textContent = Number(payload?.outages?.appeals || 0);
 
   const overviewBits = [
     `${Number(payload?.scope?.groupCount || 0)} подразделений`,
@@ -1302,6 +1313,10 @@ function renderExecutiveDashboard(payload) {
   const outageLeader = payload?.highlights?.outageLeader;
   executiveEl("executiveHighlightOutage").textContent = outageLeader?.name || "—";
   executiveEl("executiveHighlightOutageCount").textContent = `${Number(outageLeader?.count || 0)} отключений`;
+
+  const appealLeader = payload?.highlights?.appealLeader;
+  executiveEl("executiveHighlightAppeal").textContent = appealLeader?.name || "—";
+  executiveEl("executiveHighlightAppealCount").textContent = `${Number(appealLeader?.count || 0)} обращений`;
 
   const requestLeader = payload?.highlights?.requestLeader;
   executiveEl("executiveHighlightRequest").textContent = requestLeader?.name || "—";
@@ -1325,6 +1340,7 @@ function renderExecutiveDashboard(payload) {
     : "Данные НДР пока не получены";
 
   renderExecutiveRanking("executiveOutageRanking", payload?.outages?.ranked, "Нет данных по отключениям");
+  renderExecutiveRanking("executiveAppealRanking", payload?.outages?.rankedAppeals, "Нет обращений по активным отключениям");
   renderExecutiveRanking("executiveRequestRanking", payload?.requests?.ranked, "Нет данных по заявкам");
   renderExecutiveRanking("executiveWorkorderRanking", payload?.workorders?.ranked, "Нет данных по НДР");
 
@@ -1332,14 +1348,17 @@ function renderExecutiveDashboard(payload) {
   const latestHistory = history.at(-1) || {};
 
   executiveEl("executiveTrendOutagesCurrent").textContent = Number(latestHistory?.outages ?? payload?.headline?.outagesTotal ?? 0);
+  executiveEl("executiveTrendAppealsCurrent").textContent = Number(latestHistory?.appeals ?? payload?.headline?.appealsTotal ?? 0);
   executiveEl("executiveTrendRequestsCurrent").textContent = Number(latestHistory?.requests ?? payload?.headline?.requestsTotal ?? 0);
   executiveEl("executiveTrendWorkordersCurrent").textContent = Number(latestHistory?.workorders ?? payload?.headline?.workordersTotal ?? 0);
 
   renderExecutiveDelta("executiveTrendOutagesDelta", payload?.deltas?.outages, "");
+  renderExecutiveDelta("executiveTrendAppealsDelta", payload?.deltas?.appeals, "");
   renderExecutiveDelta("executiveTrendRequestsDelta", payload?.deltas?.requests, "");
   renderExecutiveDelta("executiveTrendWorkordersDelta", payload?.deltas?.workorders, "");
 
   renderExecutiveSparkline("executiveTrendOutagesChart", history, "outages", payload?.headline?.outagesTotal);
+  renderExecutiveSparkline("executiveTrendAppealsChart", history, "appeals", payload?.headline?.appealsTotal);
   renderExecutiveSparkline("executiveTrendRequestsChart", history, "requests", payload?.headline?.requestsTotal);
   renderExecutiveSparkline("executiveTrendWorkordersChart", history, "workorders", payload?.headline?.workordersTotal);
 
