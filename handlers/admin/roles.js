@@ -6,6 +6,7 @@ import {
   resolveSessionAccess,
   createRole,
   updateRole,
+  updateRoleColor,
   deleteRole
 } from "../../lib/access-control.js";
 
@@ -85,6 +86,8 @@ export default {
               body?.name,
             description:
               body?.description,
+            color:
+              body?.color,
             panelIds:
               body?.panelIds,
             dispatcherDivisionId:
@@ -112,6 +115,8 @@ export default {
               body?.name,
             description:
               body?.description,
+            color:
+              body?.color,
             panelIds:
               body?.panelIds,
             dispatcherDivisionId:
@@ -120,6 +125,23 @@ export default {
               Boolean(
                 body?.dispatcherAllDivisions
               ),
+            actor:
+              access
+          });
+
+        return json({
+          ok: true,
+          role
+        });
+      }
+
+      if (action === "color") {
+        const role =
+          await updateRoleColor({
+            roleId:
+              body?.roleId,
+            color:
+              body?.color,
             actor:
               access
           });

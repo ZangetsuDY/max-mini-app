@@ -576,6 +576,27 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
+function normalizeRoleColor(value, fallback = "#39c6e6") {
+  const clean = String(value || "").trim().toLowerCase();
+  return /^#[0-9a-f]{6}$/.test(clean) ? clean : fallback;
+}
+
+function roleColorRgba(value, alpha = 1) {
+  const color = normalizeRoleColor(value).slice(1);
+  const r = Number.parseInt(color.slice(0, 2), 16);
+  const g = Number.parseInt(color.slice(2, 4), 16);
+  const b = Number.parseInt(color.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function applyCurrentRoleColor(color) {
+  const clean = normalizeRoleColor(color);
+  userRoleBadge.style.color = clean;
+  userRoleBadge.style.borderColor = roleColorRgba(clean, 0.34);
+  userRoleBadge.style.background = roleColorRgba(clean, 0.10);
+  userRoleBadge.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,.03), 0 0 18px ${roleColorRgba(clean, 0.08)}`;
+}
+
 function splitDateTime(value) {
   const [date = "", time = ""] =
     String(value || "").split(/\s+/);
@@ -641,6 +662,23 @@ function setUserUi(user) {
       )
         ? [...user.roleNames]
         : [],
+    roles:
+      Array.isArray(
+        user?.roles
+      )
+        ? user.roles.map((role) => ({
+            ...role,
+            color: normalizeRoleColor(role?.color)
+          }))
+        : [],
+    primaryRoleColor:
+      normalizeRoleColor(
+        user?.primaryRoleColor ||
+        user?.roles?.find?.((role) => role?.id === "developer")?.color ||
+        user?.roles?.find?.((role) => role?.id === "dispatcher")?.color ||
+        user?.roles?.find?.((role) => role?.id !== "user")?.color ||
+        user?.roles?.[0]?.color
+      ),
     panelIds:
       Array.isArray(
         user?.panelIds
@@ -704,6 +742,10 @@ function setUserUi(user) {
   userRoleBadge.classList.toggle(
     "is-developer",
     currentUser.isDeveloper
+  );
+
+  applyCurrentRoleColor(
+    currentUser.primaryRoleColor
   );
 
   dispatcherCardStatus.textContent =
@@ -3045,15 +3087,23 @@ function renderAdminUsers(users) {
               )}`
             : "Входов пока нет";
 
-        const roleNames =
-          Array.isArray(
-            user.roleNames
-          ) &&
-          user.roleNames.length
-            ? user.roleNames
-            : [
-                userRoleText(user)
-              ];
+        const roleBadges =
+          Array.isArray(user.roles) && user.roles.length
+            ? user.roles.map((role) => ({
+                name: role.name || role.id,
+                color: normalizeRoleColor(role.color)
+              }))
+            : (
+                Array.isArray(user.roleNames) && user.roleNames.length
+                  ? user.roleNames.map((name) => ({
+                      name,
+                      color: "#39c6e6"
+                    }))
+                  : [{
+                      name: userRoleText(user),
+                      color: "#39c6e6"
+                    }]
+              );
 
         return `
           <div
@@ -3093,12 +3143,15 @@ function renderAdminUsers(users) {
             </div>
 
             <div class="session-role-stack">
-              ${roleNames
+              ${roleBadges
                 .map(
-                  (roleName) => `
-                    <span class="session-role">
+                  (role) => `
+                    <span
+                      class="session-role"
+                      style="color:${normalizeRoleColor(role.color)};border-color:${roleColorRgba(role.color,.28)};background:${roleColorRgba(role.color,.08)}"
+                    >
                       ${escapeHtml(
-                        roleName
+                        role.name
                       )}
                     </span>
                   `
@@ -3497,6 +3550,7 @@ function renderRoleList() {
               ? "is-builtin"
               : ""
           }"
+          style="--role-accent: ${normalizeRoleColor(role.color)}; --role-accent-soft: ${roleColorRgba(role.color, 0.12)}; --role-accent-line: ${roleColorRgba(role.color, 0.32)}"
         >
           <div class="role-card-top">
             <div class="role-card-name">
@@ -3513,19 +3567,22 @@ function renderRoleList() {
               </span>
             </div>
 
-            <span
-              class="role-kind ${
-                role.builtin
-                  ? ""
-                  : "is-custom"
-              }"
-            >
-              ${
-                role.builtin
-                  ? "СИСТЕМНАЯ"
-                  : "ПОЛЬЗОВАТЕЛЬСКАЯ"
-              }
-            </span>
+            <div class="role-card-kind-wrap">
+              <span class="role-color-swatch" title="Цвет роли" style="background: ${normalizeRoleColor(role.color)}"></span>
+              <span
+                class="role-kind ${
+                  role.builtin
+                    ? ""
+                    : "is-custom"
+                }"
+              >
+                ${
+                  role.builtin
+                    ? "СИСТЕМНАЯ"
+                    : "ПОЛЬЗОВАТЕЛЬСКАЯ"
+                }
+              </span>
+            </div>
           </div>
 
           <div class="role-panels">
@@ -3569,33 +3626,45 @@ function renderRoleList() {
             }
           </div>
 
-          ${
-            role.builtin
-              ? ""
-              : `
-                <div class="role-card-actions">
+          <div class="role-card-actions">
+            ${
+              role.builtin
+                ? `
+                  <button
+                    class="role-action role-color-action"
+                    type="button"
+                    data-color-role="${role.id}"
+                  >
+                    Цвет роли
+                  </button>
+                `
+                : `
                   <button
                     class="role-action"
                     type="button"
-                    data-edit-role="${
-                      role.id
-                    }"
+                    data-edit-role="${role.id}"
                   >
                     Изменить
                   </button>
 
                   <button
+                    class="role-action role-color-action"
+                    type="button"
+                    data-color-role="${role.id}"
+                  >
+                    Цвет
+                  </button>
+
+                  <button
                     class="role-action is-danger"
                     type="button"
-                    data-delete-role="${
-                      role.id
-                    }"
+                    data-delete-role="${role.id}"
                   >
                     Удалить
                   </button>
-                </div>
-              `
-          }
+                `
+            }
+          </div>
         </article>
       `
     ).join("");
@@ -3612,6 +3681,22 @@ function renderRoleList() {
             openRoleEditor(
               button.dataset
                 .editRole
+            )
+        );
+      }
+    );
+
+  roleList
+    .querySelectorAll(
+      "[data-color-role]"
+    )
+    .forEach(
+      (button) => {
+        button.addEventListener(
+          "click",
+          () =>
+            openRoleColorEditor(
+              button.dataset.colorRole
             )
         );
       }
@@ -5382,6 +5467,100 @@ function bindDispatcherRoleScope(
   refresh();
 }
 
+function roleColorEditorHtml(color) {
+  const clean = normalizeRoleColor(color);
+  return `
+    <div class="role-color-editor">
+      <div class="management-section-title">
+        Цвет роли
+      </div>
+      <div class="role-color-control">
+        <input
+          id="roleColorPicker"
+          class="role-color-picker"
+          type="color"
+          value="${clean}"
+          aria-label="Выберите цвет роли"
+        />
+        <label class="management-field role-color-hex-field">
+          <span>HEX</span>
+          <input
+            id="roleColorHexInput"
+            maxlength="7"
+            value="${clean}"
+            placeholder="#39c6e6"
+          />
+        </label>
+        <div id="roleColorPreview" class="role-color-preview" style="--role-preview: ${clean}; --role-preview-soft: ${roleColorRgba(clean, .12)}; --role-preview-line: ${roleColorRgba(clean, .38)}">
+          <span></span>
+          <strong>Предпросмотр роли</strong>
+        </div>
+      </div>
+      <div class="role-color-presets">
+        ${["#39c6e6", "#45d5a2", "#9f7bff", "#ffb84d", "#ff6b89", "#5b8cff", "#e879f9", "#94a3b8"].map((preset) => `
+          <button type="button" class="role-color-preset" data-role-color-preset="${preset}" style="background:${preset}" title="${preset}"></button>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function bindRoleColorEditor() {
+  const picker = document.getElementById("roleColorPicker");
+  const hex = document.getElementById("roleColorHexInput");
+  const preview = document.getElementById("roleColorPreview");
+
+  if (!picker || !hex || !preview) return;
+
+  const update = (value) => {
+    const clean = normalizeRoleColor(value, picker.value || "#39c6e6");
+    picker.value = clean;
+    hex.value = clean;
+    preview.style.setProperty("--role-preview", clean);
+    preview.style.setProperty("--role-preview-soft", roleColorRgba(clean, .12));
+    preview.style.setProperty("--role-preview-line", roleColorRgba(clean, .38));
+  };
+
+  picker.addEventListener("input", () => update(picker.value));
+  hex.addEventListener("change", () => update(hex.value));
+  hex.addEventListener("blur", () => update(hex.value));
+
+  managementBody.querySelectorAll("[data-role-color-preset]").forEach((button) => {
+    button.addEventListener("click", () => update(button.dataset.roleColorPreset));
+  });
+}
+
+function getRoleColorEditorValue() {
+  return normalizeRoleColor(
+    document.getElementById("roleColorHexInput")?.value ||
+    document.getElementById("roleColorPicker")?.value
+  );
+}
+
+function openRoleColorEditor(roleId) {
+  const role = roleById(roleId);
+  if (!role) return;
+
+  openManagementModal({
+    eyebrow: "ЦВЕТ РОЛИ",
+    title: role.name,
+    saveLabel: "Сохранить цвет",
+    context: {
+      type: "role-color",
+      roleId: role.id
+    },
+    bodyHtml: `
+      <div class="management-note">
+        Цвет используется в шапке Mini App и в интерфейсе управления ролями.
+        Настройка применяется и к системным ролям, и к созданным вручную.
+      </div>
+      ${roleColorEditorHtml(role.color)}
+    `
+  });
+
+  bindRoleColorEditor();
+}
+
 function openRoleEditor(
   roleId = null
 ) {
@@ -5432,6 +5611,10 @@ function openRoleEditor(
         )}</textarea>
       </label>
 
+      ${roleColorEditorHtml(
+        role?.color || "#39c6e6"
+      )}
+
       <div class="management-section-title">
         Доступ к панелям
       </div>
@@ -5453,6 +5636,7 @@ function openRoleEditor(
   bindDispatcherRoleScope(
     role || null
   );
+  bindRoleColorEditor();
 }
 
 function createUserRoleChoices() {
@@ -5477,7 +5661,8 @@ function createUserRoleChoices() {
             />
 
             <span class="role-choice-copy">
-              <strong>
+              <strong class="role-choice-title">
+                <i class="role-choice-color" style="background:${normalizeRoleColor(role.color)}"></i>
                 ${escapeHtml(role.name)}
                 ${role.builtin ? " · системная" : ""}
               </strong>
@@ -5659,7 +5844,8 @@ async function openUserRoleEditor(
               />
 
               <span class="role-choice-copy">
-                <strong>
+                <strong class="role-choice-title">
+                  <i class="role-choice-color" style="background:${normalizeRoleColor(role.color)}"></i>
                   ${escapeHtml(
                     role.name
                   )}
@@ -5889,6 +6075,9 @@ async function saveManagementEditor() {
         )?.value
           .trim();
 
+      const color =
+        getRoleColorEditorValue();
+
       const panelIds =
         [
           ...managementBody
@@ -5938,6 +6127,7 @@ async function saveManagementEditor() {
                   .roleId,
               name,
               description,
+              color,
               panelIds,
               dispatcherDivisionId,
               dispatcherAllDivisions
@@ -5955,6 +6145,34 @@ async function saveManagementEditor() {
           payload?.error ||
           "Не удалось сохранить роль"
         );
+      }
+    }
+
+    if (
+      managementContext.type ===
+      "role-color"
+    ) {
+      const response = await fetch(
+        API_ADMIN_ROLES,
+        {
+          method: "POST",
+          cache: "no-store",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            ...getSessionHeaders()
+          },
+          body: JSON.stringify({
+            action: "color",
+            roleId: managementContext.roleId,
+            color: getRoleColorEditorValue()
+          })
+        }
+      );
+
+      const payload = await response.json().catch(() => null);
+      if (!response.ok) {
+        throw new Error(payload?.error || "Не удалось сохранить цвет роли");
       }
     }
 
@@ -6279,7 +6497,9 @@ async function saveManagementEditor() {
         managementContext?.type ===
           "create-user"
           ? "Создать пользователя"
-          : "Сохранить";
+          : managementContext?.type === "role-color"
+            ? "Сохранить цвет"
+            : "Сохранить";
   }
 }
 
