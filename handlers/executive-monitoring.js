@@ -290,7 +290,14 @@ export default {
         id: division.id,
         name: division.name,
         count: Number(aggregate.count || 0),
-        sourceBreakdown: aggregate.sourceBreakdown,
+        appeals: Number(aggregate.appeals || 0),
+        sourceBreakdown: (aggregate.sourceBreakdown || []).map((source) => ({
+          source: source.source,
+          label: source.label,
+          matched: Boolean(source.matched),
+          count: Number(source.count || 0),
+          appeals: Number(source.appeals || 0)
+        })),
         sourceCount: Number((aggregate.sourceBreakdown || []).length || 0)
       };
     });

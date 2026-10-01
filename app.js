@@ -6533,11 +6533,119 @@ refreshAdminButton.addEventListener(
    АВАРИЙНЫЙ МОНИТОРИНГ
    ========================================================= */
 
+function renderOutageObjects(objects = []) {
+  const items = Array.isArray(objects)
+    ? objects.map((item) => String(item || "").trim()).filter(Boolean)
+    : [];
+
+  if (!items.length) return "";
+
+  const PREVIEW_LIMIT = 6;
+  const preview = items.slice(0, PREVIEW_LIMIT);
+  const hidden = items.slice(PREVIEW_LIMIT);
+
+  const chips = (values) => values
+    .map((item) => `<span class="outage-object-chip">${escapeHtml(item)}</span>`)
+    .join("");
+
+  if (!hidden.length) {
+    return `
+      <div class="outage-detail-field outage-objects-field">
+        <span>Обесточенные объекты</span>
+        <div class="outage-object-chips">${chips(preview)}</div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="outage-detail-field outage-objects-field">
+      <span>Обесточенные объекты</span>
+      <div class="outage-object-chips">${chips(preview)}</div>
+      <details class="outage-objects-more">
+        <summary>Показать ещё ${hidden.length} ${pluralizeRu(hidden.length, "объект", "объекта", "объектов")}</summary>
+        <div class="outage-object-chips outage-object-chips-more">${chips(hidden)}</div>
+      </details>
+    </div>
+  `;
+}
+
+function renderOutageEvent(event = {}) {
+  const appeals = Number(event?.appeals || 0);
+  const equipment = String(event?.equipment || "").trim();
+  const energyObject = String(event?.energyObject || "").trim();
+  const createdAt = String(event?.createdAt || "").trim();
+
+  return `
+    <article class="outage-event-card">
+      <div class="outage-event-head">
+        <div>
+          <span class="outage-event-kicker">ОТКЛЮЧЕНИЕ</span>
+          <strong>#${escapeHtml(event?.id || "—")}</strong>
+        </div>
+        <div class="outage-event-appeals ${appeals > 0 ? "has-appeals" : ""}">
+          <span>Обращений</span>
+          <strong>${appeals}</strong>
+        </div>
+      </div>
+
+      <div class="outage-event-grid">
+        ${createdAt ? `
+          <div class="outage-detail-field">
+            <span>Создано</span>
+            <strong>${escapeHtml(createdAt)}</strong>
+          </div>
+        ` : ""}
+        ${equipment ? `
+          <div class="outage-detail-field">
+            <span>Оборудование</span>
+            <strong>${escapeHtml(equipment)}</strong>
+          </div>
+        ` : ""}
+        ${energyObject ? `
+          <div class="outage-detail-field">
+            <span>Энергообъект</span>
+            <strong>${escapeHtml(energyObject)}</strong>
+          </div>
+        ` : ""}
+      </div>
+
+      ${renderOutageObjects(event?.disconnectedObjects)}
+    </article>
+  `;
+}
+
+function renderOutageSource(source = {}) {
+  const outages = Array.isArray(source?.outages) ? source.outages : [];
+  const count = Number(source?.count || 0);
+  const appeals = Number(source?.appeals || 0);
+  const canOpen = Boolean(source?.matched) && outages.length > 0;
+
+  return `
+    <details class="outage-source-details ${source?.matched ? "" : "is-missing"}">
+      <summary ${canOpen ? "" : "data-no-toggle=\"true\""}>
+        <div class="outage-source-summary-main">
+          <span>${escapeHtml(source?.label || source?.source || "Источник")}</span>
+          ${source?.matched ? "" : "<small>Строка не найдена в последней сводке</small>"}
+        </div>
+        <div class="outage-source-summary-metrics">
+          <span><b>${count}</b> откл.</span>
+          <span class="${appeals > 0 ? "has-appeals" : ""}"><b>${appeals}</b> обращ.</span>
+          ${canOpen ? `
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"></path></svg>
+          ` : ""}
+        </div>
+      </summary>
+      ${canOpen ? `
+        <div class="outage-events-list">
+          ${outages.map((event) => renderOutageEvent(event)).join("")}
+        </div>
+      ` : ""}
+    </details>
+  `;
+}
+
 function renderDivisionCards(divisions = []) {
-  const items =
-    Array.isArray(divisions)
-      ? divisions
-      : [];
+  const items = Array.isArray(divisions) ? divisions : [];
 
   divisionCountCaption.textContent =
     `${items.length} ${pluralizeRu(
@@ -6556,93 +6664,92 @@ function renderDivisionCards(divisions = []) {
     return;
   }
 
-  divisionGrid.innerHTML =
-    items.map(
-      (division) => {
-        const breakdown = Array.isArray(division?.sourceBreakdown)
-          ? division.sourceBreakdown
-          : [];
-        const canExpand = breakdown.length > 1;
-        const isExpanded = canExpand && expandedOutageDivisionIds.has(String(division.id));
+  divisionGrid.innerHTML = items.map((division) => {
+    const breakdown = Array.isArray(division?.sourceBreakdown)
+      ? division.sourceBreakdown
+      : [];
+    const canExpand = breakdown.length > 0;
+    const isExpanded = canExpand && expandedOutageDivisionIds.has(String(division.id));
+    const appeals = Number(division?.appeals || 0);
 
-        return `
-        <article
-          class="division-card outage-counter-card ${isExpanded ? "is-expanded" : ""}"
-          id="card-${escapeHtml(division.id)}"
-        >
-          <div class="division-header outage-counter-header">
-            <div class="division-main">
-              <div class="division-icon">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M13 2 4 14h7l-1 8 10-13h-7z"></path>
-                </svg>
-              </div>
-
-              <div>
-                <div class="division-kicker">
-                  ПОДРАЗДЕЛЕНИЕ
-                </div>
-                <h2>${escapeHtml(division.name)}</h2>
-                <p>Активные аварийные отключения</p>
-              </div>
+    return `
+      <article
+        class="division-card outage-counter-card ${isExpanded ? "is-expanded" : ""}"
+        id="card-${escapeHtml(division.id)}"
+      >
+        <div class="division-header outage-counter-header">
+          <div class="division-main">
+            <div class="division-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M13 2 4 14h7l-1 8 10-13h-7z"></path>
+              </svg>
             </div>
 
-            <div class="division-actions outage-counter-actions">
-              <div class="counter outage-counter-value">
-                <span>Отключений</span>
-                <strong class="division-count">
-                  ${Number(division.count || 0)}
-                </strong>
-              </div>
-
-              ${canExpand ? `
-                <button
-                  class="outage-sources-toggle"
-                  type="button"
-                  data-outage-sources-toggle="${escapeHtml(division.id)}"
-                  aria-expanded="${isExpanded ? "true" : "false"}"
-                  aria-controls="outage-sources-${escapeHtml(division.id)}"
-                  title="Показать отключения по источникам"
-                >
-                  <span>${breakdown.length} ${pluralizeRu(breakdown.length, "источник", "источника", "источников")}</span>
-                  <svg viewBox="0 0 24 24" aria-hidden="true" class="${isExpanded ? "is-open" : ""}">
-                    <path d="m7 10 5 5 5-5"></path>
-                  </svg>
-                </button>
-              ` : ""}
+            <div>
+              <div class="division-kicker">ПОДРАЗДЕЛЕНИЕ</div>
+              <h2>${escapeHtml(division.name)}</h2>
+              <p>Активные аварийные отключения</p>
             </div>
           </div>
 
-          ${canExpand ? `
-            <div
-              id="outage-sources-${escapeHtml(division.id)}"
-              class="outage-sources-breakdown"
-              ${isExpanded ? "" : "hidden"}
-            >
-              ${breakdown.map((source) => `
-                <div class="outage-source-row ${source?.matched ? "" : "is-missing"}">
-                  <div class="outage-source-row-main">
-                    <span>${escapeHtml(source?.label || source?.source || "Источник")}</span>
-                    ${source?.matched ? "" : "<small>Строка не найдена</small>"}
-                  </div>
-                  <strong>${Number(source?.count || 0)}</strong>
-                </div>
-              `).join("")}
+          <div class="division-actions outage-counter-actions">
+            <div class="outage-counter-metrics">
+              <div class="counter outage-counter-value">
+                <span>Отключений</span>
+                <strong class="division-count">${Number(division.count || 0)}</strong>
+              </div>
+              <div class="counter outage-counter-value outage-appeals-value ${appeals > 0 ? "has-appeals" : ""}">
+                <span>Обращений</span>
+                <strong>${appeals}</strong>
+              </div>
             </div>
-          ` : ""}
-        </article>
-      `;
-      }
-    ).join("");
+
+            ${canExpand ? `
+              <button
+                class="outage-sources-toggle"
+                type="button"
+                data-outage-sources-toggle="${escapeHtml(division.id)}"
+                aria-expanded="${isExpanded ? "true" : "false"}"
+                aria-controls="outage-sources-${escapeHtml(division.id)}"
+                title="Показать РЭС и отключения"
+              >
+                <span>${isExpanded ? "Скрыть детали" : `Подробнее · ${breakdown.length} ${pluralizeRu(breakdown.length, "РЭС", "РЭС", "РЭС")}`}</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true" class="${isExpanded ? "is-open" : ""}">
+                  <path d="m7 10 5 5 5-5"></path>
+                </svg>
+              </button>
+            ` : ""}
+          </div>
+        </div>
+
+        ${canExpand ? `
+          <div
+            id="outage-sources-${escapeHtml(division.id)}"
+            class="outage-sources-breakdown outage-sources-detailed"
+            ${isExpanded ? "" : "hidden"}
+          >
+            <div class="outage-breakdown-head">
+              <div>
+                <span>ДЕТАЛИЗАЦИЯ</span>
+                <strong>РЭС / районы и активные отключения</strong>
+              </div>
+              <div>
+                <span>${Number(division.count || 0)} отключений</span>
+                <span>${appeals} обращений</span>
+              </div>
+            </div>
+            ${breakdown.map((source) => renderOutageSource(source)).join("")}
+          </div>
+        ` : ""}
+      </article>
+    `;
+  }).join("");
 
   divisionGrid
     .querySelectorAll("[data-outage-sources-toggle]")
     .forEach((button) => {
       button.addEventListener("click", () => {
-        const divisionId = String(
-          button.dataset.outageSourcesToggle || ""
-        );
-
+        const divisionId = String(button.dataset.outageSourcesToggle || "");
         if (!divisionId) return;
 
         if (expandedOutageDivisionIds.has(divisionId)) {
@@ -6653,6 +6760,12 @@ function renderDivisionCards(divisions = []) {
 
         renderDivisionCards(items);
       });
+    });
+
+  divisionGrid
+    .querySelectorAll('.outage-source-details > summary[data-no-toggle="true"]')
+    .forEach((summary) => {
+      summary.addEventListener("click", (event) => event.preventDefault());
     });
 }
 

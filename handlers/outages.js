@@ -153,6 +153,7 @@ export default {
           id: division.id,
           name: division.name,
           count: aggregate.count,
+          appeals: aggregate.appeals,
           configuredSources:
             aggregate.configuredSources,
           matchedSources:
@@ -187,6 +188,10 @@ export default {
           snapshot?.rowCount || 0,
         withoutDepartment:
           snapshot?.withoutDepartment ?? null,
+        totalAppeals:
+          snapshot?.totalAppeals ?? 0,
+        parts:
+          snapshot?.parts ?? 1,
         divisions: resultDivisions,
         updatedAt: new Date().toISOString()
       });
