@@ -1,70 +1,85 @@
-{
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "functions": {
-    "api/router.js": {
-      "includeFiles": "certs/**"
+import login from "../handlers/login.js";
+import logout from "../handlers/logout.js";
+import me from "../handlers/me.js";
+import outages from "../handlers/outages.js";
+import dispatcher from "../handlers/dispatcher.js";
+import executiveMonitoring from "../handlers/executive-monitoring.js";
+import heartbeat from "../handlers/heartbeat.js";
+import system from "../handlers/system.js";
+
+import adminDashboard from "../handlers/admin/dashboard.js";
+import adminSystem from "../handlers/admin/system.js";
+import adminAccess from "../handlers/admin/access.js";
+import adminRoles from "../handlers/admin/roles.js";
+import adminUserRoles from "../handlers/admin/user-roles.js";
+import adminUsers from "../handlers/admin/users.js";
+import adminDispatcherConfig from "../handlers/admin/dispatcher-config.js";
+import adminOutageConfig from "../handlers/admin/outage-config.js";
+
+const ROUTES = new Map([
+  ["login", login],
+  ["logout", logout],
+  ["me", me],
+  ["outages", outages],
+  ["dispatcher", dispatcher],
+  ["executive-monitoring", executiveMonitoring],
+  ["heartbeat", heartbeat],
+  ["system", system],
+  ["admin/dashboard", adminDashboard],
+  ["admin/system", adminSystem],
+  ["admin/access", adminAccess],
+  ["admin/roles", adminRoles],
+  ["admin/user-roles", adminUserRoles],
+  ["admin/users", adminUsers],
+  ["admin/dispatcher-config", adminDispatcherConfig],
+  ["admin/outage-config", adminOutageConfig]
+]);
+
+function json(data, status = 200) {
+  return new Response(
+    JSON.stringify(data, null, 2),
+    {
+      status,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store"
+      }
     }
-  },
-  "rewrites": [
-    {
-      "source": "/api/login",
-      "destination": "/api/router?route=login"
-    },
-    {
-      "source": "/api/logout",
-      "destination": "/api/router?route=logout"
-    },
-    {
-      "source": "/api/me",
-      "destination": "/api/router?route=me"
-    },
-    {
-      "source": "/api/outages",
-      "destination": "/api/router?route=outages"
-    },
-    {
-      "source": "/api/dispatcher",
-      "destination": "/api/router?route=dispatcher"
-    },
-    {
-      "source": "/api/heartbeat",
-      "destination": "/api/router?route=heartbeat"
-    },
-    {
-      "source": "/api/system",
-      "destination": "/api/router?route=system"
-    },
-    {
-      "source": "/api/admin/dashboard",
-      "destination": "/api/router?route=admin/dashboard"
-    },
-    {
-      "source": "/api/admin/system",
-      "destination": "/api/router?route=admin/system"
-    },
-    {
-      "source": "/api/admin/access",
-      "destination": "/api/router?route=admin/access"
-    },
-    {
-      "source": "/api/admin/roles",
-      "destination": "/api/router?route=admin/roles"
-    },
-    {
-      "source": "/api/admin/user-roles",
-      "destination": "/api/router?route=admin/user-roles"
-    },
-    {
-      "source": "/api/admin/users",
-      "destination": "/api/router?route=admin/users"
-    },
-    {
-      "source": "/api/admin/dispatcher-config",
-      "destination": "/api/router?route=admin/dispatcher-config"
-    },
-    {
-      "source": "/api/admin/outage-config",
-      "destination": "/api/router?route=admin/outage-config"
-    }
-  ]
+  );
 }
+
+export default {
+  async fetch(request) {
+    const url = new URL(request.url);
+
+    // Vercel rewrites /api/... -> /api/router?route=...
+    // Original query params (for example division=ves) are preserved.
+    let route = String(
+      url.searchParams.get("route") || ""
+    )
+      .replace(/^\/+|\/+$/g, "")
+      .toLowerCase();
+
+    // Fallback for direct/local calls such as /api/router?route=login.
+    if (!route) {
+      route = url.pathname
+        .replace(/^\/api\//, "")
+        .replace(/^\/+|\/+$/g, "")
+        .toLowerCase();
+    }
+
+    const handler = ROUTES.get(route);
+
+    if (!handler?.fetch) {
+      return json(
+        {
+          error: "API route not found",
+          route
+        },
+        404
+      );
+    }
+
+    return handler.fetch(request);
+  }
+};

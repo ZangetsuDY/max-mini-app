@@ -1,546 +1,445 @@
-import http from "node:http";
-import fs from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import {
+  getSession
+} from "../lib/security.js";
 
-import apiRouter from "./api/router.js";
+import {
+  resolveSessionAccess,
+  hasPanel
+} from "../lib/access-control.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const ROOT = path.dirname(__filename);
+import {
+  getDispatcherStructure
+} from "../lib/dispatcher-structure.js";
 
-const HOST = "0.0.0.0";
-const PORT = Number(process.env.PORT || 3000);
+import {
+  getDispatcherUnitConfig
+} from "../lib/dispatcher-config.js";
 
-const STATIC_FILES = new Map([
-  ["/", "index.html"],
-  ["/index.html", "index.html"],
-  ["/app.js", "app.js"],
-  ["/style.css", "style.css"]
-]);
+import {
+  getWorkordersUnitConfig
+} from "../lib/dispatcher-workorders-config.js";
 
-const CONTENT_TYPES = {
-  ".html": "text/html; charset=utf-8",
-  ".js": "text/javascript; charset=utf-8",
-  ".css": "text/css; charset=utf-8",
-  ".json": "application/json; charset=utf-8",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".webp": "image/webp",
-  ".ico": "image/x-icon"
-};
+import {
+  getLatestDispatcherSnapshot,
+  aggregateDispatcherSources
+} from "../lib/dispatcher-data.js";
 
-function log(...args) {
-  console.log(
-    new Date().toISOString(),
-    ...args
-  );
-}
+import {
+  getLatestWorkordersSnapshot,
+  aggregateWorkordersSources
+} from "../lib/dispatcher-workorders-data.js";
 
-function sendJson(
-  response,
-  status,
-  data
-) {
-  const body = JSON.stringify(data);
-
-  response.writeHead(status, {
-    "Content-Type":
-      "application/json; charset=utf-8",
-    "Content-Length":
-      Buffer.byteLength(body),
-    "Cache-Control":
-      "no-store"
-  });
-
-  response.end(body);
-}
-
-async function readBody(request) {
-  const chunks = [];
-
-  for await (const chunk of request) {
-    chunks.push(
-      Buffer.isBuffer(chunk)
-        ? chunk
-        : Buffer.from(chunk)
-    );
-  }
-
-  if (!chunks.length) {
-    return undefined;
-  }
-
-  return Buffer.concat(chunks);
-}
-
-function publicRequestUrl(request) {
-  const forwardedProto =
-    String(
-      request.headers[
-        "x-forwarded-proto"
-      ] || ""
-    )
-      .split(",")[0]
-      .trim();
-
-  const protocol =
-    forwardedProto ||
-    (request.socket.encrypted
-      ? "https"
-      : "http");
-
-  const forwardedHost =
-    String(
-      request.headers[
-        "x-forwarded-host"
-      ] || ""
-    )
-      .split(",")[0]
-      .trim();
-
-  const host =
-    forwardedHost ||
-    request.headers.host ||
-    `localhost:${PORT}`;
-
-  return new URL(
-    request.url || "/",
-    `${protocol}://${host}`
-  );
-}
-
-async function handleApi(
-  nodeRequest,
-  nodeResponse
-) {
-  try {
-    const url =
-      publicRequestUrl(
-        nodeRequest
-      );
-
-    const body =
-      await readBody(
-        nodeRequest
-      );
-
-    const headers =
-      new Headers();
-
-    for (
-      const [name, value]
-      of Object.entries(
-        nodeRequest.headers
-      )
-    ) {
-      if (
-        value === undefined
-      ) {
-        continue;
-      }
-
-      if (Array.isArray(value)) {
-        for (
-          const item
-          of value
-        ) {
-          headers.append(
-            name,
-            item
-          );
-        }
-      } else {
-        headers.set(
-          name,
-          String(value)
-        );
+function json(data, status = 200) {
+  return new Response(
+    JSON.stringify(data, null, 2),
+    {
+      status,
+      headers: {
+        "Content-Type":
+          "application/json; charset=utf-8",
+        "Cache-Control":
+          "no-store"
       }
     }
+  );
+}
 
-    const method =
-      String(
-        nodeRequest.method ||
-        "GET"
-      )
-        .toUpperCase();
+export default {
+  async fetch(request) {
+    if (request.method !== "GET") {
+      return json(
+        { error: "Method not allowed" },
+        405
+      );
+    }
 
-    const options = {
-      method,
-      headers
-    };
+    let session;
+
+    try {
+      session = getSession(request);
+    } catch (error) {
+      return json(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Ошибка сессии"
+        },
+        500
+      );
+    }
+
+    if (!session) {
+      return json(
+        { error: "Требуется авторизация" },
+        401
+      );
+    }
+
+    const access =
+      await resolveSessionAccess(session);
 
     if (
-      body &&
-      method !== "GET" &&
-      method !== "HEAD"
+      !access ||
+      !hasPanel(access, "dispatcher")
     ) {
-      options.body = body;
+      return json(
+        {
+          allowed: false,
+          code: "NOT_DISPATCHER",
+          message:
+            "У вашей роли нет доступа к интерфейсу диспетчера"
+        },
+        403
+      );
     }
 
-    const webRequest =
-      new Request(
-        url,
-        options
+    const structure =
+      await getDispatcherStructure();
+
+    const groups = structure.groups;
+    const units = structure.units;
+    const groupMap =
+      new Map(
+        groups.map((group) => [
+          group.id,
+          group
+        ])
       );
 
-    const webResponse =
-      await apiRouter.fetch(
-        webRequest
+    const isDeveloper =
+      Boolean(access.isDeveloper);
+
+    const hasAllDispatcherGroups =
+      isDeveloper ||
+      Boolean(
+        access.dispatcherAllDivisions
       );
 
-    const responseHeaders = {};
+    const assignedGroupIds =
+      [
+        ...new Set(
+          (
+            Array.isArray(
+              access.dispatcherDivisionIds
+            )
+              ? access.dispatcherDivisionIds
+              : [
+                  access.dispatcherDivisionId
+                ]
+          )
+            .map(
+              (value) =>
+                String(value || "")
+                  .trim()
+                  .toLowerCase()
+            )
+            .filter(
+              (groupId) =>
+                groupMap.has(groupId)
+            )
+        )
+      ];
 
-    for (
-      const [name, value]
-      of webResponse.headers
-        .entries()
+    const assignedGroupId =
+      assignedGroupIds[0] || "";
+
+    if (
+      !hasAllDispatcherGroups &&
+      !assignedGroupIds.length
     ) {
-      if (
-        name.toLowerCase() ===
-        "set-cookie"
-      ) {
-        continue;
-      }
-
-      responseHeaders[name] =
-        value;
+      return json(
+        {
+          allowed: false,
+          code: "DISPATCHER_SCOPE_NOT_CONFIGURED",
+          message:
+            "Для вашей диспетчерской роли не назначено действующее подразделение. Обратитесь к разработчику."
+        },
+        403
+      );
     }
 
-    /*
-      Node 20+ умеет получать Set-Cookie
-      отдельно, не объединяя несколько cookie.
-    */
-    const setCookies =
-      typeof webResponse
-        .headers
-        .getSetCookie ===
-        "function"
-        ? webResponse
-            .headers
-            .getSetCookie()
-        : [];
+    const url = new URL(request.url);
 
-    if (setCookies.length) {
-      responseHeaders[
-        "Set-Cookie"
-      ] = setCookies;
-    } else {
-      const cookie =
-        webResponse
-          .headers
-          .get("set-cookie");
-
-      if (cookie) {
-        responseHeaders[
-          "Set-Cookie"
-        ] = cookie;
-      }
-    }
-
-    const arrayBuffer =
-      await webResponse
-        .arrayBuffer();
-
-    const payload =
-      Buffer.from(
-        arrayBuffer
-      );
-
-    responseHeaders[
-      "Content-Length"
-    ] =
-      String(payload.length);
-
-    nodeResponse.writeHead(
-      webResponse.status,
-      responseHeaders
-    );
-
-    if (method === "HEAD") {
-      nodeResponse.end();
-      return;
-    }
-
-    nodeResponse.end(
-      payload
-    );
-  } catch (error) {
-    console.error(
-      "API adapter error:",
-      error
-    );
-
-    sendJson(
-      nodeResponse,
-      500,
-      {
-        error:
-          "Internal server error",
-        details:
-          process.env.NODE_ENV ===
-          "development"
-            ? String(
-                error?.stack ||
-                error
-              )
-            : undefined
-      }
-    );
-  }
-}
-
-async function serveFile(
-  nodeRequest,
-  nodeResponse,
-  fileName
-) {
-  try {
-    const filePath =
-      path.join(
-        ROOT,
-        fileName
-      );
-
-    const content =
-      await fs.readFile(
-        filePath
-      );
-
-    const extension =
-      path.extname(
-        filePath
+    const requestedGroupId =
+      String(
+        url.searchParams.get("group") ||
+        url.searchParams.get("division") ||
+        ""
       )
+        .trim()
         .toLowerCase();
 
-    const isHtml =
-      extension === ".html";
+    /*
+      Серверное ограничение области доступа.
+      Удалённые подразделения автоматически перестают быть доступны,
+      даже если старый ID остался в роли.
+    */
+    const availableGroups =
+      hasAllDispatcherGroups
+        ? groups
+        : groups.filter(
+            (group) =>
+              assignedGroupIds.includes(
+                group.id
+              )
+          );
 
-    nodeResponse.writeHead(
-      200,
-      {
-        "Content-Type":
-          CONTENT_TYPES[
-            extension
-          ] ||
-          "application/octet-stream",
-        "Content-Length":
-          String(content.length),
-        "Cache-Control":
-          isHtml
-            ? "no-cache, no-store, must-revalidate"
-            : "public, max-age=300"
-      }
-    );
+    const allowedGroupIds =
+      new Set(
+        availableGroups.map(
+          (group) => group.id
+        )
+      );
 
     if (
-      nodeRequest.method ===
-      "HEAD"
+      requestedGroupId &&
+      !allowedGroupIds.has(
+        requestedGroupId
+      )
     ) {
-      nodeResponse.end();
-      return;
+      return json(
+        {
+          allowed: false,
+          code: "DISPATCHER_SCOPE_DENIED",
+          message:
+            "У вашей роли нет доступа к выбранному подразделению"
+        },
+        403
+      );
     }
 
-    nodeResponse.end(
-      content
-    );
-  } catch (error) {
-    console.error(
-      "Static file error:",
-      error
-    );
+    const selectedGroupId =
+      requestedGroupId ||
+      (
+        hasAllDispatcherGroups
+          ? availableGroups[0]?.id
+          : assignedGroupId
+      );
 
-    sendJson(
-      nodeResponse,
-      500,
-      {
-        error:
-          "Не удалось отдать статический файл"
-      }
-    );
-  }
-}
+    const selectedGroup =
+      groupMap.get(selectedGroupId) ||
+      availableGroups[0] ||
+      null;
 
-const server =
-  http.createServer(
-    async (
-      request,
-      response
-    ) => {
-      const startedAt =
-        Date.now();
-
-      try {
-        const url =
-          publicRequestUrl(
-            request
-          );
-
-        const pathname =
-          decodeURIComponent(
-            url.pathname
-          );
-
-        response.setHeader(
-          "X-Content-Type-Options",
-          "nosniff"
-        );
-
-        response.setHeader(
-          "Referrer-Policy",
-          "same-origin"
-        );
-
-        if (
-          pathname ===
-          "/health"
-        ) {
-          sendJson(
-            response,
-            200,
-            {
-              ok: true,
-              service:
-                "max-mini-app-lenenergo",
-              time:
-                new Date()
-                  .toISOString()
-            }
-          );
-
-          return;
-        }
-
-        if (
-          pathname.startsWith(
-            "/api/"
+    const availableUnits =
+      selectedGroup
+        ? units.filter(
+            (unit) =>
+              unit.groupId ===
+              selectedGroup.id
           )
-        ) {
-          await handleApi(
-            request,
-            response
-          );
+        : [];
 
-          return;
-        }
+    const requestedUnitId =
+      String(
+        url.searchParams.get("unit") ||
+        ""
+      )
+        .trim()
+        .toLowerCase();
 
-        const staticFile =
-          STATIC_FILES.get(
-            pathname
-          );
+    const selectedUnit =
+      availableUnits.find(
+        (unit) =>
+          unit.id === requestedUnitId
+      ) ||
+      availableUnits[0] ||
+      null;
 
-        if (staticFile) {
-          await serveFile(
-            request,
-            response,
-            staticFile
-          );
-
-          return;
-        }
-
-        /*
-          SPA fallback. Если позже появятся
-          клиентские маршруты, они тоже
-          откроют index.html.
-        */
-        if (
-          request.method ===
-            "GET" ||
-          request.method ===
-            "HEAD"
-        ) {
-          await serveFile(
-            request,
-            response,
-            "index.html"
-          );
-
-          return;
-        }
-
-        sendJson(
-          response,
-          404,
-          {
-            error:
-              "Not found"
-          }
-        );
-      } catch (error) {
-        console.error(
-          "Request error:",
-          error
-        );
-
-        if (
-          !response
-            .headersSent
-        ) {
-          sendJson(
-            response,
-            500,
-            {
-              error:
-                "Internal server error"
-            }
-          );
-        } else {
-          response.end();
-        }
-      } finally {
-        log(
-          request.method,
-          request.url,
-          `${Date.now() -
-            startedAt}ms`
-        );
-      }
+    if (!selectedUnit) {
+      return json(
+        {
+          allowed: true,
+          code: "NO_UNITS",
+          isDeveloper,
+          hasAllDispatcherGroups,
+          assignedGroupId,
+          assignedGroupIds,
+          assignedGroupName:
+            hasAllDispatcherGroups
+              ? "Все подразделения"
+              : assignedGroupIds
+                  .map(
+                    (groupId) =>
+                      groupMap.get(
+                        groupId
+                      )?.name
+                  )
+                  .filter(Boolean)
+                  .join(" · "),
+          group: selectedGroup,
+          availableGroups,
+          availableUnits: [],
+          message:
+            "Для выбранного подразделения пока не настроены РЭС/районы."
+        },
+        200
+      );
     }
-  );
 
-server.keepAliveTimeout =
-  65_000;
+    const [
+      unitConfig,
+      workordersUnitConfig,
+      snapshotState,
+      workordersSnapshotState
+    ] = await Promise.all([
+      getDispatcherUnitConfig(
+        selectedUnit.id
+      ),
+      getWorkordersUnitConfig(
+        selectedUnit.id
+      ),
+      getLatestDispatcherSnapshot(),
+      getLatestWorkordersSnapshot()
+    ]);
 
-server.headersTimeout =
-  70_000;
+    const aggregation =
+      aggregateDispatcherSources(
+        snapshotState.snapshot,
+        unitConfig?.sources || []
+      );
 
-server.listen(
-  PORT,
-  HOST,
-  () => {
-    log(
-      `Server listening on http://${HOST}:${PORT}`
-    );
+    const workordersAggregation =
+      aggregateWorkordersSources(
+        workordersSnapshotState.snapshot,
+        workordersUnitConfig?.sources || []
+      );
+
+    return json({
+      allowed: true,
+      code: "READY",
+      isDeveloper,
+      hasAllDispatcherGroups,
+      assignedGroupId,
+      assignedGroupIds,
+      assignedGroupName:
+        hasAllDispatcherGroups
+          ? "Все подразделения"
+          : assignedGroupIds
+              .map(
+                (groupId) =>
+                  groupMap.get(groupId)?.name
+              )
+              .filter(Boolean)
+              .join(" · "),
+      group: selectedGroup,
+      unit: selectedUnit,
+      availableGroups,
+      availableUnits,
+      sources: {
+        configured:
+          unitConfig?.sources || [],
+        defaults:
+          unitConfig?.defaultSources || [],
+        customized:
+          Boolean(unitConfig?.customized),
+        matched:
+          aggregation.matchedSources,
+        missing:
+          aggregation.missingSources,
+        breakdown:
+          aggregation.sourceBreakdown
+      },
+      requests: {
+        review:
+          aggregation.review,
+        approved:
+          aggregation.approved,
+        open:
+          aggregation.open,
+        closed:
+          aggregation.closed,
+        acknowledged:
+          aggregation.acknowledged,
+        total:
+          aggregation.total,
+        ending: null
+      },
+      sourceData: {
+        configured:
+          Boolean(snapshotState.configured),
+        status:
+          snapshotState.status,
+        message:
+          snapshotState.message || "",
+        stale:
+          Boolean(snapshotState.stale),
+        cached:
+          Boolean(snapshotState.cached),
+        period:
+          snapshotState.snapshot?.period || "",
+        sourceUpdatedAt:
+          snapshotState.snapshot?.sourceUpdatedAt || "",
+        messageTimestamp:
+          snapshotState.snapshot?.messageTimestamp || null,
+        rowCount:
+          snapshotState.snapshot?.rowCount || 0,
+        reportedTotal:
+          snapshotState.snapshot?.reportedTotal ?? null
+      },
+      workorders: {
+        counts: {
+          registered:
+            workordersAggregation.registered,
+          created:
+            workordersAggregation.created,
+          admission:
+            workordersAggregation.admission,
+          preparation:
+            workordersAggregation.preparation,
+          break:
+            workordersAggregation.break,
+          total:
+            workordersAggregation.total
+        },
+        sources: {
+          configured:
+            workordersUnitConfig?.sources || [],
+          matched:
+            workordersAggregation.matchedSources,
+          missing:
+            workordersAggregation.missingSources,
+          breakdown:
+            workordersAggregation.sourceBreakdown
+        },
+        sourceData: {
+          configured:
+            Boolean(workordersSnapshotState.configured),
+          status:
+            workordersSnapshotState.status,
+          message:
+            workordersSnapshotState.message || "",
+          stale:
+            Boolean(workordersSnapshotState.stale),
+          cached:
+            Boolean(workordersSnapshotState.cached),
+          period:
+            workordersSnapshotState.snapshot?.period || "",
+          sourceUpdatedAt:
+            workordersSnapshotState.snapshot?.sourceUpdatedAt || "",
+          messageTimestamp:
+            workordersSnapshotState.snapshot?.messageTimestamp || null,
+          rowCount:
+            workordersSnapshotState.snapshot?.rowCount || 0,
+          parts:
+            workordersSnapshotState.snapshot?.parts || 0,
+          received:
+            workordersSnapshotState.snapshot?.received ?? null,
+          counted:
+            workordersSnapshotState.snapshot?.counted ?? null,
+          withoutJournal:
+            workordersSnapshotState.snapshot?.withoutJournal ?? null,
+          journals:
+            workordersSnapshotState.snapshot?.journals ?? null
+        }
+      },
+      defects: {
+        available: false,
+        message: "В разработке"
+      },
+      updatedAt:
+        new Date().toISOString()
+    });
   }
-);
-
-function shutdown(
-  signal
-) {
-  log(
-    `Received ${signal}, shutting down`
-  );
-
-  server.close(
-    () => {
-      process.exit(0);
-    }
-  );
-
-  setTimeout(
-    () => process.exit(1),
-    10_000
-  ).unref();
-}
-
-process.on(
-  "SIGTERM",
-  () => shutdown("SIGTERM")
-);
-
-process.on(
-  "SIGINT",
-  () => shutdown("SIGINT")
-);
+};

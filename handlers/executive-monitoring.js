@@ -7,6 +7,7 @@ import { getLatestDispatcherSnapshot, aggregateDispatcherSources } from "../lib/
 import { getLatestWorkordersSnapshot, aggregateWorkordersSources } from "../lib/dispatcher-workorders-data.js";
 import { getOutageDivisions } from "../lib/outage-config.js";
 import { getLatestOutageSnapshot, aggregateOutageSources } from "../lib/outage-data.js";
+import { recordExecutivePoint, selectExecutiveHistory } from "../lib/executive-history.js";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data, null, 2), {
@@ -23,7 +24,10 @@ function cleanId(value) {
 }
 
 function sumBy(items, selector) {
-  return (Array.isArray(items) ? items : []).reduce((sum, item) => sum + Number(selector(item) || 0), 0);
+  return (Array.isArray(items) ? items : []).reduce(
+    (sum, item) => sum + Number(selector(item) || 0),
+    0
+  );
 }
 
 function summarizeRequestUnits(units) {
@@ -51,9 +55,15 @@ function summarizeWorkorderUnits(units) {
 function buildSourceLookup(unitSummary) {
   const lookup = new Set();
   const unit = unitSummary?.unit || {};
-  const requestSources = Array.isArray(unitSummary?.requestSources) ? unitSummary.requestSources : [];
-  const workorderSources = Array.isArray(unitSummary?.workorderSources) ? unitSummary.workorderSources : [];
-  const defaultSources = Array.isArray(unit?.defaultSources) ? unit.defaultSources : [];
+  const requestSources = Array.isArray(unitSummary?.requestSources)
+    ? unitSummary.requestSources
+    : [];
+  const workorderSources = Array.isArray(unitSummary?.workorderSources)
+    ? unitSummary.workorderSources
+    : [];
+  const defaultSources = Array.isArray(unit?.defaultSources)
+    ? unit.defaultSources
+    : [];
 
   [unit.name, ...defaultSources, ...requestSources, ...workorderSources]
     .map((value) => String(value || "").trim())
@@ -64,7 +74,9 @@ function buildSourceLookup(unitSummary) {
 }
 
 function matchOutageUnitCount(outageDivision, unitSummary) {
-  const breakdown = Array.isArray(outageDivision?.sourceBreakdown) ? outageDivision.sourceBreakdown : [];
+  const breakdown = Array.isArray(outageDivision?.sourceBreakdown)
+    ? outageDivision.sourceBreakdown
+    : [];
   const lookup = buildSourceLookup(unitSummary);
 
   if (!lookup.size) {
@@ -74,9 +86,90 @@ function matchOutageUnitCount(outageDivision, unitSummary) {
   return breakdown.reduce((sum, source) => {
     const label = String(source?.label || source?.source || "").trim();
     const lower = label.toLowerCase();
-    const matched = [...lookup].some((token) => lower === token || lower.includes(token) || token.includes(lower));
+    const matched = [...lookup].some(
+      (token) => lower === token || lower.includes(token) || token.includes(lower)
+    );
+
     return sum + (matched ? Number(source?.count || 0) : 0);
   }, 0);
+}
+
+function parseSourceTime(value) {
+  const text = String(value || "").trim();
+  const match = text.match(/^(\d{2})\.(\d{2})\.(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);
+
+  if (!match) return null;
+
+  const [, dd, mm, yyyy, hh, min, sec = "00"] = match;
+  const date = new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:${sec}+03:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function historyTimestamp(sourceTimes) {
+  const parsed = sourceTimes
+    .map(parseSourceTime)
+    .filter(Boolean)
+    .sort((a, b) => b.getTime() - a.getTime());
+
+  return (parsed[0] || new Date()).toISOString();
+}
+
+function historyLabel(timestamp) {
+  const date = new Date(timestamp);
+
+  if (Number.isNaN(date.getTime())) return "—";
+
+  return date.toLocaleString("ru-RU", {
+    timeZone: "Europe/Moscow",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).replace(",", "");
+}
+
+function makeDelta(current, previous) {
+  const currentValue = Number(current || 0);
+  const previousValue = Number(previous || 0);
+
+  return {
+    value: currentValue - previousValue,
+    current: currentValue,
+    previous: previousValue,
+    available: previous !== null && previous !== undefined
+  };
+}
+
+function operationalStatus({ outages, requests, workorders, hasOutageData }) {
+  if (!hasOutageData) {
+    return {
+      code: "unknown",
+      label: "Нет данных",
+      tone: "muted"
+    };
+  }
+
+  if (Number(outages || 0) > 0) {
+    return {
+      code: "outages",
+      label: "Есть отключения",
+      tone: "alert"
+    };
+  }
+
+  if (Number(requests || 0) > 0 || Number(workorders || 0) > 0) {
+    return {
+      code: "active",
+      label: "Активная работа",
+      tone: "active"
+    };
+  }
+
+  return {
+    code: "clear",
+    label: "Без активных событий",
+    tone: "ok"
+  };
 }
 
 export default {
@@ -90,7 +183,9 @@ export default {
     try {
       session = getSession(request);
     } catch (error) {
-      return json({ error: error instanceof Error ? error.message : "Ошибка сессии" }, 500);
+      return json({
+        error: error instanceof Error ? error.message : "Ошибка сессии"
+      }, 500);
     }
 
     if (!session) {
@@ -108,7 +203,9 @@ export default {
     }
 
     const structure = await getDispatcherStructure();
-    const groupMap = new Map(structure.groups.map((group) => [group.id, group]));
+    const groupMap = new Map(
+      structure.groups.map((group) => [group.id, group])
+    );
     const isDeveloper = Boolean(access.isDeveloper);
 
     const assignedGroupIds = [
@@ -122,15 +219,22 @@ export default {
       )
     ];
 
-    const hasAllGroups = isDeveloper || Boolean(access.dispatcherAllDivisions) || !assignedGroupIds.length;
+    const hasAllGroups =
+      isDeveloper ||
+      Boolean(access.dispatcherAllDivisions) ||
+      !assignedGroupIds.length;
 
     const availableGroups = hasAllGroups
       ? structure.groups
       : structure.groups.filter((group) => assignedGroupIds.includes(group.id));
 
-    const availableGroupIds = new Set(availableGroups.map((group) => group.id));
+    const availableGroupIds = new Set(
+      availableGroups.map((group) => group.id)
+    );
 
-    const allAvailableUnits = structure.units.filter((unit) => availableGroupIds.has(unit.groupId));
+    const allAvailableUnits = structure.units.filter(
+      (unit) => availableGroupIds.has(unit.groupId)
+    );
 
     const url = new URL(request.url);
     const selectedGroupId = cleanId(url.searchParams.get("group"));
@@ -148,7 +252,10 @@ export default {
       ? allAvailableUnits.filter((unit) => unit.groupId === selectedGroupId)
       : allAvailableUnits;
 
-    if (selectedUnitId && !unitsForSelectedGroup.some((unit) => unit.id === selectedUnitId)) {
+    if (
+      selectedUnitId &&
+      !unitsForSelectedGroup.some((unit) => unit.id === selectedUnitId)
+    ) {
       return json({
         allowed: false,
         code: "UNIT_SCOPE_DENIED",
@@ -160,7 +267,12 @@ export default {
       ? unitsForSelectedGroup.filter((unit) => unit.id === selectedUnitId)
       : unitsForSelectedGroup;
 
-    const [dispatcherSnapshotState, workordersSnapshotState, outageSnapshotState, outageDivisions] = await Promise.all([
+    const [
+      dispatcherSnapshotState,
+      workordersSnapshotState,
+      outageSnapshotState,
+      outageDivisions
+    ] = await Promise.all([
       getLatestDispatcherSnapshot(),
       getLatestWorkordersSnapshot(),
       getLatestOutageSnapshot(),
@@ -169,7 +281,11 @@ export default {
 
     const outageSnapshot = outageSnapshotState.snapshot;
     const outageDivisionSummaries = outageDivisions.map((division) => {
-      const aggregate = aggregateOutageSources(outageSnapshot, division.sources);
+      const aggregate = aggregateOutageSources(
+        outageSnapshot,
+        division.sources
+      );
+
       return {
         id: division.id,
         name: division.name,
@@ -179,7 +295,9 @@ export default {
       };
     });
 
-    const outageDivisionMap = new Map(outageDivisionSummaries.map((division) => [cleanId(division.id), division]));
+    const outageDivisionMap = new Map(
+      outageDivisionSummaries.map((division) => [cleanId(division.id), division])
+    );
 
     const unitSummaries = await Promise.all(
       allAvailableUnits.map(async (unit) => {
@@ -199,7 +317,8 @@ export default {
         );
 
         const group = groupMap.get(unit.groupId) || null;
-        const relatedOutageDivision = outageDivisionMap.get(cleanId(unit.groupId)) || null;
+        const relatedOutageDivision =
+          outageDivisionMap.get(cleanId(unit.groupId)) || null;
 
         return {
           id: unit.id,
@@ -236,10 +355,47 @@ export default {
       })
     );
 
-    const selectedGroup = selectedGroupId ? groupMap.get(selectedGroupId) || null : null;
-    const selectedUnit = selectedUnitId ? allAvailableUnits.find((unit) => unit.id === selectedUnitId) || null : null;
+    const groupRows = availableGroups.map((group) => {
+      const groupUnits = unitSummaries.filter(
+        (item) => item.groupId === group.id
+      );
+      const requests = summarizeRequestUnits(groupUnits);
+      const workorders = summarizeWorkorderUnits(groupUnits);
+      const outageDivision = outageDivisionMap.get(group.id);
+      const outages = outageDivision
+        ? Number(outageDivision.count || 0)
+        : sumBy(groupUnits, (item) => item.outages.total);
+
+      return {
+        id: group.id,
+        name: group.name,
+        description: group.description || "",
+        outages,
+        requests: requests.total,
+        workorders: workorders.total,
+        openRequests: requests.review + requests.open,
+        workBreaks: workorders.break,
+        units: groupUnits.length,
+        status: operationalStatus({
+          outages,
+          requests: requests.total,
+          workorders: workorders.total,
+          hasOutageData: Boolean(outageSnapshot)
+        })
+      };
+    });
+
+    const selectedGroup = selectedGroupId
+      ? groupMap.get(selectedGroupId) || null
+      : null;
+    const selectedUnit = selectedUnitId
+      ? allAvailableUnits.find((unit) => unit.id === selectedUnitId) || null
+      : null;
+
     const filteredUnits = visibleUnits.length
-      ? unitSummaries.filter((item) => visibleUnits.some((unit) => unit.id === item.id))
+      ? unitSummaries.filter((item) =>
+          visibleUnits.some((unit) => unit.id === item.id)
+        )
       : [];
 
     const requestSummary = summarizeRequestUnits(filteredUnits);
@@ -249,16 +405,26 @@ export default {
       if (selectedUnitId && filteredUnits.length) {
         return {
           total: sumBy(filteredUnits, (item) => item.outages.total),
-          cards: filteredUnits.map((item) => ({ id: item.id, name: `${item.groupName} · ${item.name}`, count: item.outages.total })),
+          cards: filteredUnits.map((item) => ({
+            id: item.id,
+            name: `${item.groupName} · ${item.name}`,
+            count: item.outages.total
+          })),
           scopeLabel: `${filteredUnits[0].groupName} · ${filteredUnits[0].name}`
         };
       }
 
       if (selectedGroupId) {
         const division = outageDivisionMap.get(selectedGroupId);
+        const groupRow = groupRows.find((item) => item.id === selectedGroupId);
+
         return {
-          total: Number(division?.count || 0),
-          cards: division ? [division] : [],
+          total: Number(division?.count ?? groupRow?.outages ?? 0),
+          cards: division
+            ? [division]
+            : groupRow
+              ? [{ id: groupRow.id, name: groupRow.name, count: groupRow.outages }]
+              : [],
           scopeLabel: selectedGroup?.name || "Подразделение"
         };
       }
@@ -277,16 +443,103 @@ export default {
     const rankedRequests = [...filteredUnits]
       .sort((a, b) => Number(b.requests.total || 0) - Number(a.requests.total || 0))
       .slice(0, 8)
-      .map((item) => ({ id: item.id, name: `${item.groupName} · ${item.name}`, count: item.requests.total }));
+      .map((item) => ({
+        id: item.id,
+        name: `${item.groupName} · ${item.name}`,
+        count: item.requests.total
+      }));
 
     const rankedWorkorders = [...filteredUnits]
       .sort((a, b) => Number(b.workorders.total || 0) - Number(a.workorders.total || 0))
       .slice(0, 8)
-      .map((item) => ({ id: item.id, name: `${item.groupName} · ${item.name}`, count: item.workorders.total }));
+      .map((item) => ({
+        id: item.id,
+        name: `${item.groupName} · ${item.name}`,
+        count: item.workorders.total
+      }));
 
     const requestLeader = rankedRequests[0] || null;
     const workorderLeader = rankedWorkorders[0] || null;
     const outageLeader = rankedOutages[0] || null;
+
+    const outageUpdatedAt = outageSnapshot?.sourceUpdatedAt || "";
+    const requestsUpdatedAt =
+      dispatcherSnapshotState.snapshot?.sourceUpdatedAt || "";
+    const workordersUpdatedAt =
+      workordersSnapshotState.snapshot?.sourceUpdatedAt || "";
+
+    const pointTimestamp = historyTimestamp([
+      outageUpdatedAt,
+      requestsUpdatedAt,
+      workordersUpdatedAt
+    ]);
+
+    const historySignature = [
+      outageUpdatedAt,
+      requestsUpdatedAt,
+      workordersUpdatedAt,
+      outageSnapshot?.reportedTotal ?? outageSnapshot?.emergencyTotal ?? "",
+      dispatcherSnapshotState.snapshot?.reportedTotal ?? "",
+      workordersSnapshotState.snapshot?.counted ?? ""
+    ].join("|");
+
+    const groupsForHistory = Object.fromEntries(
+      groupRows.map((row) => [
+        row.id,
+        {
+          outages: row.outages,
+          requests: row.requests,
+          workorders: row.workorders
+        }
+      ])
+    );
+
+    const unitsForHistory = Object.fromEntries(
+      unitSummaries.map((item) => [
+        item.id,
+        {
+          outages: item.outages.total,
+          requests: item.requests.total,
+          workorders: item.workorders.total
+        }
+      ])
+    );
+
+    const history = await recordExecutivePoint({
+      signature: historySignature,
+      timestamp: pointTimestamp,
+      label: historyLabel(pointTimestamp),
+      global: {
+        outages: sumBy(outageDivisionSummaries, (item) => item.count),
+        requests: summarizeRequestUnits(unitSummaries).total,
+        workorders: summarizeWorkorderUnits(unitSummaries).total
+      },
+      groups: groupsForHistory,
+      units: unitsForHistory
+    });
+
+    const selectedHistory = selectExecutiveHistory(history, {
+      groupId: selectedGroupId,
+      unitId: selectedUnitId
+    });
+
+    const currentHistoryPoint = selectedHistory.at(-1) || null;
+    const previousHistoryPoint = selectedHistory.at(-2) || null;
+
+    const deltas = {
+      outages: makeDelta(
+        currentHistoryPoint?.outages ?? outagesSummary.total,
+        previousHistoryPoint?.outages
+      ),
+      requests: makeDelta(
+        currentHistoryPoint?.requests ?? requestSummary.total,
+        previousHistoryPoint?.requests
+      ),
+      workorders: makeDelta(
+        currentHistoryPoint?.workorders ?? workorderSummary.total,
+        previousHistoryPoint?.workorders
+      )
+    };
 
     return json({
       allowed: true,
@@ -313,12 +566,17 @@ export default {
         divisions: availableGroups.length,
         units: filteredUnits.length
       },
+      deltas,
+      history: selectedHistory,
+      historyConfigured: history.length > 0,
+      divisionTable: groupRows,
       outages: {
         status: outageSnapshotState.status,
         message: outageSnapshotState.message || "",
         stale: Boolean(outageSnapshotState.stale),
-        sourceUpdatedAt: outageSnapshot?.sourceUpdatedAt || "",
-        reportedTotal: outageSnapshot?.reportedTotal ?? outageSnapshot?.emergencyTotal ?? null,
+        sourceUpdatedAt: outageUpdatedAt,
+        reportedTotal:
+          outageSnapshot?.reportedTotal ?? outageSnapshot?.emergencyTotal ?? null,
         total: Number(outagesSummary.total || 0),
         scopeLabel: outagesSummary.scopeLabel,
         cards: outagesSummary.cards,
@@ -328,7 +586,7 @@ export default {
         status: dispatcherSnapshotState.status,
         message: dispatcherSnapshotState.message || "",
         stale: Boolean(dispatcherSnapshotState.stale),
-        sourceUpdatedAt: dispatcherSnapshotState.snapshot?.sourceUpdatedAt || "",
+        sourceUpdatedAt: requestsUpdatedAt,
         period: dispatcherSnapshotState.snapshot?.period || "",
         rowCount: dispatcherSnapshotState.snapshot?.rowCount || 0,
         counts: requestSummary,
@@ -338,7 +596,7 @@ export default {
         status: workordersSnapshotState.status,
         message: workordersSnapshotState.message || "",
         stale: Boolean(workordersSnapshotState.stale),
-        sourceUpdatedAt: workordersSnapshotState.snapshot?.sourceUpdatedAt || "",
+        sourceUpdatedAt: workordersUpdatedAt,
         period: workordersSnapshotState.snapshot?.period || "",
         rowCount: workordersSnapshotState.snapshot?.rowCount || 0,
         counted: workordersSnapshotState.snapshot?.counted ?? null,
