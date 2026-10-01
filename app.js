@@ -8,6 +8,7 @@ const API_LOGOUT = "/api/logout";
 const API_ME = "/api/me";
 const API_OUTAGES = "/api/outages";
 const API_DISPATCHER = "/api/dispatcher";
+const API_EXECUTIVE_MONITORING = "/api/executive-monitoring";
 const API_HEARTBEAT = "/api/heartbeat";
 const API_SYSTEM = "/api/system";
 const API_ADMIN_DASHBOARD = "/api/admin/dashboard";
@@ -23,6 +24,7 @@ const REFRESH_INTERVAL_MS = 120_000;
 const HEARTBEAT_INTERVAL_MS = 45_000;
 const ADMIN_REFRESH_INTERVAL_MS = 30_000;
 const DISPATCHER_REFRESH_INTERVAL_MS = 20_000;
+const EXECUTIVE_REFRESH_INTERVAL_MS = 30_000;
 const SESSION_STORAGE_KEY = "le_app_session";
 const MAX_BRIDGE_URL = "https://st.max.ru/js/max-web-app.js";
 const STARTUP_REQUEST_TIMEOUT_MS = 7_000;
@@ -46,15 +48,19 @@ const brandHomeButton = document.getElementById("brandHomeButton");
 const homeView = document.getElementById("homeView");
 const monitoringView = document.getElementById("monitoringView");
 const dispatcherView = document.getElementById("dispatcherView");
+const executiveView = document.getElementById("executiveView");
 const adminView = document.getElementById("adminView");
 
 const openMonitoringButton = document.getElementById("openMonitoringButton");
 const openDispatcherButton = document.getElementById("openDispatcherButton");
+const openExecutiveButton = document.getElementById("openExecutiveButton");
 const openAdminButton = document.getElementById("openAdminButton");
 const dispatcherCardStatus = document.getElementById("dispatcherCardStatus");
+const executiveCardStatus = document.getElementById("executiveCardStatus");
 const moduleCount = document.getElementById("moduleCount");
 const backToMenuButton = document.getElementById("backToMenuButton");
 const backFromDispatcherButton = document.getElementById("backFromDispatcherButton");
+const backFromExecutiveButton = document.getElementById("backFromExecutiveButton");
 const backFromAdminButton = document.getElementById("backFromAdminButton");
 
 const systemLine = document.getElementById("systemLine");
@@ -205,10 +211,13 @@ let refreshTimer = null;
 let heartbeatTimer = null;
 let adminRefreshTimer = null;
 let dispatcherRefreshTimer = null;
+let executiveRefreshTimer = null;
 let loadVersion = 0;
 let selectedSystemMode = "normal";
 let selectedDispatcherGroupId = "";
 let selectedDispatcherUnitId = "";
+let selectedExecutiveGroupId = "";
+let selectedExecutiveUnitId = "";
 let dispatcherBreakdownUnitId = "";
 let dispatcherBreakdownSelection = "__all__";
 let dispatcherBreakdownExpanded = false;
@@ -641,6 +650,7 @@ function setUserUi(user) {
             user?.isDeveloper
               ? [
                   "monitoring",
+                  "executive-monitoring",
                   "system-control"
                 ]
               : user?.isDispatcher
@@ -709,13 +719,26 @@ function setUserUi(user) {
         )
       : "ДОСТУП ПО РОЛИ";
 
+  executiveCardStatus.textContent =
+    hasPanelAccess(
+      "executive-monitoring"
+    )
+      ? (
+          currentUser?.dispatcherAllDivisions
+            ? "КОНТУР: ВСЕ ПОДРАЗДЕЛЕНИЯ"
+            : currentUser?.dispatcherDivisionName
+              ? `ФОКУС: ${currentUser.dispatcherDivisionName}`
+              : "СВОДНЫЙ ДОСТУП"
+        )
+      : "ДОСТУП ПО РОЛИ";
+
   openAdminButton.hidden =
     !hasPanelAccess(
       "system-control"
     );
 
   const visibleModules =
-    2 +
+    3 +
     (
       hasPanelAccess(
         "system-control"
@@ -739,6 +762,7 @@ function showLoginScreen() {
   stopHeartbeat();
   stopAdminRefresh();
   stopDispatcherRefresh();
+  stopExecutiveRefresh();
 
   currentUser = null;
   currentView = "home";
@@ -750,6 +774,7 @@ function showLoginScreen() {
   homeView.classList.add("is-active");
   monitoringView.classList.remove("is-active");
   dispatcherView.classList.remove("is-active");
+  executiveView.classList.remove("is-active");
   adminView.classList.remove("is-active");
 
   setTimeout(
@@ -789,6 +814,11 @@ function setView(view) {
     view === "dispatcher"
   );
 
+  executiveView.classList.toggle(
+    "is-active",
+    view === "executive"
+  );
+
   adminView.classList.toggle(
     "is-active",
     view === "admin"
@@ -804,6 +834,10 @@ function setView(view) {
 
   if (view !== "dispatcher") {
     stopDispatcherRefresh();
+  }
+
+  if (view !== "executive") {
+    stopExecutiveRefresh();
   }
 
   window.scrollTo({
@@ -1019,7 +1053,230 @@ function stopDispatcherRefresh() {
   }
 }
 
+
+function executiveEl(id) {
+  return document.getElementById(id);
+}
+
+function renderExecutiveRanking(targetId, items, emptyText) {
+  const target = executiveEl(targetId);
+  if (!target) return;
+
+  const list = Array.isArray(items) ? items : [];
+  if (!list.length) {
+    target.innerHTML = `<div class="executive-empty">${escapeHtml(emptyText || "Нет данных")}</div>`;
+    return;
+  }
+
+  target.innerHTML = list.map((item, index) => `
+    <div class="executive-ranking-row">
+      <div class="executive-ranking-main">
+        <span class="executive-ranking-index">${index + 1}</span>
+        <span class="executive-ranking-name">${escapeHtml(item?.name || "—")}</span>
+      </div>
+      <strong>${Number(item?.count || 0)}</strong>
+    </div>
+  `).join("");
+}
+
+function setExecutiveRequestCounts(counts) {
+  const values = {
+    review: Number(counts?.review || 0),
+    approved: Number(counts?.approved || 0),
+    open: Number(counts?.open || 0),
+    closed: Number(counts?.closed || 0),
+    acknowledged: Number(counts?.acknowledged || 0),
+    total: Number(counts?.total || 0)
+  };
+
+  executiveEl("executiveReqReview").textContent = values.review;
+  executiveEl("executiveReqApproved").textContent = values.approved;
+  executiveEl("executiveReqOpen").textContent = values.open;
+  executiveEl("executiveReqClosed").textContent = values.closed;
+  executiveEl("executiveReqAcknowledged").textContent = values.acknowledged;
+  executiveEl("executiveRequestsTotal").textContent = values.total;
+
+  renderDispatcherDonutChart(executiveEl("executiveRequestsChart"), [
+    { label: "В рассмотрении", value: values.review, color: "#43c0ff" },
+    { label: "Разрешена", value: values.approved, color: "#37f29f" },
+    { label: "Открыта", value: values.open, color: "#8f7dff" },
+    { label: "Закрыта", value: values.closed, color: "#ff587e" },
+    { label: "Принята к сведению", value: values.acknowledged, color: "#ffc85e" }
+  ]);
+}
+
+function setExecutiveWorkorderCounts(counts) {
+  const values = {
+    registered: Number(counts?.registered || 0),
+    created: Number(counts?.created || 0),
+    admission: Number(counts?.admission || 0),
+    preparation: Number(counts?.preparation || 0),
+    break: Number(counts?.break || 0),
+    total: Number(counts?.total || 0)
+  };
+
+  executiveEl("executiveWorkordersRegistered").textContent = values.registered;
+  executiveEl("executiveWorkordersCreated").textContent = values.created;
+  executiveEl("executiveWorkordersAdmission").textContent = values.admission;
+  executiveEl("executiveWorkordersPreparation").textContent = values.preparation;
+  executiveEl("executiveWorkordersBreak").textContent = values.break;
+  executiveEl("executiveWorkordersTotal").textContent = values.total;
+
+  renderDispatcherDonutChart(executiveEl("executiveWorkordersChart"), [
+    { label: "Зарегистрирован", value: values.registered, color: "#2ed7c9" },
+    { label: "Создано", value: values.created, color: "#4d95ff" },
+    { label: "Допуск", value: values.admission, color: "#7d55ff" },
+    { label: "Подготовка р.м.", value: values.preparation, color: "#f3a722" },
+    { label: "Перерыв", value: values.break, color: "#ff4d80" }
+  ]);
+}
+
+function renderExecutiveDashboard(payload) {
+  const groups = [{ id: "", name: "Все подразделения" }, ...(Array.isArray(payload?.availableGroups) ? payload.availableGroups : [])];
+  const units = [{ id: "", name: "Все РЭС / районы" }, ...(Array.isArray(payload?.availableUnits) ? payload.availableUnits : [])];
+
+  selectedExecutiveGroupId = String(payload?.filter?.groupId || "");
+  selectedExecutiveUnitId = String(payload?.filter?.unitId || "");
+
+  renderDispatcherSelectOptions(executiveEl("executiveGroupSelect"), groups, selectedExecutiveGroupId);
+  renderDispatcherSelectOptions(executiveEl("executiveUnitSelect"), units, selectedExecutiveUnitId);
+
+  const scopeTitle = selectedExecutiveUnitId
+    ? `${payload?.filter?.groupName || ""} · ${payload?.filter?.unitName || ""}`
+    : selectedExecutiveGroupId
+      ? (payload?.filter?.groupName || "Подразделение")
+      : "Все подразделения";
+
+  executiveEl("executiveScopeTitle").textContent = scopeTitle;
+  executiveEl("executiveHeroOutages").textContent = Number(payload?.headline?.outagesTotal || 0);
+  executiveEl("executiveHeroRequests").textContent = Number(payload?.headline?.requestsTotal || 0);
+  executiveEl("executiveHeroWorkorders").textContent = Number(payload?.headline?.workordersTotal || 0);
+  executiveEl("executiveOutagesScope").textContent = payload?.outages?.scopeLabel || scopeTitle;
+  executiveEl("executiveOutagesTotal").textContent = Number(payload?.outages?.total || 0);
+
+  const overviewBits = [
+    `${Number(payload?.scope?.groupCount || 0)} подразделений`,
+    `${Number(payload?.scope?.visibleUnitCount || 0)} РЭС/районов`
+  ];
+  executiveEl("executiveOverviewMeta").textContent = overviewBits.join(" · ");
+
+  const outageLeader = payload?.highlights?.outageLeader;
+  executiveEl("executiveHighlightOutage").textContent = outageLeader?.name || "—";
+  executiveEl("executiveHighlightOutageCount").textContent = `${Number(outageLeader?.count || 0)} отключений`;
+
+  const requestLeader = payload?.highlights?.requestLeader;
+  executiveEl("executiveHighlightRequest").textContent = requestLeader?.name || "—";
+  executiveEl("executiveHighlightRequestCount").textContent = `${Number(requestLeader?.count || 0)} заявок`;
+
+  const workorderLeader = payload?.highlights?.workorderLeader;
+  executiveEl("executiveHighlightWorkorder").textContent = workorderLeader?.name || "—";
+  executiveEl("executiveHighlightWorkorderCount").textContent = `${Number(workorderLeader?.count || 0)} НДР`;
+
+  setExecutiveRequestCounts(payload?.requests?.counts || {});
+  setExecutiveWorkorderCounts(payload?.workorders?.counts || {});
+
+  executiveEl("executiveOutageMeta").textContent = payload?.outages?.sourceUpdatedAt
+    ? `OMS: ${payload.outages.sourceUpdatedAt}`
+    : "Данные OMS пока не получены";
+  executiveEl("executiveRequestsMeta").textContent = payload?.requests?.sourceUpdatedAt
+    ? `СК-11 заявки: ${payload.requests.sourceUpdatedAt}${payload?.requests?.period ? ` · ${payload.requests.period}` : ""}`
+    : "Данные заявок пока не получены";
+  executiveEl("executiveWorkordersMeta").textContent = payload?.workorders?.sourceUpdatedAt
+    ? `СК-11 НДР: ${payload.workorders.sourceUpdatedAt}${payload?.workorders?.period ? ` · ${payload.workorders.period}` : ""}`
+    : "Данные НДР пока не получены";
+
+  renderExecutiveRanking("executiveOutageRanking", payload?.outages?.ranked, "Нет данных по отключениям");
+  renderExecutiveRanking("executiveRequestRanking", payload?.requests?.ranked, "Нет данных по заявкам");
+  renderExecutiveRanking("executiveWorkorderRanking", payload?.workorders?.ranked, "Нет данных по НДР");
+
+  const updatedParts = [];
+  if (payload?.outages?.sourceUpdatedAt) updatedParts.push(`OMS: ${payload.outages.sourceUpdatedAt}`);
+  if (payload?.requests?.sourceUpdatedAt) updatedParts.push(`Заявки: ${payload.requests.sourceUpdatedAt}`);
+  if (payload?.workorders?.sourceUpdatedAt) updatedParts.push(`НДР: ${payload.workorders.sourceUpdatedAt}`);
+  executiveEl("executiveUpdatedAt").textContent = updatedParts.length ? updatedParts.join(" · ") : `Проверено ${formatDateTime(payload?.updatedAt || new Date().toISOString())}`;
+}
+
+async function loadExecutiveDashboard(options = {}) {
+  const { openView = false, quiet = false } = options;
+
+  if (!hasPanelAccess("executive-monitoring")) {
+    if (!quiet) {
+      openModal({
+        type: "denied",
+        eyebrow: "ДОСТУП ПО РОЛИ",
+        title: "Нет доступа",
+        message: "У вашей текущей роли нет доступа к панели «Диспетчерский мониторинг»."
+      });
+    }
+    return false;
+  }
+
+  try {
+    const params = new URLSearchParams();
+    if (selectedExecutiveGroupId) params.set("group", selectedExecutiveGroupId);
+    if (selectedExecutiveUnitId) params.set("unit", selectedExecutiveUnitId);
+    const query = params.toString() ? `?${params.toString()}` : "";
+
+    const response = await fetch(`${API_EXECUTIVE_MONITORING}${query}`, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "include",
+      headers: getSessionHeaders()
+    });
+
+    if (response.status === 401) {
+      setAppSessionToken("");
+      showLoginScreen();
+      return false;
+    }
+
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(payload?.message || payload?.error || `Сервер вернул ошибку ${response.status}`);
+    }
+
+    if (openView) {
+      setView("executive");
+      startExecutiveRefresh();
+    }
+
+    renderExecutiveDashboard(payload);
+    return true;
+  } catch (error) {
+    if (!quiet) {
+      openModal({
+        type: "denied",
+        eyebrow: "ОШИБКА ДАННЫХ",
+        title: "Не удалось обновить панель",
+        message: error instanceof Error ? error.message : "Попробуйте ещё раз."
+      });
+    }
+    return false;
+  }
+}
+
+async function navigateExecutive() {
+  await loadExecutiveDashboard({ openView: true });
+}
+
+function startExecutiveRefresh() {
+  stopExecutiveRefresh();
+  executiveRefreshTimer = setInterval(() => {
+    if (currentView === "executive") {
+      loadExecutiveDashboard({ quiet: true });
+    }
+  }, EXECUTIVE_REFRESH_INTERVAL_MS);
+}
+
+function stopExecutiveRefresh() {
+  if (executiveRefreshTimer) {
+    clearInterval(executiveRefreshTimer);
+    executiveRefreshTimer = null;
+  }
+}
+
 function navigateAdmin() {
+
   if (
     !hasPanelAccess(
       "system-control"
@@ -2282,6 +2539,11 @@ backFromDispatcherButton.addEventListener(
   navigateHome
 );
 
+backFromExecutiveButton.addEventListener(
+  "click",
+  navigateHome
+);
+
 backFromAdminButton.addEventListener(
   "click",
   navigateHome
@@ -2292,6 +2554,11 @@ openMonitoringButton.addEventListener(
   navigateMonitoring
 );
 
+openExecutiveButton.addEventListener(
+  "click",
+  navigateExecutive
+);
+
 openAdminButton.addEventListener(
   "click",
   navigateAdmin
@@ -2300,6 +2567,29 @@ openAdminButton.addEventListener(
 openDispatcherButton.addEventListener(
   "click",
   navigateDispatcher
+);
+
+executiveEl("executiveGroupSelect").addEventListener(
+  "change",
+  () => {
+    selectedExecutiveGroupId = executiveEl("executiveGroupSelect").value;
+    selectedExecutiveUnitId = "";
+
+    if (currentView === "executive") {
+      loadExecutiveDashboard();
+    }
+  }
+);
+
+executiveEl("executiveUnitSelect").addEventListener(
+  "change",
+  () => {
+    selectedExecutiveUnitId = executiveEl("executiveUnitSelect").value;
+
+    if (currentView === "executive") {
+      loadExecutiveDashboard();
+    }
+  }
 );
 
 dispatcherGroupSelect.addEventListener(
@@ -2433,6 +2723,15 @@ async function sendHeartbeat() {
           currentView === "dispatcher" &&
           !hasPanelAccess(
             "dispatcher"
+          )
+        ) {
+          navigateHome();
+        }
+
+        if (
+          currentView === "executive" &&
+          !hasPanelAccess(
+            "executive-monitoring"
           )
         ) {
           navigateHome();

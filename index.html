@@ -262,6 +262,33 @@
           </div>
         </button>
 
+
+        <button id="openExecutiveButton" class="module-card module-card-executive" type="button">
+          <div class="module-topline">
+            <div class="module-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 17h4v-7H4v7Zm6 0h4V7h-4v10Zm6 0h4V4h-4v13Z"></path>
+              </svg>
+            </div>
+            <span id="executiveCardStatus" class="module-status">ДОСТУП ПО РОЛИ</span>
+          </div>
+
+          <div class="module-copy">
+            <span>СВОДНАЯ ИНФОГРАФИКА</span>
+            <h3>Диспетчерский мониторинг</h3>
+            <p>
+              Единая панель для руководителей: аварийные отключения, заявки и НДР в одном профессиональном интерфейсе.
+            </p>
+          </div>
+
+          <div class="module-footer">
+            <span>Открыть сводную панель</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M5 12h14M13 6l6 6-6 6"></path>
+            </svg>
+          </div>
+        </button>
+
         <button
           id="openAdminButton"
           class="module-card module-card-admin"
@@ -345,6 +372,191 @@
         <span>•</span>
         <span id="updatedAt">Обновлено —</span>
       </footer>
+    </section>
+
+
+    <!-- EXECUTIVE MONITORING -->
+    <section id="executiveView" class="app-view">
+      <div class="view-toolbar">
+        <button id="backFromExecutiveButton" class="back-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 12H5M11 18l-6-6 6-6"></path>
+          </svg>
+          <span>Главное меню</span>
+        </button>
+
+        <div class="toolbar-status">
+          <span class="system-pulse"></span>
+          <span id="executiveUpdatedAt">Подготовка консолидированной аналитики…</span>
+        </div>
+      </div>
+
+      <div class="executive-shell">
+        <div class="executive-hero glass-panel">
+          <div class="executive-hero-copy">
+            <span class="micro-label">РУКОВОДЯЩИЙ КОНТУР</span>
+            <h1>Диспетчерский мониторинг</h1>
+            <p>
+              Единая управленческая панель по аварийным отключениям, заявкам и наряд-допускам / распоряжениям.
+              Сводная инфографика помогает быстро увидеть общую картину и переключиться на нужное подразделение или РЭС.
+            </p>
+          </div>
+
+          <div class="executive-hero-stats">
+            <div class="executive-kpi-tile">
+              <span>Аварийные отключения</span>
+              <strong id="executiveHeroOutages">0</strong>
+              <small>текущий актив</small>
+            </div>
+            <div class="executive-kpi-tile">
+              <span>Заявки</span>
+              <strong id="executiveHeroRequests">0</strong>
+              <small>суммарно по выборке</small>
+            </div>
+            <div class="executive-kpi-tile">
+              <span>НДР</span>
+              <strong id="executiveHeroWorkorders">0</strong>
+              <small>наряды / распоряжения / допуски</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="executive-filter-panel glass-panel">
+          <div>
+            <span class="micro-label">ФИЛЬТРЫ НАБЛЮДЕНИЯ</span>
+            <h2>Подразделение и РЭС / район</h2>
+          </div>
+
+          <div class="executive-filter-controls">
+            <label class="dispatcher-select-label">
+              <span>Подразделение</span>
+              <select id="executiveGroupSelect" class="dispatcher-select"></select>
+            </label>
+
+            <label class="dispatcher-select-label">
+              <span>РЭС / район</span>
+              <select id="executiveUnitSelect" class="dispatcher-select"></select>
+            </label>
+          </div>
+        </div>
+
+        <div class="executive-grid">
+          <article class="glass-panel executive-panel executive-overview-panel">
+            <div class="executive-panel-head">
+              <div>
+                <span class="micro-label">ОБЩАЯ СИТУАЦИЯ</span>
+                <h2 id="executiveScopeTitle">Все подразделения</h2>
+              </div>
+              <div class="dispatcher-live-badge"><i></i> LIVE</div>
+            </div>
+
+            <div id="executiveOverviewMeta" class="executive-meta-line">Ожидание данных…</div>
+
+            <div class="executive-highlight-grid">
+              <div class="executive-highlight-card">
+                <span>Лидер по отключениям</span>
+                <strong id="executiveHighlightOutage">—</strong>
+                <small id="executiveHighlightOutageCount">0</small>
+              </div>
+              <div class="executive-highlight-card">
+                <span>Лидер по заявкам</span>
+                <strong id="executiveHighlightRequest">—</strong>
+                <small id="executiveHighlightRequestCount">0</small>
+              </div>
+              <div class="executive-highlight-card">
+                <span>Лидер по НДР</span>
+                <strong id="executiveHighlightWorkorder">—</strong>
+                <small id="executiveHighlightWorkorderCount">0</small>
+              </div>
+            </div>
+          </article>
+
+          <article class="glass-panel executive-panel executive-outages-panel">
+            <div class="executive-panel-head">
+              <div>
+                <span class="micro-label">OMS · АВАРИЙНЫЕ ОТКЛЮЧЕНИЯ</span>
+                <h2>Оперативный фон</h2>
+              </div>
+              <div class="summary-tile executive-total-tile">
+                <span id="executiveOutagesScope">Все подразделения</span>
+                <strong id="executiveOutagesTotal">0</strong>
+                <small>активных отключений</small>
+              </div>
+            </div>
+            <div id="executiveOutageMeta" class="executive-meta-line">Данные СК-11 OMS</div>
+            <div id="executiveOutageRanking" class="executive-ranking-list"></div>
+          </article>
+
+          <article class="glass-panel executive-panel executive-chart-panel">
+            <div class="executive-panel-head">
+              <div>
+                <span class="micro-label">ЗАЯВКИ</span>
+                <h2>Статусы обращений</h2>
+              </div>
+            </div>
+            <div class="dispatcher-workorders-chart-layout executive-chart-layout">
+              <div id="executiveRequestsChart" class="dispatcher-workorders-donut executive-donut" role="img" aria-label="Распределение заявок по статусам">
+                <div class="dispatcher-workorders-donut-center">
+                  <strong id="executiveRequestsTotal">0</strong>
+                  <span>Всего</span>
+                </div>
+              </div>
+              <div class="dispatcher-workorders-legend executive-legend">
+                <div class="dispatcher-workorders-legend-item is-review"><i></i><span>В рассмотрении</span><strong id="executiveReqReview">0</strong></div>
+                <div class="dispatcher-workorders-legend-item is-approved"><i></i><span>Разрешена</span><strong id="executiveReqApproved">0</strong></div>
+                <div class="dispatcher-workorders-legend-item is-open-status"><i></i><span>Открыта</span><strong id="executiveReqOpen">0</strong></div>
+                <div class="dispatcher-workorders-legend-item is-closed"><i></i><span>Закрыта</span><strong id="executiveReqClosed">0</strong></div>
+                <div class="dispatcher-workorders-legend-item is-acknowledged"><i></i><span>Принята к сведению</span><strong id="executiveReqAcknowledged">0</strong></div>
+              </div>
+            </div>
+            <div id="executiveRequestsMeta" class="executive-meta-line">Ожидание данных СК-11</div>
+          </article>
+
+          <article class="glass-panel executive-panel executive-chart-panel">
+            <div class="executive-panel-head">
+              <div>
+                <span class="micro-label">НДР</span>
+                <h2>Наряд - Допуск/Распоряжения</h2>
+              </div>
+            </div>
+            <div class="dispatcher-workorders-chart-layout executive-chart-layout">
+              <div id="executiveWorkordersChart" class="dispatcher-workorders-donut executive-donut" role="img" aria-label="Распределение НДР по статусам">
+                <div class="dispatcher-workorders-donut-center">
+                  <strong id="executiveWorkordersTotal">0</strong>
+                  <span>Всего</span>
+                </div>
+              </div>
+              <div class="dispatcher-workorders-legend executive-legend">
+                <div class="dispatcher-workorders-legend-item is-registered"><i></i><span>Зарегистрирован</span><strong id="executiveWorkordersRegistered">0</strong></div>
+                <div class="dispatcher-workorders-legend-item is-created"><i></i><span>Создано</span><strong id="executiveWorkordersCreated">0</strong></div>
+                <div class="dispatcher-workorders-legend-item is-admission"><i></i><span>Допуск</span><strong id="executiveWorkordersAdmission">0</strong></div>
+                <div class="dispatcher-workorders-legend-item is-preparation"><i></i><span>Подготовка р.м.</span><strong id="executiveWorkordersPreparation">0</strong></div>
+                <div class="dispatcher-workorders-legend-item is-break"><i></i><span>Перерыв</span><strong id="executiveWorkordersBreak">0</strong></div>
+              </div>
+            </div>
+            <div id="executiveWorkordersMeta" class="executive-meta-line">Ожидание данных НДР</div>
+          </article>
+
+          <article class="glass-panel executive-panel executive-ranking-panel">
+            <div class="executive-panel-head">
+              <div>
+                <span class="micro-label">РЕЙТИНГ</span>
+                <h2>Точки внимания</h2>
+              </div>
+            </div>
+            <div class="executive-ranking-columns">
+              <div>
+                <h3>Топ по заявкам</h3>
+                <div id="executiveRequestRanking" class="executive-ranking-list is-compact"></div>
+              </div>
+              <div>
+                <h3>Топ по НДР</h3>
+                <div id="executiveWorkorderRanking" class="executive-ranking-list is-compact"></div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
     </section>
 
     <!-- DISPATCHER -->

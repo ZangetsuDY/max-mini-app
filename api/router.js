@@ -3,6 +3,7 @@ import logout from "../handlers/logout.js";
 import me from "../handlers/me.js";
 import outages from "../handlers/outages.js";
 import dispatcher from "../handlers/dispatcher.js";
+import executiveMonitoring from "../handlers/executive-monitoring.js";
 import heartbeat from "../handlers/heartbeat.js";
 import system from "../handlers/system.js";
 
@@ -21,6 +22,7 @@ const ROUTES = new Map([
   ["me", me],
   ["outages", outages],
   ["dispatcher", dispatcher],
+  ["executive-monitoring", executiveMonitoring],
   ["heartbeat", heartbeat],
   ["system", system],
   ["admin/dashboard", adminDashboard],
