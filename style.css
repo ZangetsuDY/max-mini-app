@@ -6129,3 +6129,380 @@ select:focus {
     padding: 15px;
   }
 }
+
+/* =========================================================
+   EXECUTIVE MONITORING · POLISH / DESKTOP + MOBILE FIXES
+   ========================================================= */
+
+/* Unified professional scrollbars */
+html,
+body,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(63, 178, 235, 0.46) rgba(4, 20, 36, 0.42);
+}
+
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(3, 18, 34, 0.5);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(65, 194, 241, 0.82), rgba(39, 117, 177, 0.78));
+  border: 2px solid rgba(3, 18, 34, 0.72);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(95, 216, 255, 0.94), rgba(58, 143, 208, 0.9));
+}
+
+/* Prevent flex/grid text from pushing cards outside their bounds */
+#executiveView *,
+#executiveView *::before,
+#executiveView *::after {
+  min-width: 0;
+}
+
+#executiveView h1,
+#executiveView h2,
+#executiveView h3,
+#executiveView p,
+#executiveView span,
+#executiveView strong,
+#executiveView small {
+  word-break: normal;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+#executiveView .executive-kpi-tile strong,
+#executiveView .executive-total-tile strong,
+#executiveView .executive-ranking-row > strong,
+#executiveView .executive-table-number,
+#executiveView .executive-trend-head strong {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hero KPI cards: more breathing room and predictable wrapping */
+#executiveView .executive-hero {
+  grid-template-columns: minmax(0, 1.55fr) minmax(390px, 0.95fr);
+  gap: 28px;
+}
+
+#executiveView .executive-hero-stats {
+  gap: 14px;
+}
+
+#executiveView .executive-kpi-tile {
+  padding: 20px 18px 18px;
+}
+
+#executiveView .executive-kpi-tile > span {
+  min-height: 38px;
+  line-height: 1.35;
+}
+
+#executiveView .executive-kpi-tile > strong {
+  font-size: clamp(34px, 3.1vw, 50px);
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+}
+
+#executiveView .executive-kpi-foot {
+  align-items: flex-end;
+}
+
+#executiveView .executive-kpi-foot small {
+  line-height: 1.35;
+}
+
+/* Overview cards: keep long names readable without exploding card height */
+#executiveView .executive-highlight-grid {
+  gap: 14px;
+}
+
+#executiveView .executive-highlight-card {
+  display: flex;
+  min-height: 180px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+#executiveView .executive-highlight-card > span {
+  line-height: 1.35;
+}
+
+#executiveView .executive-highlight-card > strong {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  overflow: hidden;
+  font-size: clamp(18px, 1.55vw, 24px);
+  line-height: 1.16;
+  letter-spacing: -0.02em;
+}
+
+#executiveView .executive-highlight-card > small {
+  margin-top: auto;
+  line-height: 1.3;
+}
+
+/* Operational background: value never overlaps caption/title */
+#executiveView .executive-outages-panel .executive-panel-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 164px;
+  align-items: start;
+  gap: 18px;
+}
+
+#executiveView .executive-total-tile {
+  width: 164px;
+  min-height: 132px;
+  padding: 16px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+#executiveView .executive-total-tile > span {
+  display: block;
+  width: 100%;
+  font-size: 12px;
+  line-height: 1.28;
+}
+
+#executiveView .executive-total-tile > strong {
+  display: block;
+  margin: 0;
+  font-size: clamp(38px, 3vw, 52px);
+  line-height: 0.95;
+}
+
+#executiveView .executive-total-tile > small {
+  display: block;
+  margin: 0;
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+/* Desktop: no default-looking inner scroll views. Lists become grids. */
+@media (min-width: 901px) {
+  #executiveView .executive-outages-panel .executive-ranking-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  #executiveView .executive-ranking-panel {
+    grid-column: 1 / -1;
+  }
+
+  #executiveView .executive-ranking-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px;
+  }
+
+  #executiveView .executive-ranking-columns > div {
+    min-width: 0;
+  }
+
+  #executiveView .executive-ranking-columns > div > h3 {
+    margin-bottom: 14px;
+  }
+
+  #executiveView .executive-ranking-columns .executive-ranking-list {
+    max-height: none;
+    overflow: visible;
+    padding-right: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  #executiveView .executive-ranking-row {
+    min-height: 82px;
+    padding: 14px 15px;
+    align-items: center;
+  }
+
+  #executiveView .executive-ranking-name {
+    line-height: 1.25;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+  }
+
+  #executiveView .executive-table-wrap {
+    max-height: none;
+    overflow-y: visible;
+    overflow-x: auto;
+  }
+}
+
+/* Ranking rows: stable name/value columns */
+#executiveView .executive-ranking-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+}
+
+#executiveView .executive-ranking-main {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+#executiveView .executive-ranking-index {
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+
+#executiveView .executive-ranking-name {
+  overflow-wrap: break-word;
+}
+
+#executiveView .executive-ranking-row > strong {
+  align-self: center;
+  font-size: clamp(19px, 1.7vw, 25px);
+  line-height: 1;
+}
+
+/* Slightly softer, more consistent corners */
+#executiveView .executive-ranking-row,
+#executiveView .executive-highlight-card,
+#executiveView .executive-trend-card,
+#executiveView .executive-total-tile {
+  border-radius: 22px !important;
+}
+
+#executiveView .executive-panel,
+#executiveView .executive-filter-panel {
+  border-radius: 28px !important;
+}
+
+/* Mobile alignment fixes */
+@media (max-width: 900px) {
+  #executiveView .executive-hero {
+    grid-template-columns: 1fr;
+  }
+
+  #executiveView .executive-hero-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  #executiveView .executive-kpi-tile > strong {
+    font-size: clamp(32px, 8vw, 44px);
+  }
+
+  #executiveView .executive-outages-panel .executive-panel-head {
+    grid-template-columns: minmax(0, 1fr) 154px;
+  }
+
+  #executiveView .executive-total-tile {
+    width: 154px;
+  }
+}
+
+@media (max-width: 620px) {
+  #executiveView .executive-hero-stats {
+    grid-template-columns: 1fr;
+  }
+
+  #executiveView .executive-kpi-tile {
+    min-height: 0;
+  }
+
+  #executiveView .executive-outages-panel .executive-panel-head {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  #executiveView .executive-total-tile {
+    width: 100%;
+    min-height: 96px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "scope value"
+      "label value";
+    align-items: center;
+    column-gap: 18px;
+    row-gap: 4px;
+    padding: 15px 16px;
+  }
+
+  #executiveView .executive-total-tile > span {
+    grid-area: scope;
+    align-self: end;
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+  #executiveView .executive-total-tile > strong {
+    grid-area: value;
+    justify-self: end;
+    align-self: center;
+    font-size: clamp(40px, 14vw, 58px);
+    line-height: 0.92;
+  }
+
+  #executiveView .executive-total-tile > small {
+    grid-area: label;
+    align-self: start;
+    font-size: 9px;
+    line-height: 1.3;
+  }
+
+  #executiveView .executive-highlight-card {
+    min-height: 0;
+  }
+
+  #executiveView .executive-highlight-card > strong {
+    -webkit-line-clamp: 3;
+    font-size: 20px;
+  }
+
+  /* Keep mobile ranking behavior compact, but with styled scrollbars */
+  #executiveView .executive-ranking-columns .executive-ranking-list,
+  #executiveView .executive-outages-panel .executive-ranking-list {
+    display: grid;
+    grid-template-columns: 1fr;
+    max-height: 350px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+  }
+
+  #executiveView .executive-ranking-row {
+    min-height: 68px;
+  }
+
+  #executiveView .executive-ranking-name {
+    line-height: 1.25;
+  }
+
+  #executiveView .executive-ranking-row > strong {
+    font-size: 20px;
+  }
+
+  #executiveView .executive-table-wrap {
+    max-height: 520px;
+    overflow: auto;
+  }
+}
