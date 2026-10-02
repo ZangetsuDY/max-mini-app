@@ -37,6 +37,7 @@ function summarizeRequestUnits(units) {
     open: sumBy(units, (item) => item.requests.open),
     closed: sumBy(units, (item) => item.requests.closed),
     acknowledged: sumBy(units, (item) => item.requests.acknowledged),
+    ending: sumBy(units, (item) => item.requests.ending),
     total: sumBy(units, (item) => item.requests.total)
   };
 }
@@ -355,6 +356,7 @@ export default {
             open: Number(requestAggregation.open || 0),
             closed: Number(requestAggregation.closed || 0),
             acknowledged: Number(requestAggregation.acknowledged || 0),
+            ending: Number(requestAggregation.ending || 0),
             total: Number(requestAggregation.total || 0)
           },
           workorders: {

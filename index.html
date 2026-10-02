@@ -532,6 +532,7 @@
                 <div class="dispatcher-workorders-legend-item is-open-status"><i></i><span>Открыта</span><strong id="executiveReqOpen">0</strong></div>
                 <div class="dispatcher-workorders-legend-item is-closed"><i></i><span>Закрыта</span><strong id="executiveReqClosed">0</strong></div>
                 <div class="dispatcher-workorders-legend-item is-acknowledged"><i></i><span>Принята к сведению</span><strong id="executiveReqAcknowledged">0</strong></div>
+                <div class="dispatcher-workorders-legend-item is-ending"><i></i><span>Заканчиваются</span><strong id="executiveReqEnding">0</strong></div>
               </div>
             </div>
             <div id="executiveRequestsMeta" class="executive-meta-line">Ожидание данных СК-11</div>
@@ -805,13 +806,15 @@
                   Сумма по подключённым строкам СК-11
                 </p>
 
-                <div class="dispatcher-request-card dispatcher-ending-card dispatcher-ending-card-inline">
-                  <div class="dispatcher-ending-blur" aria-hidden="true">12</div>
-                  <div class="dispatcher-ending-overlay">
-                    <span>Заканчиваются</span>
-                    <strong>!</strong>
-                    <small>В разработке</small>
+                <div class="dispatcher-ending-live-card">
+                  <div class="dispatcher-ending-live-copy">
+                    <i></i>
+                    <div>
+                      <span>Заканчиваются</span>
+                      <small>в текущую смену</small>
+                    </div>
                   </div>
+                  <strong id="dispatcherReqEnding">0</strong>
                 </div>
               </div>
             </div>
