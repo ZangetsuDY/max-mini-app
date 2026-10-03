@@ -7174,3 +7174,92 @@ body,
     font-size: clamp(16px, 1.2vw, 21px);
   }
 }
+
+/* Mobile header: show role next to FIO like desktop */
+@media (max-width: 700px) {
+  .topbar-user {
+    gap: 8px;
+  }
+
+  .topbar-user-meta {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    min-width: 0;
+    flex: 1 1 auto;
+    max-width: calc(100vw - 156px);
+  }
+
+  .identity {
+    max-width: min(44vw, 170px);
+    align-items: flex-end;
+  }
+
+  .identity strong {
+    max-width: 100%;
+    font-size: 10px;
+    line-height: 1.12;
+  }
+
+  .role-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: min(28vw, 120px);
+    padding: 4px 7px;
+    border-radius: 999px;
+    font-size: 7px;
+    line-height: 1.05;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+@media (max-width: 620px) {
+  .topbar-user-meta {
+    max-width: calc(100vw - 154px);
+    gap: 5px;
+  }
+
+  .identity {
+    max-width: min(43vw, 150px);
+  }
+
+  .identity strong {
+    font-size: 10px;
+  }
+
+  .role-badge {
+    display: inline-flex;
+    max-width: min(30vw, 110px);
+    padding: 4px 7px;
+    font-size: 6.8px;
+    line-height: 1.04;
+    letter-spacing: 0.04em;
+  }
+}
+
+@media (max-width: 420px) {
+  .topbar-user-meta {
+    max-width: calc(100vw - 150px);
+  }
+
+  .identity {
+    max-width: min(40vw, 132px);
+  }
+
+  .identity strong {
+    font-size: 9.5px;
+  }
+
+  .role-badge {
+    max-width: min(28vw, 92px);
+    padding: 4px 6px;
+    font-size: 6.4px;
+  }
+}
