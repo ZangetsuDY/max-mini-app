@@ -156,6 +156,7 @@ const dispatcherReqApproved = document.getElementById("dispatcherReqApproved");
 const dispatcherReqOpen = document.getElementById("dispatcherReqOpen");
 const dispatcherReqClosed = document.getElementById("dispatcherReqClosed");
 const dispatcherReqAcknowledged = document.getElementById("dispatcherReqAcknowledged");
+const dispatcherReqEnding = document.getElementById("dispatcherReqEnding");
 const dispatcherReqTotal = document.getElementById("dispatcherReqTotal");
 const dispatcherReqTotalCaption = document.getElementById("dispatcherReqTotalCaption");
 
@@ -1128,6 +1129,7 @@ function setExecutiveRequestCounts(counts) {
     open: Number(counts?.open || 0),
     closed: Number(counts?.closed || 0),
     acknowledged: Number(counts?.acknowledged || 0),
+    ending: Number(counts?.ending || 0),
     total: Number(counts?.total || 0)
   };
 
@@ -1136,6 +1138,7 @@ function setExecutiveRequestCounts(counts) {
   executiveEl("executiveReqOpen").textContent = values.open;
   executiveEl("executiveReqClosed").textContent = values.closed;
   executiveEl("executiveReqAcknowledged").textContent = values.acknowledged;
+  executiveEl("executiveReqEnding").textContent = values.ending;
   executiveEl("executiveRequestsTotal").textContent = values.total;
 
   renderDispatcherDonutChart(executiveEl("executiveRequestsChart"), [
@@ -1143,7 +1146,8 @@ function setExecutiveRequestCounts(counts) {
     { label: "Разрешена", value: values.approved, color: "#37f29f" },
     { label: "Открыта", value: values.open, color: "#8f7dff" },
     { label: "Закрыта", value: values.closed, color: "#ff587e" },
-    { label: "Принята к сведению", value: values.acknowledged, color: "#ffc85e" }
+    { label: "Принята к сведению", value: values.acknowledged, color: "#ffc85e" },
+    { label: "Заканчиваются", value: values.ending, color: "#fb7185" }
   ]);
 }
 
@@ -1893,6 +1897,7 @@ function setDispatcherRequestCounts(
     acknowledged: Number(
       counts?.acknowledged || 0
     ),
+    ending: Number(counts?.ending || 0),
     total: Number(counts?.total || 0)
   };
 
@@ -1906,6 +1911,8 @@ function setDispatcherRequestCounts(
     values.closed;
   dispatcherReqAcknowledged.textContent =
     values.acknowledged;
+  dispatcherReqEnding.textContent =
+    values.ending;
   dispatcherReqTotal.textContent =
     values.total;
 
@@ -1936,6 +1943,11 @@ function setDispatcherRequestCounts(
         label: "Принята к сведению",
         value: values.acknowledged,
         color: "#f43f5e"
+      },
+      {
+        label: "Заканчиваются",
+        value: values.ending,
+        color: "#fb7185"
       }
     ]
   );
@@ -2046,7 +2058,7 @@ function renderDispatcherSourceBreakdown(
         data-breakdown-source="__all__"
       >
         <strong>Общая сумма</strong>
-        <span>${payload?.requests?.total ?? 0} всего</span>
+        <span>${payload?.requests?.total ?? 0} всего · ${payload?.requests?.ending ?? 0} заканч.</span>
       </button>
 
       ${breakdown.map(
