@@ -37,7 +37,6 @@ function summarizeRequestUnits(units) {
     open: sumBy(units, (item) => item.requests.open),
     closed: sumBy(units, (item) => item.requests.closed),
     acknowledged: sumBy(units, (item) => item.requests.acknowledged),
-    ending: sumBy(units, (item) => item.requests.ending),
     total: sumBy(units, (item) => item.requests.total)
   };
 }
@@ -137,15 +136,37 @@ function historyLabel(timestamp) {
   }).replace(",", "");
 }
 
-function makeDelta(current, previous) {
+function dayKeyMsk(timestamp) {
+  const date = new Date(timestamp);
+
+  if (Number.isNaN(date.getTime())) return "";
+
+  return date.toLocaleDateString("sv-SE", {
+    timeZone: "Europe/Moscow"
+  });
+}
+
+function findDayBaseline(history) {
+  const list = Array.isArray(history) ? history : [];
+  const current = list.at(-1);
+
+  if (!current?.timestamp) return null;
+
+  const currentDayKey = dayKeyMsk(current.timestamp);
+  if (!currentDayKey) return null;
+
+  return list.find((item) => dayKeyMsk(item?.timestamp) === currentDayKey) || null;
+}
+
+function makeDelta(current, baseline) {
   const currentValue = Number(current || 0);
-  const previousValue = Number(previous || 0);
+  const baselineValue = Number(baseline || 0);
 
   return {
-    value: currentValue - previousValue,
+    value: currentValue - baselineValue,
     current: currentValue,
-    previous: previousValue,
-    available: previous !== null && previous !== undefined
+    previous: baselineValue,
+    available: baseline !== null && baseline !== undefined
   };
 }
 
@@ -356,7 +377,6 @@ export default {
             open: Number(requestAggregation.open || 0),
             closed: Number(requestAggregation.closed || 0),
             acknowledged: Number(requestAggregation.acknowledged || 0),
-            ending: Number(requestAggregation.ending || 0),
             total: Number(requestAggregation.total || 0)
           },
           workorders: {
@@ -567,24 +587,24 @@ export default {
     });
 
     const currentHistoryPoint = selectedHistory.at(-1) || null;
-    const previousHistoryPoint = selectedHistory.at(-2) || null;
+    const dayBaselinePoint = findDayBaseline(selectedHistory) || null;
 
     const deltas = {
       outages: makeDelta(
         currentHistoryPoint?.outages ?? outagesSummary.total,
-        previousHistoryPoint?.outages
+        dayBaselinePoint?.outages
       ),
       appeals: makeDelta(
         currentHistoryPoint?.appeals ?? outagesSummary.appeals,
-        previousHistoryPoint?.appeals
+        dayBaselinePoint?.appeals
       ),
       requests: makeDelta(
         currentHistoryPoint?.requests ?? requestSummary.total,
-        previousHistoryPoint?.requests
+        dayBaselinePoint?.requests
       ),
       workorders: makeDelta(
         currentHistoryPoint?.workorders ?? workorderSummary.total,
-        previousHistoryPoint?.workorders
+        dayBaselinePoint?.workorders
       )
     };
 

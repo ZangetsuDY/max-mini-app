@@ -156,7 +156,6 @@ const dispatcherReqApproved = document.getElementById("dispatcherReqApproved");
 const dispatcherReqOpen = document.getElementById("dispatcherReqOpen");
 const dispatcherReqClosed = document.getElementById("dispatcherReqClosed");
 const dispatcherReqAcknowledged = document.getElementById("dispatcherReqAcknowledged");
-const dispatcherReqEnding = document.getElementById("dispatcherReqEnding");
 const dispatcherReqTotal = document.getElementById("dispatcherReqTotal");
 const dispatcherReqTotalCaption = document.getElementById("dispatcherReqTotalCaption");
 
@@ -1129,7 +1128,6 @@ function setExecutiveRequestCounts(counts) {
     open: Number(counts?.open || 0),
     closed: Number(counts?.closed || 0),
     acknowledged: Number(counts?.acknowledged || 0),
-    ending: Number(counts?.ending || 0),
     total: Number(counts?.total || 0)
   };
 
@@ -1138,7 +1136,6 @@ function setExecutiveRequestCounts(counts) {
   executiveEl("executiveReqOpen").textContent = values.open;
   executiveEl("executiveReqClosed").textContent = values.closed;
   executiveEl("executiveReqAcknowledged").textContent = values.acknowledged;
-  executiveEl("executiveReqEnding").textContent = values.ending;
   executiveEl("executiveRequestsTotal").textContent = values.total;
 
   renderDispatcherDonutChart(executiveEl("executiveRequestsChart"), [
@@ -1146,8 +1143,7 @@ function setExecutiveRequestCounts(counts) {
     { label: "Разрешена", value: values.approved, color: "#37f29f" },
     { label: "Открыта", value: values.open, color: "#8f7dff" },
     { label: "Закрыта", value: values.closed, color: "#ff587e" },
-    { label: "Принята к сведению", value: values.acknowledged, color: "#ffc85e" },
-    { label: "Заканчиваются", value: values.ending, color: "#fb7185" }
+    { label: "Принята к сведению", value: values.acknowledged, color: "#ffc85e" }
   ]);
 }
 
@@ -1178,7 +1174,7 @@ function setExecutiveWorkorderCounts(counts) {
 }
 
 
-function renderExecutiveDelta(targetId, delta, suffix = "к прошлой сводке") {
+function renderExecutiveDelta(targetId, delta, suffix = "с начала дня") {
   const target = executiveEl(targetId);
   if (!target) return;
 
@@ -1193,10 +1189,10 @@ function renderExecutiveDelta(targetId, delta, suffix = "к прошлой св�
   const value = Number(delta.value || 0);
 
   if (value > 0) {
-    target.textContent = `+${value} ${suffix}`;
+    target.textContent = `+${value}${suffix ? ` ${suffix}` : ""}`;
     target.classList.add("is-up");
   } else if (value < 0) {
-    target.textContent = `${value} ${suffix}`;
+    target.textContent = `${value}${suffix ? ` ${suffix}` : ""}`;
     target.classList.add("is-down");
   } else {
     target.textContent = `без изменений`;
@@ -1254,26 +1250,32 @@ function renderExecutiveSparkline(targetId, history, metric, fallbackValue = 0) 
   const area = points.length
     ? `M ${points[0].x.toFixed(2)} ${height - padBottom} L ${points.map((point) => `${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(" L ")} L ${points.at(-1).x.toFixed(2)} ${height - padBottom} Z`
     : "";
+  const firstPoint = points[0] || null;
   const last = points.at(-1);
-  const firstLabel = escapeHtml(points[0]?.label || "");
+  const firstLabel = escapeHtml(firstPoint?.label || "");
   const lastLabel = escapeHtml(last?.label || "");
   const gradientId = `exec-gradient-${targetId}`;
+  const isSingleLabel = firstLabel && firstLabel === lastLabel;
 
   target.innerHTML = `
-    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">
-      <defs>
-        <linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="currentColor" stop-opacity=".34"></stop>
-          <stop offset="100%" stop-color="currentColor" stop-opacity="0"></stop>
-        </linearGradient>
-      </defs>
-      <line x1="${padX}" y1="${height - padBottom}" x2="${width - padX}" y2="${height - padBottom}" class="executive-sparkline-axis"></line>
-      <path d="${area}" fill="url(#${gradientId})"></path>
-      <polyline points="${polyline}" class="executive-sparkline-line"></polyline>
-      ${last ? `<circle cx="${last.x}" cy="${last.y}" r="5" class="executive-sparkline-point"></circle>` : ""}
-      <text x="${padX}" y="${height - 8}" class="executive-sparkline-label">${firstLabel}</text>
-      <text x="${width - padX}" y="${height - 8}" text-anchor="end" class="executive-sparkline-label">${lastLabel}</text>
-    </svg>
+    <div class="executive-sparkline-canvas">
+      <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="${gradientId}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="currentColor" stop-opacity=".34"></stop>
+            <stop offset="100%" stop-color="currentColor" stop-opacity="0"></stop>
+          </linearGradient>
+        </defs>
+        <line x1="${padX}" y1="${height - padBottom}" x2="${width - padX}" y2="${height - padBottom}" class="executive-sparkline-axis"></line>
+        <path d="${area}" fill="url(#${gradientId})"></path>
+        <polyline points="${polyline}" class="executive-sparkline-line"></polyline>
+        ${last ? `<circle cx="${last.x}" cy="${last.y}" r="5" class="executive-sparkline-point"></circle>` : ""}
+      </svg>
+    </div>
+    <div class="executive-sparkline-meta ${isSingleLabel ? "is-single" : ""}">
+      ${firstLabel ? `<span class="executive-sparkline-chip is-start">${isSingleLabel ? "Сводка" : "Начало"}: ${firstLabel}</span>` : ""}
+      ${!isSingleLabel && lastLabel ? `<span class="executive-sparkline-chip is-end">Последняя: ${lastLabel}</span>` : ""}
+    </div>
   `;
 }
 
@@ -1409,7 +1411,7 @@ function renderExecutiveDashboard(payload) {
   renderExecutiveSparkline("executiveTrendWorkordersChart", history, "workorders", payload?.headline?.workordersTotal);
 
   executiveEl("executiveHistoryHint").textContent = history.length >= 2
-    ? `${history.length} последних сводок · дельта к предыдущему обновлению`
+    ? `${history.length} последних сводок · дельта с начала дня`
     : "История появится после следующей новой сводки";
 
   renderExecutiveDivisionTable(payload?.divisionTable, selectedExecutiveGroupId);
@@ -1866,7 +1868,6 @@ function setDispatcherRequestCounts(
     acknowledged: Number(
       counts?.acknowledged || 0
     ),
-    ending: Number(counts?.ending || 0),
     total: Number(counts?.total || 0)
   };
 
@@ -1880,8 +1881,6 @@ function setDispatcherRequestCounts(
     values.closed;
   dispatcherReqAcknowledged.textContent =
     values.acknowledged;
-  dispatcherReqEnding.textContent =
-    values.ending;
   dispatcherReqTotal.textContent =
     values.total;
 
@@ -1912,11 +1911,6 @@ function setDispatcherRequestCounts(
         label: "Принята к сведению",
         value: values.acknowledged,
         color: "#f43f5e"
-      },
-      {
-        label: "Заканчиваются",
-        value: values.ending,
-        color: "#fb7185"
       }
     ]
   );
@@ -2027,7 +2021,7 @@ function renderDispatcherSourceBreakdown(
         data-breakdown-source="__all__"
       >
         <strong>Общая сумма</strong>
-        <span>${payload?.requests?.total ?? 0} всего · ${payload?.requests?.ending ?? 0} заканч.</span>
+        <span>${payload?.requests?.total ?? 0} всего</span>
       </button>
 
       ${breakdown.map(

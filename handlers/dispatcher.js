@@ -352,10 +352,9 @@ export default {
           aggregation.closed,
         acknowledged:
           aggregation.acknowledged,
-        ending:
-          aggregation.ending,
         total:
-          aggregation.total
+          aggregation.total,
+        ending: null
       },
       sourceData: {
         configured:
@@ -377,9 +376,7 @@ export default {
         rowCount:
           snapshotState.snapshot?.rowCount || 0,
         reportedTotal:
-          snapshotState.snapshot?.reportedTotal ?? null,
-        reportedEnding:
-          snapshotState.snapshot?.reportedEnding ?? null
+          snapshotState.snapshot?.reportedTotal ?? null
       },
       workorders: {
         counts: {
