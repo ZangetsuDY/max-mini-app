@@ -1321,6 +1321,29 @@ function renderExecutiveDivisionTable(rows, selectedGroupId = "") {
   });
 }
 
+function applyExecutiveLeaderSizing() {
+  [
+    "executiveHighlightOutage",
+    "executiveHighlightAppeal",
+    "executiveHighlightRequest",
+    "executiveHighlightWorkorder"
+  ].forEach((id) => {
+    const element = executiveEl(id);
+    if (!element) return;
+
+    const text = String(element.textContent || "").trim();
+    const normalizedLength = text.replace(/\s+/g, " ").length;
+
+    element.classList.remove("is-long", "is-xlong");
+
+    if (normalizedLength > 30) {
+      element.classList.add("is-xlong");
+    } else if (normalizedLength > 19) {
+      element.classList.add("is-long");
+    }
+  });
+}
+
 function renderExecutiveDashboard(payload) {
   const groups = [{ id: "", name: "Все подразделения" }, ...(Array.isArray(payload?.availableGroups) ? payload.availableGroups : [])];
   const units = [{ id: "", name: "Все РЭС / районы" }, ...(Array.isArray(payload?.availableUnits) ? payload.availableUnits : [])];
@@ -1373,6 +1396,8 @@ function renderExecutiveDashboard(payload) {
   const workorderLeader = payload?.highlights?.workorderLeader;
   executiveEl("executiveHighlightWorkorder").textContent = workorderLeader?.name || "—";
   executiveEl("executiveHighlightWorkorderCount").textContent = `${Number(workorderLeader?.count || 0)} НДР`;
+
+  applyExecutiveLeaderSizing();
 
   setExecutiveRequestCounts(payload?.requests?.counts || {});
   setExecutiveWorkorderCounts(payload?.workorders?.counts || {});

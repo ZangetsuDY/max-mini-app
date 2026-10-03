@@ -7009,3 +7009,168 @@ body,
     flex-wrap: wrap;
   }
 }
+
+/* =========================================================
+   EXECUTIVE OVERVIEW PANEL — DESKTOP POLISH
+   ========================================================= */
+@media (min-width: 901px) {
+  #executiveView .executive-overview-panel {
+    grid-template-rows: auto auto 1fr;
+    min-height: 632px;
+  }
+
+  #executiveView .executive-overview-panel .executive-panel-head {
+    align-items: center;
+  }
+
+  #executiveView .executiveOverviewMeta,
+  #executiveView #executiveOverviewMeta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    width: fit-content;
+    max-width: 100%;
+    padding: 10px 14px;
+    border-radius: 999px;
+    background: rgba(7, 27, 48, 0.72);
+    border: 1px solid rgba(87, 184, 255, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  #executiveView .executive-highlight-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: minmax(208px, 1fr);
+    align-items: stretch;
+    gap: 18px;
+  }
+
+  #executiveView .executive-highlight-card {
+    position: relative;
+    min-height: 208px;
+    padding: 18px 18px 16px;
+    gap: 12px;
+    overflow: hidden;
+    border-radius: 24px !important;
+    border: 1px solid rgba(84, 189, 255, 0.14);
+    background:
+      linear-gradient(180deg, rgba(12, 53, 92, 0.18), rgba(4, 18, 36, 0.82)),
+      rgba(5, 22, 42, 0.86);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,0.04),
+      0 16px 36px rgba(2, 10, 22, 0.16);
+  }
+
+  #executiveView .executive-highlight-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 4px;
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(90, 214, 255, 0.95), rgba(90, 214, 255, 0));
+    opacity: 0.9;
+  }
+
+  #executiveView .executive-highlight-card:nth-child(2)::before {
+    background: linear-gradient(180deg, rgba(247, 185, 85, 0.95), rgba(247, 185, 85, 0));
+  }
+
+  #executiveView .executive-highlight-card:nth-child(3)::before {
+    background: linear-gradient(180deg, rgba(89, 196, 255, 0.95), rgba(89, 196, 255, 0));
+  }
+
+  #executiveView .executive-highlight-card:nth-child(4)::before {
+    background: linear-gradient(180deg, rgba(88, 245, 220, 0.95), rgba(88, 245, 220, 0));
+  }
+
+  #executiveView .executive-highlight-card > span {
+    display: block;
+    max-width: 92%;
+    color: rgba(196, 219, 235, 0.76);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.32;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  #executiveView .executive-highlight-card > strong {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    overflow: hidden;
+    min-height: 92px;
+    margin-top: 0;
+    font-size: clamp(24px, 1.85vw, 34px);
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    hyphens: auto;
+  }
+
+  #executiveView .executive-highlight-card > strong.is-long {
+    font-size: clamp(21px, 1.55vw, 29px);
+    line-height: 1.1;
+  }
+
+  #executiveView .executive-highlight-card > strong.is-xlong {
+    font-size: clamp(18px, 1.3vw, 24px);
+    line-height: 1.14;
+    -webkit-line-clamp: 5;
+    min-height: 104px;
+  }
+
+  #executiveView .executive-highlight-card > small {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.25;
+    color: rgba(221, 237, 247, 0.92);
+  }
+
+  #executiveView .executive-highlight-card > small::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: 0 0 12px currentColor;
+    opacity: 0.7;
+    flex: 0 0 auto;
+  }
+
+  #executiveView .executive-highlight-card:nth-child(1) > small {
+    color: #7fe6ff;
+  }
+
+  #executiveView .executive-highlight-card:nth-child(2) > small {
+    color: #ffd07a;
+  }
+
+  #executiveView .executive-highlight-card:nth-child(3) > small {
+    color: #8dc9ff;
+  }
+
+  #executiveView .executive-highlight-card:nth-child(4) > small {
+    color: #70f0e2;
+  }
+}
+
+@media (max-width: 1180px) and (min-width: 901px) {
+  #executiveView .executive-highlight-card > strong {
+    font-size: clamp(20px, 1.7vw, 28px);
+  }
+
+  #executiveView .executive-highlight-card > strong.is-long {
+    font-size: clamp(18px, 1.45vw, 24px);
+  }
+
+  #executiveView .executive-highlight-card > strong.is-xlong {
+    font-size: clamp(16px, 1.2vw, 21px);
+  }
+}
