@@ -8329,3 +8329,485 @@ body,
     justify-content: flex-start;
   }
 }
+
+
+/* =========================================================
+   AAA COMMAND CENTER REDESIGN · FULL-WIDTH / DENSE LAYOUT
+   ========================================================= */
+:root {
+  --layout-max-width: 1820px;
+  --layout-gap: clamp(12px, 1.3vw, 22px);
+  --panel-radius-xl: 28px;
+  --panel-radius-lg: 22px;
+  --panel-radius-md: 18px;
+}
+
+body.authenticated .app-shell {
+  padding-top: 6px;
+}
+
+.topbar {
+  width: min(var(--layout-max-width), calc(100% - 24px));
+  margin: 10px auto 0;
+  border-radius: 24px;
+  position: sticky;
+  top: max(8px, env(safe-area-inset-top));
+  z-index: 70;
+}
+
+.app-view {
+  width: min(var(--layout-max-width), calc(100% - 24px));
+}
+
+.view-toolbar {
+  margin-bottom: 12px;
+}
+
+.home-hero,
+.monitoring-hero,
+.dispatcher-hero,
+.admin-hero,
+.executive-hero {
+  min-height: 0 !important;
+  padding: clamp(22px, 2vw, 30px) !important;
+  border-radius: 30px !important;
+}
+
+.home-hero {
+  grid-template-columns: minmax(0, 1.2fr) minmax(260px, .8fr);
+  gap: 26px;
+}
+
+.home-hero h1,
+.monitoring-hero h1,
+.dispatcher-hero h1,
+.admin-hero h1,
+.executive-hero-copy h1 {
+  font-size: clamp(30px, 3vw, 54px) !important;
+}
+
+.home-hero p,
+.monitoring-hero p,
+.dispatcher-hero p,
+.admin-hero p,
+.executive-hero-copy p {
+  font-size: 12px !important;
+  line-height: 1.6 !important;
+}
+
+.ops-ribbon,
+.telemetry-strip {
+  display: grid;
+  gap: 14px;
+}
+
+.home-ops-ribbon {
+  margin-top: 16px;
+  padding: 18px 22px;
+  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
+  align-items: center;
+  border-radius: 24px;
+  background: radial-gradient(circle at 100% 0%, rgba(72,205,241,.12), transparent 30%), linear-gradient(145deg, rgba(5, 28, 49, .94), rgba(3, 20, 38, .97));
+}
+
+.ops-ribbon-copy {
+  display: grid;
+  gap: 7px;
+}
+
+.ops-ribbon-copy strong {
+  color: #f2f9fd;
+  font-size: clamp(18px, 1.8vw, 28px);
+  letter-spacing: -.03em;
+}
+
+.ops-ribbon-copy small {
+  color: #7fa3b8;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.ops-ribbon-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ops-ribbon-chip,
+.telemetry-card {
+  position: relative;
+  padding: 15px 16px 14px;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(96, 184, 216, .12);
+  background: linear-gradient(180deg, rgba(7, 32, 56, .86), rgba(2, 16, 30, .86));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.03);
+}
+
+.ops-ribbon-chip::before,
+.telemetry-card::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, rgba(74,216,246,.9), rgba(74,216,246,0));
+}
+
+.ops-ribbon-chip span,
+.telemetry-card span {
+  display: block;
+  color: #84a8bd;
+  font-size: 9px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-weight: 800;
+}
+
+.ops-ribbon-chip strong,
+.telemetry-card strong {
+  display: block;
+  margin-top: 8px;
+  color: #f8fcff;
+  font-size: clamp(20px, 1.8vw, 34px);
+  line-height: 1;
+  letter-spacing: -.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.telemetry-card small {
+  display: block;
+  margin-top: 8px;
+  color: #6f8da2;
+  font-size: 9px;
+}
+
+.telemetry-card.is-emergency::before,
+.telemetry-card.is-outages::before { background: linear-gradient(180deg, #ff7a97, rgba(255,122,151,0)); }
+.telemetry-card.is-planned::before,
+.telemetry-card.is-workorders::before { background: linear-gradient(180deg, #4de2cf, rgba(77,226,207,0)); }
+.telemetry-card.is-requests::before,
+.telemetry-card.is-divisions::before { background: linear-gradient(180deg, #53c8ff, rgba(83,200,255,0)); }
+.telemetry-card.is-appeals::before,
+.telemetry-card.is-update::before { background: linear-gradient(180deg, #ffc86a, rgba(255,200,106,0)); }
+
+.section-intro {
+  margin-top: 18px;
+  margin-bottom: 14px;
+}
+
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.module-card {
+  grid-column: span 3;
+  min-height: 210px;
+  padding: 22px !important;
+  border-radius: 24px;
+}
+
+.module-copy h3 {
+  font-size: clamp(30px, 2vw, 40px) !important;
+  line-height: 1.02;
+}
+
+.module-copy p {
+  font-size: 11px !important;
+  line-height: 1.55;
+}
+
+#monitoringView, #dispatcherView, #executiveView, #adminView {
+  padding-bottom: 24px;
+}
+
+.active-outages-selector,
+.outage-details-view,
+.dispatcher-shell,
+.executive-shell {
+  gap: 16px;
+}
+
+.active-outages-hero {
+  min-height: 0;
+  padding: 24px 28px;
+}
+
+.active-outage-type-grid {
+  gap: 16px;
+}
+
+.active-outage-type-card {
+  min-height: 250px;
+  padding: 22px;
+}
+
+.monitoring-telemetry,
+.dispatcher-telemetry {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.division-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.outage-counter-card {
+  grid-column: span 3;
+  min-height: 0;
+  border-radius: 20px;
+}
+
+.outage-counter-card.is-expanded {
+  grid-column: 1 / -1 !important;
+}
+
+.outage-counter-card .outage-counter-header {
+  min-height: 0 !important;
+  gap: 12px;
+  align-items: start;
+  padding: 18px 18px 16px;
+}
+
+.outage-counter-card .division-main h2 {
+  font-size: clamp(18px, 1.25vw, 24px);
+}
+
+.outage-counter-actions {
+  min-width: 136px;
+}
+
+.outage-sources-breakdown {
+  padding: 0 18px 18px;
+}
+
+.dispatcher-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(260px, .75fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.dispatcher-assigned-tile {
+  min-height: 0 !important;
+  padding: 18px;
+  border-radius: 20px;
+}
+
+.dispatcher-select-wrap {
+  display: grid;
+  grid-template-columns: minmax(240px, .9fr) minmax(0, 1.2fr);
+  align-items: end;
+  gap: 18px;
+  padding: 18px 20px;
+  border-radius: 22px;
+}
+
+.dispatcher-outages-panel {
+  padding: 20px;
+  border-radius: 24px;
+}
+
+.dispatcher-outage-kpis {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dispatcher-outage-kpi,
+.dispatcher-outage-table-card,
+.dispatcher-panel,
+.admin-panel,
+.admin-stat-card {
+  border-radius: 22px !important;
+}
+
+.dispatcher-outage-table-card {
+  padding: 16px;
+}
+
+.dispatcher-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.dispatcher-grid > .dispatcher-panel:first-child {
+  grid-column: span 7;
+}
+
+.dispatcher-side-stack {
+  grid-column: span 5;
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+
+.dispatcher-panel {
+  padding: 18px 20px;
+}
+
+.dispatcher-panel-head {
+  padding-bottom: 10px;
+}
+
+.dispatcher-workorders-chart-layout,
+.dispatcher-requests-chart-layout {
+  grid-template-columns: minmax(165px, 220px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+.dispatcher-workorders-donut,
+.dispatcher-requests-donut {
+  width: min(100%, 220px);
+  aspect-ratio: 1;
+}
+
+.dispatcher-workorders-legend,
+.dispatcher-requests-legend {
+  gap: 8px;
+}
+
+.dispatcher-workorders-legend-item {
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+.dispatcher-defects-lockup {
+  min-height: 260px;
+}
+
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.admin-layout {
+  display: grid;
+  grid-template-columns: minmax(380px, .95fr) minmax(0, 1.05fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.session-list,
+.role-list,
+.dispatcher-config-list,
+.outage-config-list {
+  gap: 14px;
+}
+
+#accessManagementPanel,
+#outageManagementPanel,
+#dispatcherSourceManagementPanel,
+#dispatcherWorkordersManagementPanel {
+  margin-top: 16px;
+  padding: 20px;
+  border-radius: 24px;
+}
+
+.dispatcher-config-list,
+.outage-config-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.executive-shell {
+  gap: 16px;
+}
+
+.executive-grid {
+  gap: 16px;
+}
+
+.executive-panel {
+  padding: 20px;
+  border-radius: 24px !important;
+}
+
+.executive-trend-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* Use space more aggressively on very wide screens */
+@media (min-width: 1680px) {
+  .module-card { grid-column: span 3; }
+  .division-grid > .outage-counter-card { grid-column: span 3; }
+  .division-grid > .outage-counter-card.outage-card-shift-unassigned { grid-column: span 6 !important; }
+  .active-outage-type-card { min-height: 230px; }
+}
+
+@media (max-width: 1450px) {
+  .module-card { grid-column: span 6; }
+  .division-grid > .outage-counter-card { grid-column: span 4; }
+  .dispatcher-grid > .dispatcher-panel:first-child { grid-column: span 12; }
+  .dispatcher-side-stack { grid-column: span 12; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .executive-trend-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1180px) {
+  .topbar, .app-view { width: min(var(--layout-max-width), calc(100% - 16px)); }
+  .brand-context { display: none; }
+  .home-ops-ribbon, .dispatcher-select-wrap, .dispatcher-hero { grid-template-columns: 1fr; }
+  .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .module-card { grid-column: auto; }
+  .monitoring-telemetry, .dispatcher-telemetry { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .division-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .outage-counter-card { grid-column: auto; }
+  .dispatcher-grid { grid-template-columns: 1fr; }
+  .dispatcher-grid > .dispatcher-panel:first-child, .dispatcher-side-stack { grid-column: auto; }
+  .dispatcher-side-stack { grid-template-columns: 1fr; }
+  .admin-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-layout { grid-template-columns: 1fr; }
+  .dispatcher-config-list, .outage-config-list { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    width: calc(100% - 10px);
+    min-height: 58px;
+    padding: 8px 12px;
+    border-radius: 18px;
+    top: max(4px, env(safe-area-inset-top));
+  }
+  .app-view { width: calc(100% - 10px); }
+  .view-toolbar { gap: 8px; margin-bottom: 10px; }
+  .back-button, .toolbar-status, .icon-button { min-height: 38px; }
+  .home-hero, .monitoring-hero, .dispatcher-hero, .admin-hero, .executive-hero { padding: 16px !important; border-radius: 20px !important; }
+  .home-hero h1, .monitoring-hero h1, .dispatcher-hero h1, .admin-hero h1, .executive-hero-copy h1 { font-size: clamp(24px, 8vw, 34px) !important; }
+  .home-hero p, .monitoring-hero p, .dispatcher-hero p, .admin-hero p, .executive-hero-copy p { font-size: 10px !important; }
+  .home-ops-ribbon { padding: 14px; border-radius: 18px; }
+  .ops-ribbon-grid { grid-template-columns: 1fr; }
+  .module-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .module-card { min-height: 170px; padding: 14px !important; border-radius: 18px; }
+  .module-copy h3 { font-size: 22px !important; }
+  .module-copy p { font-size: 9px !important; }
+  .active-outages-hero, .active-outage-type-card, .dispatcher-select-wrap, .dispatcher-panel, .dispatcher-outages-panel, .executive-panel, #accessManagementPanel, #outageManagementPanel, #dispatcherSourceManagementPanel, #dispatcherWorkordersManagementPanel { border-radius: 18px !important; }
+  .active-outages-hero { padding: 16px 16px; }
+  .active-outage-type-card { padding: 14px; }
+  .monitoring-telemetry, .dispatcher-telemetry, .admin-stats { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .telemetry-card, .ops-ribbon-chip { padding: 12px 12px 11px; border-radius: 14px; }
+  .telemetry-card strong, .ops-ribbon-chip strong { font-size: clamp(16px, 6vw, 24px); }
+  .division-grid { grid-template-columns: 1fr; gap: 10px; }
+  .outage-counter-card { border-radius: 16px; }
+  .outage-counter-card .outage-counter-header { padding: 14px; }
+  .outage-counter-card .division-main h2 { font-size: 18px; }
+  .dispatcher-outage-tables { grid-template-columns: 1fr; }
+  .dispatcher-outage-table-card { padding: 12px; }
+  .dispatcher-workorders-chart-layout, .dispatcher-requests-chart-layout, .executive-chart-layout { grid-template-columns: 120px minmax(0, 1fr); gap: 10px; }
+  .dispatcher-workorders-donut, .dispatcher-requests-donut, .executive-donut { width: 118px; }
+  .dispatcher-workorders-legend-item { min-height: 38px; padding: 8px 10px; }
+  .dispatcher-defects-lockup { min-height: 180px; }
+  .admin-layout, .executive-trend-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px) {
+  .module-grid { grid-template-columns: 1fr; }
+  .monitoring-telemetry, .dispatcher-telemetry, .admin-stats { grid-template-columns: 1fr; }
+  .topbar-user-meta strong { font-size: 12px; }
+  .dispatcher-workorders-chart-layout, .dispatcher-requests-chart-layout { grid-template-columns: 1fr; }
+  .dispatcher-workorders-donut, .dispatcher-requests-donut { width: 132px; margin-inline: auto; }
+}

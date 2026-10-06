@@ -195,6 +195,28 @@
         </div>
       </div>
 
+      <div class="ops-ribbon home-ops-ribbon glass-panel">
+        <div class="ops-ribbon-copy">
+          <span class="micro-label">ЕНЕРГЕТИЧЕСКИЙ КОНТУР</span>
+          <strong>Единая оперативная среда управления</strong>
+          <small>Аварийные и плановые отключения · диспетчерское рабочее место · руководящий мониторинг · центр управления системой</small>
+        </div>
+        <div class="ops-ribbon-grid">
+          <div class="ops-ribbon-chip">
+            <span>Покрытие</span>
+            <strong>СПб · ЛО</strong>
+          </div>
+          <div class="ops-ribbon-chip">
+            <span>Профиль</span>
+            <strong>Энергосистема</strong>
+          </div>
+          <div class="ops-ribbon-chip">
+            <span>Среда</span>
+            <strong>MAX Mini App</strong>
+          </div>
+        </div>
+      </div>
+
       <div class="section-intro">
         <div>
           <span class="micro-label">РАЗДЕЛЫ СИСТЕМЫ</span>
@@ -425,6 +447,29 @@
           </div>
         </div>
 
+        <div class="telemetry-strip monitoring-telemetry">
+          <article class="telemetry-card is-outages">
+            <span>Активных отключений</span>
+            <strong id="monitoringTelemetryOutages">—</strong>
+            <small>текущий объём</small>
+          </article>
+          <article class="telemetry-card is-divisions">
+            <span>Подразделений</span>
+            <strong id="monitoringTelemetryDivisions">—</strong>
+            <small>в актуальной сводке</small>
+          </article>
+          <article class="telemetry-card is-appeals">
+            <span>Обращений</span>
+            <strong id="monitoringTelemetryAppeals">—</strong>
+            <small>по всем подразделениям</small>
+          </article>
+          <article class="telemetry-card is-update">
+            <span>Последнее обновление</span>
+            <strong id="monitoringTelemetryUpdated">—</strong>
+            <small>время синхронизации</small>
+          </article>
+        </div>
+
         <div class="monitoring-heading">
           <div>
             <span id="monitoringHeadingLabel" class="micro-label">ПОДРАЗДЕЛЕНИЯ</span>
@@ -438,7 +483,7 @@
         <footer class="footer">
           <span>ПАО «Россети Ленэнерго»</span>
           <span>•</span>
-          <span id="updatedAt">Обновлено —</span>
+          <span id="updatedAt">Обновлено: —</span>
         </footer>
       </div>
     </section>
@@ -455,7 +500,7 @@
 
         <div class="toolbar-status">
           <span class="system-pulse"></span>
-          <span id="executiveUpdatedAt">Подготовка консолидированной аналитики…</span>
+          <span id="executiveUpdatedAt">Обновлено: —</span>
         </div>
       </div>
 
@@ -574,7 +619,7 @@
                 <div class="executive-total-secondary"><span>Обращения</span><b id="executiveOutagesAppeals">0</b></div>
               </div>
             </div>
-            <div id="executiveOutageMeta" class="executive-meta-line">Данные СК-11 OMS</div>
+            <div id="executiveOutageMeta" class="executive-meta-line">Обновлено: —</div>
             <div id="executiveOutageRanking" class="executive-ranking-list"></div>
           </article>
 
@@ -601,7 +646,7 @@
                 <div class="dispatcher-workorders-legend-item is-ending"><i></i><span>Заканчиваются</span><strong id="executiveReqEnding">0</strong></div>
               </div>
             </div>
-            <div id="executiveRequestsMeta" class="executive-meta-line">Ожидание данных СК-11</div>
+            <div id="executiveRequestsMeta" class="executive-meta-line">Обновлено: —</div>
           </article>
 
           <article class="glass-panel executive-panel executive-chart-panel">
@@ -626,7 +671,7 @@
                 <div class="dispatcher-workorders-legend-item is-break"><i></i><span>Перерыв</span><strong id="executiveWorkordersBreak">0</strong></div>
               </div>
             </div>
-            <div id="executiveWorkordersMeta" class="executive-meta-line">Ожидание данных НДР</div>
+            <div id="executiveWorkordersMeta" class="executive-meta-line">Обновлено: —</div>
           </article>
 
           <article class="glass-panel executive-panel executive-ranking-panel">
@@ -752,7 +797,7 @@
         <div class="dispatcher-toolbar-actions">
           <div class="toolbar-status toolbar-status-dispatcher">
             <span class="system-pulse"></span>
-            <span id="dispatcherUpdatedAt">Получение данных СК-11…</span>
+            <span id="dispatcherUpdatedAt">Обновлено: —</span>
           </div>
           <button id="dispatcherRefreshButton" class="icon-button admin-refresh-button" type="button" title="Обновить данные">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -802,6 +847,29 @@
 
         <div id="dispatcherDataNotice" class="dispatcher-data-notice" hidden></div>
 
+        <div class="telemetry-strip dispatcher-telemetry">
+          <article class="telemetry-card is-emergency">
+            <span>Аварийные отключения</span>
+            <strong id="dispatcherTelemetryEmergency">0</strong>
+            <small>активных событий</small>
+          </article>
+          <article class="telemetry-card is-planned">
+            <span>Плановые отключения</span>
+            <strong id="dispatcherTelemetryPlanned">0</strong>
+            <small>в контуре РЭС / района</small>
+          </article>
+          <article class="telemetry-card is-requests">
+            <span>Заявки СК-11</span>
+            <strong id="dispatcherTelemetryRequests">0</strong>
+            <small>по подключённым строкам</small>
+          </article>
+          <article class="telemetry-card is-workorders">
+            <span>НДР</span>
+            <strong id="dispatcherTelemetryWorkorders">0</strong>
+            <small>наряды / распоряжения / допуски</small>
+          </article>
+        </div>
+
         <article class="dispatcher-panel glass-panel dispatcher-outages-panel">
           <div class="dispatcher-panel-head">
             <div>
@@ -815,8 +883,8 @@
           </div>
 
           <div class="dispatcher-source-meta dispatcher-outages-meta">
-            <span id="dispatcherOutagesMeta">Ожидание данных активных отключений</span>
-            <span id="dispatcherOutagesSourcesText">Подразделения: —</span>
+            <span id="dispatcherOutagesMeta">Обновлено: —</span>
+            <span id="dispatcherOutagesSourcesText" hidden></span>
           </div>
 
           <div id="dispatcherOutagesNotice" class="dispatcher-data-notice dispatcher-outages-notice" hidden></div>
@@ -916,8 +984,8 @@
             </div>
 
             <div class="dispatcher-source-meta">
-              <span id="dispatcherSourceMeta">Ожидание данных СК-11</span>
-              <span id="dispatcherSourcesText">Источники: —</span>
+              <span id="dispatcherSourceMeta">Обновлено: —</span>
+              <span id="dispatcherSourcesText" hidden></span>
             </div>
 
             <div
@@ -1022,8 +1090,8 @@
               </div>
 
               <div class="dispatcher-source-meta dispatcher-workorders-meta">
-                <span id="dispatcherWorkordersMeta">Ожидание данных СК-11</span>
-                <span id="dispatcherWorkordersSourcesText">Источники: —</span>
+                <span id="dispatcherWorkordersMeta">Обновлено: —</span>
+                <span id="dispatcherWorkordersSourcesText" hidden></span>
               </div>
 
               <div

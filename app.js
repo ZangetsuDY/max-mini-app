@@ -152,6 +152,10 @@ const totalOutages = document.getElementById("totalOutages");
 const updatedAt = document.getElementById("updatedAt");
 const dashboardStatus = document.getElementById("dashboardStatus");
 const divisionCountCaption = document.getElementById("divisionCountCaption");
+const monitoringTelemetryOutages = document.getElementById("monitoringTelemetryOutages");
+const monitoringTelemetryDivisions = document.getElementById("monitoringTelemetryDivisions");
+const monitoringTelemetryAppeals = document.getElementById("monitoringTelemetryAppeals");
+const monitoringTelemetryUpdated = document.getElementById("monitoringTelemetryUpdated");
 
 const dispatcherAssignedDivision = document.getElementById("dispatcherAssignedDivision");
 const dispatcherAssignedHint = document.getElementById("dispatcherAssignedHint");
@@ -201,6 +205,10 @@ const dispatcherEmergencyOutagesTableBody = document.getElementById("dispatcherE
 const dispatcherPlannedOutagesTableBody = document.getElementById("dispatcherPlannedOutagesTableBody");
 const dispatcherEmergencyOutagesDetails = document.getElementById("dispatcherEmergencyOutagesDetails");
 const dispatcherPlannedOutagesDetails = document.getElementById("dispatcherPlannedOutagesDetails");
+const dispatcherTelemetryEmergency = document.getElementById("dispatcherTelemetryEmergency");
+const dispatcherTelemetryPlanned = document.getElementById("dispatcherTelemetryPlanned");
+const dispatcherTelemetryRequests = document.getElementById("dispatcherTelemetryRequests");
+const dispatcherTelemetryWorkorders = document.getElementById("dispatcherTelemetryWorkorders");
 
 const outageManagementPanel = document.getElementById("outageManagementPanel");
 const outageCreateDivisionButton = document.getElementById("outageCreateDivisionButton");
@@ -1056,7 +1064,11 @@ function openOutageKind(kind) {
   monitoringHeadingTitle.textContent = meta.label;
   dashboardStatus.textContent = "Получение последней сводки СК-11 OMS";
   totalOutages.textContent = "—";
-  updatedAt.textContent = "Обновлено —";
+  updatedAt.textContent = "Обновлено: —";
+  if (monitoringTelemetryOutages) monitoringTelemetryOutages.textContent = "—";
+  if (monitoringTelemetryDivisions) monitoringTelemetryDivisions.textContent = "—";
+  if (monitoringTelemetryAppeals) monitoringTelemetryAppeals.textContent = "—";
+  if (monitoringTelemetryUpdated) monitoringTelemetryUpdated.textContent = "—";
   divisionGrid.innerHTML = `
     <div class="monitoring-loading-card">
       Получение последней сводки СК-11 OMS…
@@ -1560,15 +1572,15 @@ function renderExecutiveDashboard(payload) {
   setExecutiveRequestCounts(payload?.requests?.counts || {});
   setExecutiveWorkorderCounts(payload?.workorders?.counts || {});
 
-  executiveEl("executiveOutageMeta").textContent = payload?.outages?.sourceUpdatedAt
-    ? `OMS: ${payload.outages.sourceUpdatedAt}`
-    : "Данные OMS пока не получены";
-  executiveEl("executiveRequestsMeta").textContent = payload?.requests?.sourceUpdatedAt
-    ? `СК-11 заявки: ${payload.requests.sourceUpdatedAt}${payload?.requests?.period ? ` · ${payload.requests.period}` : ""}`
-    : "Данные заявок пока не получены";
-  executiveEl("executiveWorkordersMeta").textContent = payload?.workorders?.sourceUpdatedAt
-    ? `СК-11 НДР: ${payload.workorders.sourceUpdatedAt}${payload?.workorders?.period ? ` · ${payload.workorders.period}` : ""}`
-    : "Данные НДР пока не получены";
+  executiveEl("executiveOutageMeta").textContent = formatSourceUpdate(
+    payload?.outages?.sourceUpdatedAt
+  );
+  executiveEl("executiveRequestsMeta").textContent = formatSourceUpdate(
+    payload?.requests?.sourceUpdatedAt
+  );
+  executiveEl("executiveWorkordersMeta").textContent = formatSourceUpdate(
+    payload?.workorders?.sourceUpdatedAt
+  );
 
   renderExecutiveRanking("executiveOutageRanking", payload?.outages?.ranked, "Нет данных по отключениям");
   renderExecutiveRanking("executiveAppealRanking", payload?.outages?.rankedAppeals, "Нет обращений по активным отключениям");
@@ -1599,11 +1611,14 @@ function renderExecutiveDashboard(payload) {
 
   renderExecutiveDivisionTable(payload?.divisionTable, selectedExecutiveGroupId);
 
-  const updatedParts = [];
-  if (payload?.outages?.sourceUpdatedAt) updatedParts.push(`OMS: ${payload.outages.sourceUpdatedAt}`);
-  if (payload?.requests?.sourceUpdatedAt) updatedParts.push(`Заявки: ${payload.requests.sourceUpdatedAt}`);
-  if (payload?.workorders?.sourceUpdatedAt) updatedParts.push(`НДР: ${payload.workorders.sourceUpdatedAt}`);
-  executiveEl("executiveUpdatedAt").textContent = updatedParts.length ? updatedParts.join(" · ") : `Проверено ${formatDateTime(payload?.updatedAt || new Date().toISOString())}`;
+  const executiveLatestUpdate = latestSourceUpdate(
+    payload?.outages?.sourceUpdatedAt,
+    payload?.requests?.sourceUpdatedAt,
+    payload?.workorders?.sourceUpdatedAt
+  );
+  executiveEl("executiveUpdatedAt").textContent = formatSourceUpdate(
+    executiveLatestUpdate || formatDateTime(payload?.updatedAt || new Date().toISOString())
+  );
 }
 
 async function loadExecutiveDashboard(options = {}) {
@@ -2521,10 +2536,8 @@ function renderDispatcherWorkorders(
       ? workorders.sources.missing
       : [];
 
-  dispatcherWorkordersSourcesText.textContent =
-    configuredSources.length
-      ? `Источники: ${configuredSources.join(" + ")}`
-      : "Источники НДР не настроены · все значения = 0";
+  dispatcherWorkordersSourcesText.textContent = "";
+  dispatcherWorkordersSourcesText.hidden = true;
 
   renderDispatcherWorkordersBreakdown(
     payload
@@ -2533,36 +2546,8 @@ function renderDispatcherWorkorders(
   const sourceData =
     workorders?.sourceData || {};
 
-  const metaParts = [];
-
-  if (sourceData.sourceUpdatedAt) {
-    metaParts.push(
-      `СК-11: ${sourceData.sourceUpdatedAt}`
-    );
-  }
-
-  if (sourceData.period) {
-    metaParts.push(
-      `Период: ${sourceData.period}`
-    );
-  }
-
-  if (sourceData.rowCount) {
-    metaParts.push(
-      `журналов: ${sourceData.rowCount}`
-    );
-  }
-
-  if (sourceData.parts > 1) {
-    metaParts.push(
-      `частей: ${sourceData.parts}`
-    );
-  }
-
   dispatcherWorkordersMeta.textContent =
-    metaParts.length
-      ? metaParts.join(" · ")
-      : "Данные НДР пока не получены";
+    formatSourceUpdate(sourceData.sourceUpdatedAt);
 
   dispatcherWorkordersNotice.hidden = true;
   dispatcherWorkordersNotice.classList.remove(
@@ -2727,21 +2712,15 @@ function renderDispatcherOutages(payload) {
   dispatcherPlannedAppealsCount.textContent =
     Number(planned?.appeals || 0);
 
-  dispatcherOutagesSourcesText.textContent =
-    configuredSources.length
-      ? `Подразделения / роли: ${
-          configuredSelections.length
-            ? configuredSelections
-                .map((selection) => {
-                  const roleCount = Array.isArray(selection?.sources)
-                    ? selection.sources.length
-                    : 0;
-                  return `${selection?.divisionName || selection?.divisionId || "—"} (${roleCount})`;
-                })
-                .join(" + ")
-            : configuredSources.join(" + ")
-        }`
-      : "Подразделения и роли активных отключений не настроены";
+  if (dispatcherTelemetryEmergency) {
+    dispatcherTelemetryEmergency.textContent = Number(emergency?.count || 0);
+  }
+  if (dispatcherTelemetryPlanned) {
+    dispatcherTelemetryPlanned.textContent = Number(planned?.count || 0);
+  }
+
+  dispatcherOutagesSourcesText.textContent = "";
+  dispatcherOutagesSourcesText.hidden = true;
 
   renderDispatcherOutageTable(
     dispatcherEmergencyOutagesTableBody,
@@ -2777,20 +2756,12 @@ function renderDispatcherOutages(payload) {
 
   const emergencySourceData = emergency?.sourceData || {};
   const plannedSourceData = planned?.sourceData || {};
-  const metaParts = [];
-
-  if (emergencySourceData.sourceUpdatedAt) {
-    metaParts.push(`Аварийные: ${emergencySourceData.sourceUpdatedAt}`);
-  }
-
-  if (plannedSourceData.sourceUpdatedAt) {
-    metaParts.push(`Плановые: ${plannedSourceData.sourceUpdatedAt}`);
-  }
-
-  dispatcherOutagesMeta.textContent =
-    metaParts.length
-      ? metaParts.join(" · ")
-      : "Данные активных отключений пока не получены";
+  dispatcherOutagesMeta.textContent = formatSourceUpdate(
+    latestSourceUpdate(
+      emergencySourceData.sourceUpdatedAt,
+      plannedSourceData.sourceUpdatedAt
+    )
+  );
 
   const notices = [];
   const emergencyMissing =
@@ -2940,6 +2911,13 @@ function renderDispatcherDashboard(payload) {
     payload?.requests
   );
 
+  if (dispatcherTelemetryRequests) {
+    dispatcherTelemetryRequests.textContent = Number(payload?.requests?.counts?.total || 0);
+  }
+  if (dispatcherTelemetryWorkorders) {
+    dispatcherTelemetryWorkorders.textContent = Number(payload?.workorders?.counts?.total || 0);
+  }
+
   const configuredSources =
     Array.isArray(
       payload?.sources?.configured
@@ -2954,10 +2932,8 @@ function renderDispatcherDashboard(payload) {
       ? payload.sources.missing
       : [];
 
-  dispatcherSourcesText.textContent =
-    configuredSources.length
-      ? `Источники: ${configuredSources.join(" + ")}`
-      : "Источники не настроены · все значения = 0";
+  dispatcherSourcesText.textContent = "";
+  dispatcherSourcesText.hidden = true;
 
   renderDispatcherSourceBreakdown(
     payload
@@ -2966,30 +2942,8 @@ function renderDispatcherDashboard(payload) {
   const sourceData =
     payload?.sourceData || {};
 
-  const metaParts = [];
-
-  if (sourceData.sourceUpdatedAt) {
-    metaParts.push(
-      `СК-11: ${sourceData.sourceUpdatedAt}`
-    );
-  }
-
-  if (sourceData.period) {
-    metaParts.push(
-      `Период: ${sourceData.period}`
-    );
-  }
-
-  if (sourceData.rowCount) {
-    metaParts.push(
-      `строк: ${sourceData.rowCount}`
-    );
-  }
-
   dispatcherSourceMeta.textContent =
-    metaParts.length
-      ? metaParts.join(" · ")
-      : "Данные СК-11 пока не получены";
+    formatSourceUpdate(sourceData.sourceUpdatedAt);
 
   dispatcherDataNotice.hidden = true;
   dispatcherDataNotice.classList.remove(
@@ -3046,46 +3000,16 @@ function renderDispatcherDashboard(payload) {
     payload?.outages?.planned?.sourceData?.sourceUpdatedAt ||
     "";
 
-  if (
-    sourceData.sourceUpdatedAt ||
-    workordersUpdatedAt ||
-    emergencyOutagesUpdatedAt ||
+  const dispatcherLatestUpdate = latestSourceUpdate(
+    sourceData.sourceUpdatedAt,
+    workordersUpdatedAt,
+    emergencyOutagesUpdatedAt,
     plannedOutagesUpdatedAt
-  ) {
-    const updateParts = [];
+  );
 
-    if (sourceData.sourceUpdatedAt) {
-      updateParts.push(
-        `Заявки: ${sourceData.sourceUpdatedAt}`
-      );
-    }
-
-    if (workordersUpdatedAt) {
-      updateParts.push(
-        `НДР: ${workordersUpdatedAt}`
-      );
-    }
-
-    if (emergencyOutagesUpdatedAt) {
-      updateParts.push(
-        `Авар.: ${emergencyOutagesUpdatedAt}`
-      );
-    }
-
-    if (plannedOutagesUpdatedAt) {
-      updateParts.push(
-        `План.: ${plannedOutagesUpdatedAt}`
-      );
-    }
-
-    dispatcherUpdatedAt.textContent =
-      updateParts.join(" · ");
-  } else {
-    dispatcherUpdatedAt.textContent =
-      payload?.updatedAt
-        ? `Проверено ${formatDateTime(payload.updatedAt)}`
-        : "Интерфейс готов";
-  }
+  dispatcherUpdatedAt.textContent = formatSourceUpdate(
+    dispatcherLatestUpdate || (payload?.updatedAt ? formatDateTime(payload.updatedAt) : "")
+  );
 }
 
 loginForm.addEventListener(
@@ -3493,6 +3417,52 @@ function stopHeartbeat() {
 
     heartbeatTimer = null;
   }
+}
+
+function sourceUpdateTimeValue(value) {
+  const text = String(value || "").trim();
+  if (!text) return Number.NaN;
+
+  const ruMatch = text.match(
+    /^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:[ ,]+)(\d{1,2}):(\d{2})(?::(\d{2}))?$/
+  );
+
+  if (ruMatch) {
+    const [, day, month, year, hour, minute, second = "0"] = ruMatch;
+    return new Date(
+      Number(year),
+      Number(month) - 1,
+      Number(day),
+      Number(hour),
+      Number(minute),
+      Number(second)
+    ).getTime();
+  }
+
+  const parsed = new Date(text).getTime();
+  return Number.isNaN(parsed) ? Number.NaN : parsed;
+}
+
+function latestSourceUpdate(...values) {
+  const candidates = values
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+
+  if (!candidates.length) return "";
+
+  return candidates.reduce((latest, current) => {
+    const latestTime = sourceUpdateTimeValue(latest);
+    const currentTime = sourceUpdateTimeValue(current);
+
+    if (Number.isNaN(currentTime)) return latest;
+    if (Number.isNaN(latestTime)) return current;
+    return currentTime > latestTime ? current : latest;
+  });
+}
+
+function formatSourceUpdate(value) {
+  const text = String(value || "").trim();
+  return text ? `Обновлено: ${text}` : "Обновлено: —";
 }
 
 function formatDateTime(value) {
@@ -4716,21 +4686,18 @@ async function loadOutageConfigManagement() {
     };
 
     const sourceInfo = outageConfigCatalog.sourceData;
-    const emergencySuffix = sourceInfo?.sourceUpdatedAt
-      ? ` Аварийные: ${sourceInfo.sourceUpdatedAt}, строк: ${sourceInfo.rowCount || 0}.`
-      : sourceInfo?.message
-        ? ` Аварийные: ${sourceInfo.message}`
-        : "";
-    const plannedSuffix = sourceInfo?.plannedSourceUpdatedAt
-      ? ` Плановые: ${sourceInfo.plannedSourceUpdatedAt}, строк: ${sourceInfo.plannedRowCount || 0}.`
-      : sourceInfo?.plannedMessage
-        ? ` Плановые: ${sourceInfo.plannedMessage}`
-        : "";
+    const outageConfigUpdatedAt = latestSourceUpdate(
+      sourceInfo?.sourceUpdatedAt,
+      sourceInfo?.plannedSourceUpdatedAt
+    );
+    const outageConfigUpdateSuffix = outageConfigUpdatedAt
+      ? ` Обновлено: ${outageConfigUpdatedAt}.`
+      : "";
 
     outageConfigStatus.textContent =
       outageConfigCatalog.storageConfigured
-        ? `Подразделения и роли сохраняются в Redis. Чаты задаются через OUTAGES_CHAT_ID и PLANNED_OUTAGES_CHAT_ID.${emergencySuffix}${plannedSuffix}`
-        : `Redis не подключён: изменения сохранить нельзя.${emergencySuffix}${plannedSuffix}`;
+        ? `Подразделения и роли сохраняются в Redis. Чаты задаются через OUTAGES_CHAT_ID и PLANNED_OUTAGES_CHAT_ID.${outageConfigUpdateSuffix}`
+        : `Redis не подключён: изменения сохранить нельзя.${outageConfigUpdateSuffix}`;
 
     outageConfigStatus.classList.toggle(
       "is-warning",
@@ -5417,29 +5384,22 @@ async function loadDispatcherConfigManagement() {
     const sourceInfo =
       dispatcherConfigCatalog.sourceData;
 
-    const sourceSuffix =
-      sourceInfo?.sourceUpdatedAt
-        ? ` Последний СК-11: ${sourceInfo.sourceUpdatedAt}.`
-        : sourceInfo?.message
-          ? ` ${sourceInfo.message}`
-          : "";
-
     const outageInfo = dispatcherConfigCatalog.outageSourceData || {};
     const emergencyOutageInfo = outageInfo.emergency || {};
     const plannedOutageInfo = outageInfo.planned || {};
-    const outageSuffix = [
-      emergencyOutageInfo?.sourceUpdatedAt
-        ? `Аварийные: ${emergencyOutageInfo.sourceUpdatedAt}`
-        : "",
+    const dispatcherConfigUpdatedAt = latestSourceUpdate(
+      sourceInfo?.sourceUpdatedAt,
+      emergencyOutageInfo?.sourceUpdatedAt,
       plannedOutageInfo?.sourceUpdatedAt
-        ? `Плановые: ${plannedOutageInfo.sourceUpdatedAt}`
-        : ""
-    ].filter(Boolean).join(" · ");
+    );
+    const dispatcherConfigUpdateSuffix = dispatcherConfigUpdatedAt
+      ? ` Обновлено: ${dispatcherConfigUpdatedAt}.`
+      : "";
 
     dispatcherConfigStatus.textContent =
       dispatcherConfigCatalog.storageConfigured
-        ? `Структура подразделений, РЭС / районов, источники заявок и привязки активных отключений сохраняются в Redis. Отключения настраиваются через подразделения из блока активных отключений.${sourceSuffix}${outageSuffix ? ` ${outageSuffix}.` : ""}`
-        : `Redis не подключён: отображается только базовая структура, изменения сохранить нельзя.${sourceSuffix}${outageSuffix ? ` ${outageSuffix}.` : ""}`;
+        ? `Структура подразделений, РЭС / районов, источники заявок и привязки активных отключений сохраняются в Redis. Отключения настраиваются через подразделения из блока активных отключений.${dispatcherConfigUpdateSuffix}`
+        : `Redis не подключён: отображается только базовая структура, изменения сохранить нельзя.${dispatcherConfigUpdateSuffix}`;
 
     dispatcherConfigStatus.classList.toggle(
       "is-warning",
@@ -5451,10 +5411,8 @@ async function loadDispatcherConfigManagement() {
 
     const workordersSuffix =
       workordersInfo?.sourceUpdatedAt
-        ? ` Последний НДР: ${workordersInfo.sourceUpdatedAt}. Распознано журналов: ${workordersInfo.rowCount || 0}${workordersInfo.parts > 1 ? ` · частей: ${workordersInfo.parts}` : ""}.`
-        : workordersInfo?.message
-          ? ` ${workordersInfo.message}`
-          : "";
+        ? ` Обновлено: ${workordersInfo.sourceUpdatedAt}.`
+        : "";
 
     dispatcherWorkordersConfigStatus.textContent =
       dispatcherWorkordersConfigCatalog.storageConfigured
@@ -8061,7 +8019,7 @@ function renderOutageTypeOverviewCard(kind, payload) {
 
   if (payload?.status === "ok") {
     statusEl.textContent = payload?.sourceUpdatedAt
-      ? `Обновлено ${payload.sourceUpdatedAt}`
+      ? `Обновлено: ${payload.sourceUpdatedAt}`
       : "Сводка получена";
   } else if (payload?.stale) {
     statusEl.textContent = "Показаны последние сохранённые данные";
@@ -8318,6 +8276,18 @@ async function loadAllDivisions() {
         ? "—"
         : Number(payload.total || 0);
 
+    const telemetryDivisionCount = divisions.length;
+    const telemetryAppeals = divisions.reduce((sum, division) => sum + Number(division?.appeals || 0), 0);
+    if (monitoringTelemetryOutages) {
+      monitoringTelemetryOutages.textContent = totalOutages.textContent;
+    }
+    if (monitoringTelemetryDivisions) {
+      monitoringTelemetryDivisions.textContent = telemetryDivisionCount;
+    }
+    if (monitoringTelemetryAppeals) {
+      monitoringTelemetryAppeals.textContent = telemetryAppeals;
+    }
+
     if (payload?.status === "ok") {
       dashboardStatus.textContent =
         "Все подразделения обновлены";
@@ -8330,19 +8300,12 @@ async function loadAllDivisions() {
         "Сводка пока недоступна";
     }
 
-    if (payload?.sourceUpdatedAt) {
-      updatedAt.textContent =
-        `СК-11 обновлено ${payload.sourceUpdatedAt}`;
-    } else {
-      const now = new Date();
-      updatedAt.textContent =
-        `Проверено ${now.toLocaleTimeString(
-          "ru-RU",
-          {
-            hour: "2-digit",
-            minute: "2-digit"
-          }
-        )}`;
+    updatedAt.textContent = formatSourceUpdate(
+      payload?.sourceUpdatedAt || formatDateTime(new Date().toISOString())
+    );
+
+    if (monitoringTelemetryUpdated) {
+      monitoringTelemetryUpdated.textContent = formatDateTime(payload?.sourceUpdatedAt || new Date().toISOString());
     }
 
     const expandedToRefresh = outageDivisionsState
