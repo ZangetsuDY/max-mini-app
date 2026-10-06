@@ -7315,3 +7315,39 @@ body,
     font-size: 6.4px;
   }
 }
+
+/* Network-optimized lazy outage details */
+.outage-detail-lazy-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 72px;
+  margin-top: 10px;
+  padding: 14px 16px;
+  border: 1px solid rgba(91, 190, 225, 0.10);
+  border-radius: 14px;
+  background: rgba(2, 18, 32, 0.38);
+  color: #7f9bae;
+  font-size: 11px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.outage-detail-lazy-state.is-error {
+  border-color: rgba(239, 119, 119, 0.16);
+  color: #d69a9a;
+}
+
+/* Outage details: creator of the OMS event */
+.outage-created-by-field {
+  padding: 8px 10px;
+  border: 1px solid rgba(93, 210, 244, 0.10);
+  border-radius: 12px;
+  background: rgba(42, 152, 190, 0.045);
+}
+
+.outage-created-by-field > strong {
+  color: #d9edf6;
+  font-weight: 750;
+}

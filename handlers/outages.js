@@ -23,7 +23,7 @@ import {
 
 function json(data, status = 200) {
   return new Response(
-    JSON.stringify(data, null, 2),
+    JSON.stringify(data),
     {
       status,
       headers: {
@@ -136,32 +136,57 @@ export default {
     }
 
     try {
+      const url = new URL(request.url);
+      const requestedDivisionId = String(
+        url.searchParams.get("division") || ""
+      ).trim();
+      const includeDetails =
+        url.searchParams.get("details") === "1" ||
+        Boolean(requestedDivisionId);
+
       const [divisions, sourceState] = await Promise.all([
         getOutageDivisions(),
         getLatestOutageSnapshot()
       ]);
 
       const snapshot = sourceState.snapshot;
+      const selectedDivisions = requestedDivisionId
+        ? divisions.filter(
+            (division) => String(division.id) === requestedDivisionId
+          )
+        : divisions;
 
-      const resultDivisions = divisions.map((division) => {
+      if (requestedDivisionId && !selectedDivisions.length) {
+        return json(
+          { error: "Подразделение аварийного мониторинга не найдено" },
+          404
+        );
+      }
+
+      const resultDivisions = selectedDivisions.map((division) => {
         const aggregate = aggregateOutageSources(
           snapshot,
           division.sources
         );
+
+        const sourceBreakdown = aggregate.sourceBreakdown.map((source) => ({
+          source: source.source,
+          label: source.label,
+          matched: Boolean(source.matched),
+          count: Number(source.count || 0),
+          appeals: Number(source.appeals || 0),
+          ...(includeDetails
+            ? { outages: Array.isArray(source.outages) ? source.outages : [] }
+            : {})
+        }));
 
         return {
           id: division.id,
           name: division.name,
           count: aggregate.count,
           appeals: aggregate.appeals,
-          configuredSources:
-            aggregate.configuredSources,
-          matchedSources:
-            aggregate.matchedSources,
-          missingSources:
-            aggregate.missingSources,
-          sourceBreakdown:
-            aggregate.sourceBreakdown
+          detailsLoaded: includeDetails,
+          sourceBreakdown
         };
       });
 

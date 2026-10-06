@@ -2,6 +2,8 @@ import http from "node:http";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
+import { brotliCompressSync, gzipSync, constants as zlibConstants } from "node:zlib";
 
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.dirname(__filename);
@@ -46,6 +48,142 @@ const CONTENT_TYPES = {
   ".webp": "image/webp",
   ".ico": "image/x-icon"
 };
+
+const STATIC_ASSET_CACHE = new Map();
+const MIN_COMPRESS_BYTES = 1024;
+
+function isCompressibleContentType(contentType = "") {
+  const value = String(contentType || "").toLowerCase();
+  return (
+    value.startsWith("text/") ||
+    value.includes("application/json") ||
+    value.includes("application/javascript") ||
+    value.includes("image/svg+xml")
+  );
+}
+
+function stripVolatileJsonFields(value) {
+  if (Array.isArray(value)) {
+    return value.map(stripVolatileJsonFields);
+  }
+
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  const result = {};
+
+  for (const [key, item] of Object.entries(value)) {
+    if (key === "updatedAt") continue;
+    result[key] = stripVolatileJsonFields(item);
+  }
+
+  return result;
+}
+
+function makeWeakEtag(payload, contentType = "") {
+  let source = payload;
+
+  if (String(contentType).toLowerCase().includes("application/json")) {
+    try {
+      const parsed = JSON.parse(payload.toString("utf8"));
+      source = Buffer.from(
+        JSON.stringify(stripVolatileJsonFields(parsed)),
+        "utf8"
+      );
+    } catch {
+      source = payload;
+    }
+  }
+
+  const digest = createHash("sha256")
+    .update(source)
+    .digest("hex")
+    .slice(0, 24);
+
+  return `W/"${digest}"`;
+}
+
+function requestEtagMatches(request, etag) {
+  const value = String(request.headers["if-none-match"] || "");
+  if (!value || !etag) return false;
+
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .some((item) => item === "*" || item === etag);
+}
+
+function appendVary(headers, value) {
+  const current = String(headers.Vary || headers.vary || "").trim();
+  const parts = current
+    ? current.split(",").map((item) => item.trim()).filter(Boolean)
+    : [];
+
+  if (!parts.some((item) => item.toLowerCase() === value.toLowerCase())) {
+    parts.push(value);
+  }
+
+  delete headers.vary;
+  headers.Vary = parts.join(", ");
+}
+
+function encodePayload(request, payload, contentType, headers) {
+  if (
+    payload.length < MIN_COMPRESS_BYTES ||
+    !isCompressibleContentType(contentType) ||
+    headers["Content-Encoding"] ||
+    headers["content-encoding"]
+  ) {
+    return payload;
+  }
+
+  const accepted = String(request.headers["accept-encoding"] || "").toLowerCase();
+
+  try {
+    if (/\bbr\b/.test(accepted)) {
+      const compressed = brotliCompressSync(payload, {
+        params: {
+          [zlibConstants.BROTLI_PARAM_QUALITY]: 4
+        }
+      });
+      headers["Content-Encoding"] = "br";
+      appendVary(headers, "Accept-Encoding");
+      return compressed;
+    }
+
+    if (/\bgzip\b/.test(accepted)) {
+      const compressed = gzipSync(payload, { level: 6 });
+      headers["Content-Encoding"] = "gzip";
+      appendVary(headers, "Accept-Encoding");
+      return compressed;
+    }
+  } catch (error) {
+    console.error("Response compression failed:", error);
+  }
+
+  return payload;
+}
+
+async function getStaticAsset(fileName) {
+  if (STATIC_ASSET_CACHE.has(fileName)) {
+    return STATIC_ASSET_CACHE.get(fileName);
+  }
+
+  const filePath = path.join(ROOT, fileName);
+  const content = await fs.readFile(filePath);
+  const extension = path.extname(filePath).toLowerCase();
+  const contentType = CONTENT_TYPES[extension] || "application/octet-stream";
+  const asset = {
+    content,
+    extension,
+    contentType,
+    etag: makeWeakEtag(content, contentType)
+  };
+
+  STATIC_ASSET_CACHE.set(fileName, asset);
+  return asset;
+}
 
 function log(...args) {
   console.log(
@@ -261,10 +399,53 @@ async function handleApi(
       await webResponse
         .arrayBuffer();
 
-    const payload =
+    const rawPayload =
       Buffer.from(
         arrayBuffer
       );
+
+    const contentType =
+      String(
+        responseHeaders["content-type"] ||
+        responseHeaders["Content-Type"] ||
+        ""
+      );
+
+    if (
+      (method === "GET" || method === "HEAD") &&
+      webResponse.status >= 200 &&
+      webResponse.status < 300
+    ) {
+      const etag = makeWeakEtag(
+        rawPayload,
+        contentType
+      );
+
+      responseHeaders.ETag = etag;
+      responseHeaders["Cache-Control"] =
+        "private, no-cache, must-revalidate";
+
+      if (requestEtagMatches(nodeRequest, etag)) {
+        delete responseHeaders["Content-Length"];
+        delete responseHeaders["content-length"];
+        delete responseHeaders["Content-Encoding"];
+        delete responseHeaders["content-encoding"];
+
+        nodeResponse.writeHead(
+          304,
+          responseHeaders
+        );
+        nodeResponse.end();
+        return;
+      }
+    }
+
+    const payload = encodePayload(
+      nodeRequest,
+      rawPayload,
+      contentType,
+      responseHeaders
+    );
 
     responseHeaders[
       "Content-Length"
@@ -315,54 +496,39 @@ async function serveFile(
   fileName
 ) {
   try {
-    const filePath =
-      path.join(
-        ROOT,
-        fileName
-      );
+    const asset = await getStaticAsset(fileName);
+    const isHtml = asset.extension === ".html";
+    const headers = {
+      "Content-Type": asset.contentType,
+      "Cache-Control": isHtml
+        ? "no-cache, must-revalidate"
+        : "public, max-age=300, must-revalidate",
+      ETag: asset.etag
+    };
 
-    const content =
-      await fs.readFile(
-        filePath
-      );
-
-    const extension =
-      path.extname(
-        filePath
-      )
-        .toLowerCase();
-
-    const isHtml =
-      extension === ".html";
-
-    nodeResponse.writeHead(
-      200,
-      {
-        "Content-Type":
-          CONTENT_TYPES[
-            extension
-          ] ||
-          "application/octet-stream",
-        "Content-Length":
-          String(content.length),
-        "Cache-Control":
-          isHtml
-            ? "no-cache, no-store, must-revalidate"
-            : "public, max-age=300"
-      }
-    );
-
-    if (
-      nodeRequest.method ===
-      "HEAD"
-    ) {
+    if (requestEtagMatches(nodeRequest, asset.etag)) {
+      nodeResponse.writeHead(304, headers);
       nodeResponse.end();
       return;
     }
 
-    nodeResponse.end(
-      content
+    const payload = encodePayload(
+      nodeRequest,
+      asset.content,
+      asset.contentType,
+      headers
     );
+
+    headers["Content-Length"] = String(payload.length);
+
+    nodeResponse.writeHead(200, headers);
+
+    if (nodeRequest.method === "HEAD") {
+      nodeResponse.end();
+      return;
+    }
+
+    nodeResponse.end(payload);
   } catch (error) {
     console.error(
       "Static file error:",

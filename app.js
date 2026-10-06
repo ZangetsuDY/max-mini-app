@@ -21,10 +21,10 @@ const API_ADMIN_DISPATCHER_CONFIG = "/api/admin/dispatcher-config";
 const API_ADMIN_OUTAGE_CONFIG = "/api/admin/outage-config";
 
 const REFRESH_INTERVAL_MS = 120_000;
-const HEARTBEAT_INTERVAL_MS = 45_000;
-const ADMIN_REFRESH_INTERVAL_MS = 30_000;
-const DISPATCHER_REFRESH_INTERVAL_MS = 20_000;
-const EXECUTIVE_REFRESH_INTERVAL_MS = 30_000;
+const HEARTBEAT_INTERVAL_MS = 60_000;
+const ADMIN_REFRESH_INTERVAL_MS = 60_000;
+const DISPATCHER_REFRESH_INTERVAL_MS = 60_000;
+const EXECUTIVE_REFRESH_INTERVAL_MS = 60_000;
 const SESSION_STORAGE_KEY = "le_app_session";
 const MAX_BRIDGE_URL = "https://st.max.ru/js/max-web-app.js";
 const STARTUP_REQUEST_TIMEOUT_MS = 7_000;
@@ -226,6 +226,10 @@ let dispatcherWorkordersBreakdownUnitId = "";
 let dispatcherWorkordersBreakdownSelection = "__all__";
 let dispatcherWorkordersBreakdownExpanded = true;
 let expandedOutageDivisionIds = new Set();
+let outageDivisionsState = [];
+let outageSourceUpdatedAt = "";
+const outageDetailLoadingIds = new Set();
+const apiJsonCache = new Map();
 
 let accessCatalog = {
   panels: [],
@@ -269,12 +273,76 @@ function getAppSessionToken() {
 
 function setAppSessionToken(token) {
   try {
-    if (token) {
-      sessionStorage.setItem(SESSION_STORAGE_KEY, token);
+    const previous = sessionStorage.getItem(SESSION_STORAGE_KEY) || "";
+    const next = String(token || "");
+
+    if (next) {
+      sessionStorage.setItem(SESSION_STORAGE_KEY, next);
     } else {
       sessionStorage.removeItem(SESSION_STORAGE_KEY);
     }
+
+    if (previous !== next) {
+      apiJsonCache.clear();
+      outageDivisionsState = [];
+      outageDetailLoadingIds.clear();
+    }
   } catch {}
+}
+
+async function fetchJsonWithEtag(url, options = {}, cacheKey = url) {
+  const previous = apiJsonCache.get(cacheKey) || null;
+  const headers = new Headers(options.headers || {});
+
+  if (previous?.etag) {
+    headers.set("If-None-Match", previous.etag);
+  }
+
+  let response = await fetch(url, {
+    ...options,
+    cache: "no-store",
+    headers
+  });
+
+  if (response.status === 304 && previous) {
+    return {
+      response,
+      payload: previous.payload,
+      notModified: true
+    };
+  }
+
+  if (response.status === 304 && !previous) {
+    headers.delete("If-None-Match");
+    response = await fetch(url, {
+      ...options,
+      cache: "no-store",
+      headers
+    });
+  }
+
+  const payload = await response.json().catch(() => null);
+
+  if (response.ok) {
+    const etag = response.headers.get("etag");
+
+    if (etag) {
+      apiJsonCache.set(cacheKey, {
+        etag,
+        payload
+      });
+    }
+  }
+
+  return {
+    response,
+    payload,
+    notModified: false
+  };
+}
+
+function isAppVisible() {
+  return document.visibilityState !== "hidden";
 }
 
 function getMaxInitData() {
@@ -982,11 +1050,14 @@ async function loadDispatcherDashboard({
         ? `?${params.toString()}`
         : "";
 
-    const response = await fetch(
+    const {
+      response,
+      payload,
+      notModified
+    } = await fetchJsonWithEtag(
       `${API_DISPATCHER}${query}`,
       {
         method: "GET",
-        cache: "no-store",
         credentials: "include",
         headers: sessionToken
           ? {
@@ -994,13 +1065,9 @@ async function loadDispatcherDashboard({
                 sessionToken
             }
           : {}
-      }
+      },
+      `dispatcher:${query}`
     );
-
-    const payload =
-      await response
-        .json()
-        .catch(() => null);
 
     if (response.status === 401) {
       setAppSessionToken("");
@@ -1023,7 +1090,7 @@ async function loadDispatcherDashboard({
       return false;
     }
 
-    if (!response.ok) {
+    if (!response.ok && !notModified) {
       throw new Error(
         payload?.error ||
         "Не удалось загрузить интерфейс диспетчера"
@@ -1076,7 +1143,8 @@ function startDispatcherRefresh() {
       () => {
         if (
           currentView ===
-          "dispatcher"
+          "dispatcher" &&
+          isAppVisible()
         ) {
           loadDispatcherDashboard({
             quiet: true
@@ -1473,12 +1541,19 @@ async function loadExecutiveDashboard(options = {}) {
     if (selectedExecutiveUnitId) params.set("unit", selectedExecutiveUnitId);
     const query = params.toString() ? `?${params.toString()}` : "";
 
-    const response = await fetch(`${API_EXECUTIVE_MONITORING}${query}`, {
-      method: "GET",
-      cache: "no-store",
-      credentials: "include",
-      headers: getSessionHeaders()
-    });
+    const {
+      response,
+      payload,
+      notModified
+    } = await fetchJsonWithEtag(
+      `${API_EXECUTIVE_MONITORING}${query}`,
+      {
+        method: "GET",
+        credentials: "include",
+        headers: getSessionHeaders()
+      },
+      `executive:${query}`
+    );
 
     if (response.status === 401) {
       setAppSessionToken("");
@@ -1486,8 +1561,7 @@ async function loadExecutiveDashboard(options = {}) {
       return false;
     }
 
-    const payload = await response.json().catch(() => null);
-    if (!response.ok) {
+    if (!response.ok && !notModified) {
       throw new Error(payload?.message || payload?.error || `Сервер вернул ошибку ${response.status}`);
     }
 
@@ -1518,7 +1592,7 @@ async function navigateExecutive() {
 function startExecutiveRefresh() {
   stopExecutiveRefresh();
   executiveRefreshTimer = setInterval(() => {
-    if (currentView === "executive") {
+    if (currentView === "executive" && isAppVisible()) {
       loadExecutiveDashboard({ quiet: true });
     }
   }, EXECUTIVE_REFRESH_INTERVAL_MS);
@@ -3017,7 +3091,11 @@ function startHeartbeat() {
 
   heartbeatTimer =
     setInterval(
-      sendHeartbeat,
+      () => {
+        if (isAppVisible()) {
+          sendHeartbeat();
+        }
+      },
       HEARTBEAT_INTERVAL_MS
     );
 }
@@ -6764,7 +6842,8 @@ function startAdminRefresh() {
     setInterval(
       () => {
         if (
-          currentView === "admin"
+          currentView === "admin" &&
+          isAppVisible()
         ) {
           loadAdminDashboard();
         }
@@ -6856,6 +6935,7 @@ function renderOutageEvent(event = {}) {
   const equipment = String(event?.equipment || "").trim();
   const energyObject = String(event?.energyObject || "").trim();
   const createdAt = String(event?.createdAt || "").trim();
+  const createdBy = String(event?.createdBy || "").trim();
 
   return `
     <article class="outage-event-card">
@@ -6875,6 +6955,12 @@ function renderOutageEvent(event = {}) {
           <div class="outage-detail-field">
             <span>Создано</span>
             <strong>${escapeHtml(createdAt)}</strong>
+          </div>
+        ` : ""}
+        ${createdBy ? `
+          <div class="outage-detail-field outage-created-by-field">
+            <span>Создал</span>
+            <strong>${escapeHtml(createdBy)}</strong>
           </div>
         ` : ""}
         ${equipment ? `
@@ -7020,7 +7106,16 @@ function renderDivisionCards(divisions = []) {
                 <span>${appeals} обращений</span>
               </div>
             </div>
-            ${breakdown.map((source) => renderOutageSource(source)).join("")}
+            ${division?.detailsLoaded
+              ? breakdown.map((source) => renderOutageSource(source)).join("")
+              : `
+                <div class="outage-detail-lazy-state ${division?.detailError ? "is-error" : ""}">
+                  ${division?.detailError ? "" : '<span class="system-pulse"></span>'}
+                  <span>${division?.detailError
+                    ? `Не удалось загрузить детали: ${escapeHtml(division.detailError)}. Сверните и откройте снова.`
+                    : "Загрузка деталей только для этого подразделения…"}</span>
+                </div>
+              `}
           </div>
         ` : ""}
       </article>
@@ -7036,11 +7131,19 @@ function renderDivisionCards(divisions = []) {
 
         if (expandedOutageDivisionIds.has(divisionId)) {
           expandedOutageDivisionIds.delete(divisionId);
-        } else {
-          expandedOutageDivisionIds.add(divisionId);
+          renderDivisionCards(outageDivisionsState.length ? outageDivisionsState : items);
+          return;
         }
 
-        renderDivisionCards(items);
+        expandedOutageDivisionIds.add(divisionId);
+        renderDivisionCards(outageDivisionsState.length ? outageDivisionsState : items);
+
+        const division = (outageDivisionsState.length ? outageDivisionsState : items)
+          .find((item) => String(item?.id || "") === divisionId);
+
+        if (!division?.detailsLoaded) {
+          loadOutageDivisionDetails(divisionId);
+        }
       });
     });
 
@@ -7085,6 +7188,103 @@ function renderOutageLoadError(message) {
   }
 }
 
+async function loadOutageDivisionDetails(divisionId) {
+  const id = String(divisionId || "").trim();
+
+  if (!id || outageDetailLoadingIds.has(id)) {
+    return;
+  }
+
+  const initData = getMaxInitData();
+  if (!initData) return;
+
+  const sessionToken = getAppSessionToken();
+  const params = new URLSearchParams({
+    division: id,
+    details: "1"
+  });
+  const url = `${API_OUTAGES}?${params.toString()}`;
+
+  outageDetailLoadingIds.add(id);
+
+  try {
+    const {
+      response,
+      payload,
+      notModified
+    } = await fetchJsonWithEtag(
+      url,
+      {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "X-Max-Init-Data": initData,
+          ...(sessionToken ? { "X-App-Session": sessionToken } : {})
+        }
+      },
+      `outages:detail:${id}`
+    );
+
+    if (response.status === 401) {
+      setAppSessionToken("");
+      stopAutoRefresh();
+      showLoginScreen();
+      return;
+    }
+
+    if (!response.ok && !notModified) {
+      throw new Error(
+        payload?.error ||
+        `Сервер вернул ошибку ${response.status}`
+      );
+    }
+
+    const detail = Array.isArray(payload?.divisions)
+      ? payload.divisions[0]
+      : null;
+
+    if (!detail) {
+      throw new Error("Детализация подразделения не получена");
+    }
+
+    outageDivisionsState = outageDivisionsState.map((division) =>
+      String(division?.id || "") === id
+        ? {
+            ...division,
+            ...detail,
+            detailsLoaded: true,
+            detailError: ""
+          }
+        : division
+    );
+
+    if (currentView === "monitoring") {
+      renderDivisionCards(outageDivisionsState);
+    }
+  } catch (error) {
+    console.error("Outage detail load failed:", error);
+
+    outageDivisionsState = outageDivisionsState.map((division) =>
+      String(division?.id || "") === id
+        ? {
+            ...division,
+            detailsLoaded: false,
+            detailError:
+              error instanceof Error
+                ? error.message
+                : "Не удалось загрузить детализацию"
+          }
+        : division
+    );
+
+    if (currentView === "monitoring") {
+      renderDivisionCards(outageDivisionsState);
+    }
+  } finally {
+    outageDetailLoadingIds.delete(id);
+  }
+}
+
 async function loadAllDivisions() {
   const version = ++loadVersion;
 
@@ -7103,24 +7303,21 @@ async function loadAllDivisions() {
   const sessionToken = getAppSessionToken();
 
   try {
-    const response = await fetch(
+    const {
+      response,
+      payload,
+      notModified
+    } = await fetchJsonWithEtag(
       API_OUTAGES,
       {
         method: "GET",
-        cache: "no-store",
         credentials: "include",
         headers: {
           "X-Max-Init-Data": initData,
-          ...(
-            sessionToken
-              ? {
-                  "X-App-Session":
-                    sessionToken
-                }
-              : {}
-          )
+          ...(sessionToken ? { "X-App-Session": sessionToken } : {})
         }
-      }
+      },
+      "outages:summary"
     );
 
     if (response.status === 401) {
@@ -7133,11 +7330,7 @@ async function loadAllDivisions() {
       );
     }
 
-    const payload = await response
-      .json()
-      .catch(() => null);
-
-    if (!response.ok) {
+    if (!response.ok && !notModified) {
       throw new Error(
         payload?.error ||
         `Сервер вернул ошибку ${response.status}`
@@ -7146,12 +7339,29 @@ async function loadAllDivisions() {
 
     if (version !== loadVersion) return;
 
+    if (notModified && outageDivisionsState.length) {
+      dashboardStatus.textContent = "Изменений в сводке нет";
+      return;
+    }
+
     const divisions =
       Array.isArray(payload?.divisions)
         ? payload.divisions
         : [];
 
-    renderDivisionCards(divisions);
+    outageSourceUpdatedAt = String(
+      payload?.sourceUpdatedAt ||
+      payload?.messageTimestamp ||
+      ""
+    );
+
+    outageDivisionsState = divisions.map((division) => ({
+      ...division,
+      detailsLoaded: Boolean(division?.detailsLoaded),
+      detailError: ""
+    }));
+
+    renderDivisionCards(outageDivisionsState);
 
     totalOutages.textContent =
       payload?.total === null ||
@@ -7185,6 +7395,17 @@ async function loadAllDivisions() {
           }
         )}`;
     }
+
+    const expandedToRefresh = outageDivisionsState
+      .filter((division) =>
+        expandedOutageDivisionIds.has(String(division?.id || "")) &&
+        !division?.detailsLoaded
+      )
+      .map((division) => String(division.id));
+
+    for (const divisionId of expandedToRefresh) {
+      loadOutageDivisionDetails(divisionId);
+    }
   } catch (error) {
     if (version !== loadVersion) return;
 
@@ -7201,7 +7422,7 @@ function startAutoRefresh() {
 
   refreshTimer = setInterval(
     () => {
-      if (currentView === "monitoring") {
+      if (currentView === "monitoring" && isAppVisible()) {
         loadAllDivisions();
       }
     },
@@ -7215,6 +7436,24 @@ function stopAutoRefresh() {
     refreshTimer = null;
   }
 }
+
+document.addEventListener("visibilitychange", () => {
+  if (!isAppVisible()) {
+    return;
+  }
+
+  sendHeartbeat();
+
+  if (currentView === "monitoring") {
+    loadAllDivisions();
+  } else if (currentView === "dispatcher") {
+    loadDispatcherDashboard({ quiet: true });
+  } else if (currentView === "executive") {
+    loadExecutiveDashboard({ quiet: true });
+  } else if (currentView === "admin") {
+    loadAdminDashboard();
+  }
+});
 
 checkSession();
 

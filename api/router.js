@@ -37,7 +37,7 @@ const ROUTES = new Map([
 
 function json(data, status = 200) {
   return new Response(
-    JSON.stringify(data, null, 2),
+    JSON.stringify(data),
     {
       status,
       headers: {
