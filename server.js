@@ -33,7 +33,8 @@ const STATIC_FILES = new Map([
   ["/", "index.html"],
   ["/index.html", "index.html"],
   ["/app.js", "app.js"],
-  ["/style.css", "style.css"]
+  ["/style.css", "style.css"],
+  ["/pro.css", "pro.css"]
 ]);
 
 const CONTENT_TYPES = {
@@ -500,9 +501,10 @@ async function serveFile(
     const isHtml = asset.extension === ".html";
     const headers = {
       "Content-Type": asset.contentType,
-      "Cache-Control": isHtml
-        ? "no-cache, must-revalidate"
-        : "public, max-age=300, must-revalidate",
+      "Cache-Control":
+        isHtml || asset.extension === ".css" || asset.extension === ".js"
+          ? "no-cache, no-store, must-revalidate"
+          : "public, max-age=300, must-revalidate",
       ETag: asset.etag
     };
 
