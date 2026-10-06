@@ -7351,3 +7351,40 @@ body,
   color: #d9edf6;
   font-weight: 750;
 }
+
+
+/* PC polish for long outage division titles (for example: "Не принявшие смену") */
+@media (min-width: 1180px) {
+  .outage-counter-card.has-long-title .outage-counter-header .division-main h2 {
+    font-size: clamp(15px, 1.05vw, 19px);
+    line-height: 1.04;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  .outage-counter-card.outage-card-shift-unassigned {
+    grid-column: span 2;
+  }
+
+  .outage-counter-card.outage-card-shift-unassigned .outage-counter-header {
+    min-height: 132px;
+  }
+
+  .outage-counter-card.outage-card-shift-unassigned .division-main > div:last-child {
+    max-width: 260px;
+  }
+
+  .outage-counter-card.outage-card-shift-unassigned .outage-counter-header .division-main h2 {
+    max-width: 10.8ch;
+    font-size: clamp(24px, 1.65vw, 30px);
+    line-height: 0.98;
+    letter-spacing: -0.028em;
+    overflow-wrap: normal;
+    word-break: keep-all;
+    text-wrap: balance;
+  }
+
+  .outage-counter-card.outage-card-shift-unassigned .outage-counter-header .division-main p {
+    max-width: 190px;
+  }
+}

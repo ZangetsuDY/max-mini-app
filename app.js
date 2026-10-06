@@ -7039,10 +7039,14 @@ function renderDivisionCards(divisions = []) {
     const canExpand = breakdown.length > 0;
     const isExpanded = canExpand && expandedOutageDivisionIds.has(String(division.id));
     const appeals = Number(division?.appeals || 0);
+    const divisionName = String(division?.name || "").trim();
+    const normalizedDivisionName = divisionName.toLowerCase();
+    const isShiftUnassigned = normalizedDivisionName.includes("не приняв");
+    const hasLongTitle = divisionName.length >= 16 || /\s/.test(divisionName);
 
     return `
       <article
-        class="division-card outage-counter-card ${isExpanded ? "is-expanded" : ""}"
+        class="division-card outage-counter-card ${isExpanded ? "is-expanded" : ""} ${hasLongTitle ? "has-long-title" : ""} ${isShiftUnassigned ? "outage-card-shift-unassigned" : ""}"
         id="card-${escapeHtml(division.id)}"
       >
         <div class="division-header outage-counter-header">
