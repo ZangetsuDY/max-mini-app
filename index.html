@@ -366,6 +366,20 @@
 
       <div id="activeOutagesSelector" class="active-outages-selector">
         <div class="active-outages-hero glass-panel">
+          <div class="ambient-energy-schematic ambient-energy-schematic-outages" aria-hidden="true">
+            <svg viewBox="0 0 260 120">
+              <path class="aes-bus aes-bus-hot" d="M18 26H242"/>
+              <path class="aes-line aes-flow" d="M56 26V58M130 26V58M204 26V58"/>
+              <rect class="aes-breaker" x="50" y="42" width="12" height="10"/>
+              <rect class="aes-breaker" x="124" y="42" width="12" height="10"/>
+              <rect class="aes-breaker" x="198" y="42" width="12" height="10"/>
+              <path class="aes-bus aes-bus-cold" d="M28 82H232"/>
+              <path class="aes-line aes-flow aes-flow-slow" d="M56 58V82M130 58V82M204 58V82M84 82V108M176 82V108"/>
+              <circle class="aes-node" cx="84" cy="82" r="4"/>
+              <circle class="aes-node" cx="176" cy="82" r="4"/>
+              <text x="18" y="18">OMS BUS</text><text x="190" y="112">SYNC</text>
+            </svg>
+          </div>
           <div>
             <span class="micro-label">АКТИВНЫЕ ОТКЛЮЧЕНИЯ</span>
             <h1>Состояние отключений</h1>
@@ -482,6 +496,14 @@
 
       <div class="executive-shell">
         <div class="executive-hero glass-panel">
+          <div class="ambient-energy-schematic ambient-energy-schematic-executive" aria-hidden="true">
+            <svg viewBox="0 0 320 100">
+              <path class="aes-grid" d="M8 78H312M8 52H312M8 26H312M54 8V92M106 8V92M158 8V92M210 8V92M262 8V92"/>
+              <path class="aes-wave" d="M10 57 C28 57,28 43,46 43 S64 66,82 66 S100 49,118 49 S136 56,154 56 S172 39,190 39 S208 63,226 63 S244 50,262 50 S280 56,310 56"/>
+              <path class="aes-wave-glow" d="M10 57 C28 57,28 43,46 43 S64 66,82 66 S100 49,118 49 S136 56,154 56 S172 39,190 39 S208 63,226 63 S244 50,262 50 S280 56,310 56"/>
+              <text x="10" y="18">GRID FREQ · 50 Hz</text>
+            </svg>
+          </div>
           <div class="executive-hero-copy">
             <span class="micro-label">РУКОВОДЯЩИЙ КОНТУР</span>
             <h1>Диспетчерский мониторинг</h1>
@@ -786,6 +808,20 @@
 
       <div class="dispatcher-shell">
         <div class="dispatcher-hero">
+          <div class="ambient-energy-schematic ambient-energy-schematic-dispatcher" aria-hidden="true">
+            <svg viewBox="0 0 300 130">
+              <path class="aes-bus aes-bus-cold" d="M18 30H282"/>
+              <path class="aes-line aes-flow" d="M58 30V72M150 30V72M242 30V72"/>
+              <rect class="aes-breaker" x="52" y="48" width="12" height="10"/>
+              <rect class="aes-breaker" x="144" y="48" width="12" height="10"/>
+              <rect class="aes-breaker" x="236" y="48" width="12" height="10"/>
+              <path class="aes-bus aes-bus-green" d="M30 88H270"/>
+              <path class="aes-line aes-flow aes-flow-slow" d="M58 72V88M150 72V88M242 72V88M96 88V120M204 88V120"/>
+              <circle class="aes-node aes-node-live" cx="96" cy="88" r="4"/>
+              <circle class="aes-node" cx="204" cy="88" r="4"/>
+              <text x="18" y="20">SCADA LINK</text><text x="216" y="122">BUS A</text>
+            </svg>
+          </div>
           <div>
             <span class="micro-label">ИНТЕРФЕЙС ДИСПЕТЧЕРА</span>
             <h1>Оперативная панель диспетчера</h1>
@@ -1125,6 +1161,17 @@
       </div>
 
       <div class="admin-hero">
+        <div class="ambient-energy-schematic ambient-energy-schematic-admin" aria-hidden="true">
+          <svg viewBox="0 0 260 100">
+            <path class="aes-bus aes-bus-hot" d="M18 26H242"/>
+            <g class="aes-switches">
+              <path d="M52 26V52M130 26V52M208 26V52"/>
+              <circle cx="52" cy="60" r="5"/><circle cx="130" cy="60" r="5"/><circle cx="208" cy="60" r="5"/>
+              <path class="aes-flow" d="M52 65V90M130 65V90M208 65V90"/>
+            </g>
+            <text x="18" y="18">CONTROL BUS</text>
+          </svg>
+        </div>
         <div>
           <span class="micro-label">ДОСТУП РАЗРАБОТЧИКА</span>
           <h1>Центр управления системой</h1>
