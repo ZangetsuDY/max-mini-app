@@ -8329,3 +8329,91 @@ body,
     justify-content: flex-start;
   }
 }
+
+
+/* Donut marker polish: readable pills with collision-safe placement */
+.dispatcher-donut-marker {
+  position: absolute;
+  z-index: 3;
+  min-width: 28px;
+  min-height: 24px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--marker-color, #45c8f4) 78%, #ffffff 22%);
+  background: linear-gradient(180deg, rgba(5, 20, 35, .97), rgba(2, 14, 27, .95));
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .30), inset 0 1px 0 rgba(255,255,255,.06);
+  color: #f8fcff;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -.02em;
+  pointer-events: none;
+}
+
+.dispatcher-donut-marker::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: var(--connector-width, 18px);
+  height: 1px;
+  transform-origin: center;
+  transform: translateY(-50%) rotate(var(--connector-angle, 0rad));
+  background: linear-gradient(90deg, rgba(255,255,255,.06), color-mix(in srgb, var(--marker-color, #45c8f4) 80%, white 20%));
+  opacity: .82;
+}
+
+.dispatcher-donut-marker::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  margin-top: -3.5px;
+  border-radius: 50%;
+  background: var(--marker-color, #45c8f4);
+  box-shadow: 0 0 0 2px rgba(4, 16, 30, .92), 0 0 12px color-mix(in srgb, var(--marker-color, #45c8f4) 55%, transparent 45%);
+}
+
+.dispatcher-donut-marker.is-right::before,
+.dispatcher-donut-marker.is-right::after {
+  right: 100%;
+  margin-right: 6px;
+}
+
+.dispatcher-donut-marker.is-right::before {
+  transform-origin: right center;
+}
+
+.dispatcher-donut-marker.is-left::before,
+.dispatcher-donut-marker.is-left::after {
+  left: 100%;
+  margin-left: 6px;
+}
+
+.dispatcher-donut-marker.is-left::before {
+  transform-origin: left center;
+}
+
+.dispatcher-donut-marker span {
+  position: relative;
+  z-index: 1;
+}
+
+.dispatcher-workorders-donut,
+.dispatcher-requests-donut,
+.executive-donut {
+  overflow: visible;
+}
+
+@media (max-width: 760px) {
+  .dispatcher-donut-marker {
+    min-width: 24px;
+    min-height: 20px;
+    padding: 0 6px;
+    font-size: 10px;
+  }
+}

@@ -2009,6 +2009,19 @@ function renderDispatcherDonutChart(
 
   let cursor = 0;
   const gradientParts = [];
+  const markerData = [];
+  const chartSize =
+    Math.max(
+      chartElement.clientWidth || 0,
+      chartElement.clientHeight || 0,
+      150
+    );
+  const center = chartSize / 2;
+  const anchorRadius = chartSize * 0.34;
+  const labelRadius = chartSize * 0.43;
+  const sideOffset = chartSize * 0.09;
+  const verticalPadding = chartSize * 0.14;
+  const minVerticalGap = Math.max(18, chartSize * 0.11);
 
   normalized.forEach((segment) => {
     const safeValue = Math.max(0, segment.value);
@@ -2027,22 +2040,90 @@ function renderDispatcherDonutChart(
           Math.PI *
           2 -
         Math.PI / 2;
-      const marker =
-        document.createElement("div");
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const side = cos >= 0 ? "right" : "left";
 
-      marker.className =
-        "dispatcher-donut-marker";
-      marker.textContent = String(safeValue);
-      marker.title = segment.label
-        ? `${segment.label}: ${safeValue}`
-        : String(safeValue);
-      marker.style.left = `${50 + Math.cos(angle) * 41}%`;
-      marker.style.top = `${50 + Math.sin(angle) * 41}%`;
-      marker.style.background = segment.color;
-      chartElement.appendChild(marker);
+      markerData.push({
+        segment,
+        safeValue,
+        side,
+        anchorX: center + cos * anchorRadius,
+        anchorY: center + sin * anchorRadius,
+        labelX:
+          center +
+          cos * labelRadius +
+          (side === "right"
+            ? sideOffset
+            : -sideOffset),
+        labelY: center + sin * labelRadius
+      });
     }
 
     cursor = end;
+  });
+
+  ["left", "right"].forEach((side) => {
+    const sideMarkers = markerData
+      .filter((item) => item.side === side)
+      .sort((a, b) => a.labelY - b.labelY);
+
+    sideMarkers.forEach((item, index) => {
+      const minY =
+        verticalPadding +
+        index * minVerticalGap;
+      item.labelY = Math.max(
+        item.labelY,
+        minY
+      );
+    });
+
+    for (
+      let index = sideMarkers.length - 1;
+      index >= 0;
+      index -= 1
+    ) {
+      const item = sideMarkers[index];
+      const maxY =
+        chartSize -
+        verticalPadding -
+        (sideMarkers.length - 1 - index) *
+          minVerticalGap;
+      item.labelY = Math.min(
+        item.labelY,
+        maxY
+      );
+    }
+  });
+
+  markerData.forEach((item) => {
+    const marker =
+      document.createElement("div");
+
+    marker.className =
+      `dispatcher-donut-marker is-${item.side}`;
+    marker.title = item.segment.label
+      ? `${item.segment.label}: ${item.safeValue}`
+      : String(item.safeValue);
+    marker.style.left = `${item.labelX}px`;
+    marker.style.top = `${item.labelY}px`;
+    marker.style.setProperty(
+      "--marker-color",
+      item.segment.color
+    );
+    marker.style.setProperty(
+      "--connector-width",
+      `${Math.max(14, Math.hypot(item.labelX - item.anchorX, item.labelY - item.anchorY) - 16)}px`
+    );
+    marker.style.setProperty(
+      "--connector-angle",
+      `${Math.atan2(item.anchorY - item.labelY, item.anchorX - item.labelX)}rad`
+    );
+
+    const value = document.createElement("span");
+    value.textContent = String(item.safeValue);
+    marker.appendChild(value);
+    chartElement.appendChild(marker);
   });
 
   chartElement.style.background =
