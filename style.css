@@ -7876,7 +7876,7 @@ body,
    ========================================================= */
 
 .dispatcher-outages-panel {
-  margin-top: 16px;
+  margin-top: 0;
 }
 
 .dispatcher-outage-kpis {
@@ -8046,6 +8046,138 @@ body,
   border-bottom: 0;
 }
 
+.dispatcher-outage-details {
+  border-top: 1px solid rgba(255, 255, 255, .05);
+}
+
+.dispatcher-outage-details > summary {
+  min-height: 48px;
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  list-style: none;
+  color: #8fb0c3;
+  background: rgba(1, 12, 23, .24);
+  font-size: 10px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.dispatcher-outage-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+.dispatcher-outage-details > summary svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  fill: none;
+  stroke: #69c5df;
+  stroke-width: 2;
+  transition: transform .18s ease;
+}
+
+.dispatcher-outage-details[open] > summary svg {
+  transform: rotate(180deg);
+}
+
+.dispatcher-outage-details-body {
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  background: rgba(1, 10, 20, .22);
+}
+
+.dispatcher-outage-detail-division {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid rgba(83, 205, 241, .08);
+  border-radius: 14px;
+  background: rgba(4, 21, 39, .48);
+}
+
+.dispatcher-outage-detail-division-head {
+  padding: 12px 13px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, .04);
+}
+
+.dispatcher-outage-detail-division-head > div:first-child {
+  min-width: 0;
+}
+
+.dispatcher-outage-detail-division-head h4 {
+  margin: 3px 0 0;
+  color: #eaf5fa;
+  font-size: 13px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.dispatcher-outage-detail-division-head small {
+  display: block;
+  margin-top: 4px;
+  color: #708fa3;
+  font-size: 9px;
+}
+
+.dispatcher-outage-detail-division-metrics {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.dispatcher-outage-detail-division-metrics span {
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, .055);
+  border-radius: 10px;
+  color: #89a7b8;
+  background: rgba(255, 255, 255, .02);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.dispatcher-outage-detail-division-metrics b {
+  margin-right: 2px;
+  color: #eef8fc;
+  font-size: 12px;
+}
+
+.dispatcher-outage-detail-division-metrics .has-appeals {
+  color: #d5aa60;
+  border-color: rgba(255, 191, 76, .14);
+  background: rgba(255, 170, 49, .05);
+}
+
+.dispatcher-outage-role-details {
+  padding: 10px;
+  display: grid;
+  gap: 8px;
+}
+
+.dispatcher-outage-role-details .outage-events-list {
+  grid-template-columns: 1fr;
+}
+
+.dispatcher-outage-detail-empty {
+  padding: 16px 12px;
+  color: #6f8ea2;
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.dispatcher-outage-detail-empty.is-compact {
+  padding: 12px;
+}
+
 @media (max-width: 940px) {
   .dispatcher-outage-tables,
   .outage-unassigned-grid {
@@ -8065,58 +8197,135 @@ body,
 
 .dispatcher-outage-division-picker {
   display: grid;
-  gap: 9px;
+  gap: 10px;
   margin-top: 14px;
 }
 
 .dispatcher-outage-division-option {
   position: relative;
+  overflow: hidden;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: flex-start;
-  gap: 11px;
+  gap: 10px;
   padding: 13px 14px;
   border-radius: 14px;
   border: 1px solid rgba(249, 115, 22, .10);
   background: rgba(3, 18, 34, .46);
-  cursor: pointer;
   transition: border-color .18s ease, background .18s ease, transform .18s ease;
 }
 
 .dispatcher-outage-division-option:hover {
   transform: translateY(-1px);
-  border-color: rgba(249, 115, 22, .22);
-  background: rgba(37, 24, 18, .34);
+  border-color: rgba(249, 115, 22, .20);
 }
 
-.dispatcher-outage-division-option input {
+.dispatcher-outage-division-option.is-selected {
+  border-color: rgba(249, 115, 22, .28);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(249, 115, 22, .08), transparent 38%),
+    rgba(36, 24, 18, .42);
+}
+
+.dispatcher-outage-division-option-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+}
+
+.dispatcher-outage-division-master {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: flex-start;
+  gap: 11px;
+  cursor: pointer;
+}
+
+.dispatcher-outage-division-master input,
+.dispatcher-outage-role-option input {
   width: 18px;
   height: 18px;
   margin: 1px 0 0;
   accent-color: #e8843f;
 }
 
-.dispatcher-outage-division-option > span {
+.dispatcher-outage-division-master > span {
   min-width: 0;
   display: grid;
   gap: 4px;
 }
 
-.dispatcher-outage-division-option strong {
+.dispatcher-outage-division-master strong {
   color: #eaf3f8;
   font-size: 13px;
 }
 
-.dispatcher-outage-division-option small {
+.dispatcher-outage-division-master small {
   color: #7896a8;
   font-size: 10px;
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
 
-.dispatcher-outage-division-option:has(input:checked) {
-  border-color: rgba(249, 115, 22, .28);
-  background:
-    radial-gradient(circle at 100% 0%, rgba(249, 115, 22, .08), transparent 38%),
-    rgba(36, 24, 18, .42);
+.dispatcher-outage-role-count {
+  min-width: 48px;
+  padding: 6px 8px;
+  border: 1px solid rgba(249, 115, 22, .12);
+  border-radius: 999px;
+  color: #dcaa80;
+  background: rgba(249, 115, 22, .045);
+  font-size: 9px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.dispatcher-outage-role-picker {
+  margin-left: 29px;
+  padding-top: 9px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  border-top: 1px solid rgba(255, 255, 255, .04);
+}
+
+.dispatcher-outage-role-option {
+  min-width: 0;
+  padding: 8px 9px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  border: 1px solid rgba(255, 255, 255, .045);
+  border-radius: 10px;
+  color: #91adbd;
+  background: rgba(1, 12, 24, .32);
+  font-size: 9px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.dispatcher-outage-role-option span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dispatcher-outage-role-option:has(input:checked) {
+  border-color: rgba(249, 115, 22, .18);
+  color: #e5c0a0;
+  background: rgba(249, 115, 22, .045);
+}
+
+@media (max-width: 640px) {
+  .dispatcher-outage-role-picker {
+    margin-left: 0;
+    grid-template-columns: 1fr;
+  }
+
+  .dispatcher-outage-detail-division-head {
+    flex-direction: column;
+  }
+
+  .dispatcher-outage-detail-division-metrics {
+    justify-content: flex-start;
+  }
 }

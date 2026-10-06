@@ -330,6 +330,10 @@ export default {
               Array.isArray(body?.divisionIds)
                 ? body.divisionIds
                 : [],
+            selections:
+              Array.isArray(body?.selections)
+                ? body.selections
+                : undefined,
             actor: auth.access
           });
 

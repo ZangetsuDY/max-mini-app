@@ -199,6 +199,8 @@ const dispatcherPlannedOutagesCount = document.getElementById("dispatcherPlanned
 const dispatcherPlannedAppealsCount = document.getElementById("dispatcherPlannedAppealsCount");
 const dispatcherEmergencyOutagesTableBody = document.getElementById("dispatcherEmergencyOutagesTableBody");
 const dispatcherPlannedOutagesTableBody = document.getElementById("dispatcherPlannedOutagesTableBody");
+const dispatcherEmergencyOutagesDetails = document.getElementById("dispatcherEmergencyOutagesDetails");
+const dispatcherPlannedOutagesDetails = document.getElementById("dispatcherPlannedOutagesDetails");
 
 const outageManagementPanel = document.getElementById("outageManagementPanel");
 const outageCreateDivisionButton = document.getElementById("outageCreateDivisionButton");
@@ -2626,12 +2628,80 @@ function renderDispatcherOutageTable(
       <tr class="${row?.matched ? "" : "is-missing"}">
         <td>
           <strong>${escapeHtml(row?.label || row?.source || "—")}</strong>
-          ${row?.matched ? "" : "<small>строка не найдена в последней сводке</small>"}
+          ${row?.matched
+            ? ""
+            : Number(row?.sourceCount || 0) > 0
+              ? "<small>роль не найдена в последней сводке</small>"
+              : "<small>для подразделения не выбраны действующие роли</small>"}
         </td>
         <td>${Number(row?.count || 0)}</td>
         <td>${Number(row?.appeals || 0)}</td>
       </tr>
     `)
+    .join("");
+}
+
+function renderDispatcherOutageDetails(
+  container,
+  data,
+  emptyLabel
+) {
+  if (!container) return;
+
+  const breakdown = Array.isArray(data?.breakdown)
+    ? data.breakdown
+    : [];
+
+  if (!breakdown.length) {
+    container.innerHTML = `
+      <div class="dispatcher-outage-detail-empty">
+        ${escapeHtml(emptyLabel)}
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = breakdown
+    .map((division) => {
+      const roleBreakdown = Array.isArray(division?.sourceBreakdown)
+        ? division.sourceBreakdown
+        : [];
+      const count = Number(division?.count || 0);
+      const appeals = Number(division?.appeals || 0);
+      const selectedSources = Array.isArray(division?.selectedSources)
+        ? division.selectedSources
+        : [];
+
+      return `
+        <section class="dispatcher-outage-detail-division">
+          <div class="dispatcher-outage-detail-division-head">
+            <div>
+              <span class="micro-label">ПОДРАЗДЕЛЕНИЕ</span>
+              <h4>${escapeHtml(division?.label || division?.source || "—")}</h4>
+              <small>
+                ${selectedSources.length
+                  ? `${selectedSources.length} ${pluralizeRu(selectedSources.length, "роль", "роли", "ролей")} участвует в сводке`
+                  : "Роли для сводки не выбраны"}
+              </small>
+            </div>
+            <div class="dispatcher-outage-detail-division-metrics">
+              <span><b>${count}</b> откл.</span>
+              <span class="${appeals > 0 ? "has-appeals" : ""}"><b>${appeals}</b> обращ.</span>
+            </div>
+          </div>
+
+          ${
+            roleBreakdown.length
+              ? `<div class="dispatcher-outage-role-details">
+                  ${roleBreakdown.map((source) => renderOutageSource(source)).join("")}
+                </div>`
+              : `<div class="dispatcher-outage-detail-empty is-compact">
+                  Нет выбранных ролей для этого подразделения.
+                </div>`
+          }
+        </section>
+      `;
+    })
     .join("");
 }
 
@@ -2642,6 +2712,10 @@ function renderDispatcherOutages(payload) {
   const configuredSources =
     Array.isArray(outages?.sources?.configured)
       ? outages.sources.configured
+      : [];
+  const configuredSelections =
+    Array.isArray(outages?.sources?.selections)
+      ? outages.sources.selections
       : [];
 
   dispatcherEmergencyOutagesCount.textContent =
@@ -2655,8 +2729,19 @@ function renderDispatcherOutages(payload) {
 
   dispatcherOutagesSourcesText.textContent =
     configuredSources.length
-      ? `Подразделения: ${configuredSources.join(" + ")}`
-      : "Подразделения активных отключений не настроены";
+      ? `Подразделения / роли: ${
+          configuredSelections.length
+            ? configuredSelections
+                .map((selection) => {
+                  const roleCount = Array.isArray(selection?.sources)
+                    ? selection.sources.length
+                    : 0;
+                  return `${selection?.divisionName || selection?.divisionId || "—"} (${roleCount})`;
+                })
+                .join(" + ")
+            : configuredSources.join(" + ")
+        }`
+      : "Подразделения и роли активных отключений не настроены";
 
   renderDispatcherOutageTable(
     dispatcherEmergencyOutagesTableBody,
@@ -2672,6 +2757,22 @@ function renderDispatcherOutages(payload) {
     configuredSources.length
       ? "По выбранным подразделениям нет строк плановых отключений"
       : "Настройте подразделения отключений в Управлении приложением"
+  );
+
+  renderDispatcherOutageDetails(
+    dispatcherEmergencyOutagesDetails,
+    emergency,
+    configuredSources.length
+      ? "По выбранным ролям нет аварийных отключений"
+      : "Настройте подразделения и роли отключений в Управлении приложением"
+  );
+
+  renderDispatcherOutageDetails(
+    dispatcherPlannedOutagesDetails,
+    planned,
+    configuredSources.length
+      ? "По выбранным ролям нет плановых отключений"
+      : "Настройте подразделения и роли отключений в Управлении приложением"
   );
 
   const emergencySourceData = emergency?.sourceData || {};
@@ -4660,6 +4761,55 @@ function dispatcherConfigGroupName(
   );
 }
 
+function getDispatcherOutageSelectionMap(unit) {
+  const result = new Map();
+  const divisions = Array.isArray(dispatcherConfigCatalog.outageDivisions)
+    ? dispatcherConfigCatalog.outageDivisions
+    : [];
+  const divisionMap = new Map(
+    divisions.map((division) => [String(division.id), division])
+  );
+
+  if (unit?.outageSelectionMode === "roles") {
+    const selections = Array.isArray(unit?.outageSelections)
+      ? unit.outageSelections
+      : [];
+
+    for (const selection of selections) {
+      const divisionId = String(selection?.divisionId || "");
+      if (!divisionId) continue;
+      result.set(
+        divisionId,
+        new Set(
+          (Array.isArray(selection?.sources) ? selection.sources : [])
+            .map((source) => String(source || "").trim())
+            .filter(Boolean)
+        )
+      );
+    }
+
+    return result;
+  }
+
+  const legacyDivisionIds = Array.isArray(unit?.outageDivisionIds)
+    ? unit.outageDivisionIds
+    : [];
+
+  for (const divisionId of legacyDivisionIds) {
+    const division = divisionMap.get(String(divisionId));
+    result.set(
+      String(divisionId),
+      new Set(
+        (Array.isArray(division?.sources) ? division.sources : [])
+          .map((source) => String(source || "").trim())
+          .filter(Boolean)
+      )
+    );
+  }
+
+  return result;
+}
+
 function renderDispatcherConfigList() {
   const selectedGroupId =
     dispatcherConfigGroupSelect.value ||
@@ -4699,18 +4849,28 @@ function renderDispatcherConfigList() {
           Array.isArray(unit.sources)
             ? unit.sources
             : [];
-        const outageDivisionIds =
-          Array.isArray(unit.outageDivisionIds)
-            ? unit.outageDivisionIds
-            : [];
-        const outageDivisionNames =
-          outageDivisionIds
-            .map((divisionId) =>
-              dispatcherConfigCatalog.outageDivisions.find(
-                (division) => division.id === divisionId
-              )?.name || divisionId
-            )
-            .filter(Boolean);
+        const outageSelectionMap =
+          getDispatcherOutageSelectionMap(unit);
+        const outageSelectionSummaries =
+          [...outageSelectionMap.entries()]
+            .map(([divisionId, selectedRoles]) => {
+              const division =
+                dispatcherConfigCatalog.outageDivisions.find(
+                  (item) => item.id === divisionId
+                );
+
+              if (!division) {
+                return {
+                  name: divisionId,
+                  roleCount: selectedRoles.size
+                };
+              }
+
+              return {
+                name: division.name,
+                roleCount: selectedRoles.size
+              };
+            });
 
         return `
           <article class="dispatcher-config-card">
@@ -4753,17 +4913,19 @@ function renderDispatcherConfigList() {
             <div class="dispatcher-config-section-label is-outages">Активные отключения</div>
             <div class="dispatcher-config-sources dispatcher-config-outage-sources">
               ${
-                outageDivisionNames.length
-                  ? outageDivisionNames
+                outageSelectionSummaries.length
+                  ? outageSelectionSummaries
                       .map(
-                        (source) => `
-                          <span>${escapeHtml(source)}</span>
+                        (selection) => `
+                          <span title="Выбрано ролей: ${Number(selection.roleCount || 0)}">
+                            ${escapeHtml(selection.name)} · ${Number(selection.roleCount || 0)} ${pluralizeRu(Number(selection.roleCount || 0), "роль", "роли", "ролей")}
+                          </span>
                         `
                       )
                       .join("")
                   : `
                     <span class="is-empty">
-                      Подразделения отключений не выбраны · аварийные и плановые будут по нулям
+                      Подразделения и роли отключений не выбраны · аварийные и плановые будут по нулям
                     </span>
                   `
               }
@@ -5805,6 +5967,65 @@ function openDispatcherSourceEditor(
   );
 }
 
+function bindDispatcherOutageRolePicker() {
+  const groups = [
+    ...managementBody.querySelectorAll(
+      "[data-dispatcher-outage-division-group]"
+    )
+  ];
+
+  const syncGroup = (group) => {
+    const master = group.querySelector(
+      'input[name="dispatcherOutageDivisionToggle"]'
+    );
+    const roles = [
+      ...group.querySelectorAll(
+        'input[name="dispatcherOutageRole"]'
+      )
+    ];
+    const count = group.querySelector(
+      "[data-dispatcher-outage-role-count]"
+    );
+    const checkedCount = roles.filter((input) => input.checked).length;
+
+    if (master) {
+      master.checked = roles.length > 0 && checkedCount === roles.length;
+      master.indeterminate = checkedCount > 0 && checkedCount < roles.length;
+      master.disabled = roles.length === 0;
+    }
+
+    group.classList.toggle("is-selected", checkedCount > 0);
+
+    if (count) {
+      count.textContent = `${checkedCount}/${roles.length}`;
+    }
+  };
+
+  for (const group of groups) {
+    const master = group.querySelector(
+      'input[name="dispatcherOutageDivisionToggle"]'
+    );
+    const roles = [
+      ...group.querySelectorAll(
+        'input[name="dispatcherOutageRole"]'
+      )
+    ];
+
+    master?.addEventListener("change", () => {
+      for (const role of roles) {
+        role.checked = master.checked;
+      }
+      syncGroup(group);
+    });
+
+    for (const role of roles) {
+      role.addEventListener("change", () => syncGroup(group));
+    }
+
+    syncGroup(group);
+  }
+}
+
 function openDispatcherOutageSourceEditor(
   unitId
 ) {
@@ -5817,11 +6038,8 @@ function openDispatcherOutageSourceEditor(
     return;
   }
 
-  const selectedDivisionIds = new Set(
-    Array.isArray(unit.outageDivisionIds)
-      ? unit.outageDivisionIds
-      : []
-  );
+  const selectedRolesByDivision =
+    getDispatcherOutageSelectionMap(unit);
 
   const outageDivisions =
     Array.isArray(dispatcherConfigCatalog.outageDivisions)
@@ -5837,10 +6055,9 @@ function openDispatcherOutageSourceEditor(
     },
     bodyHtml: `
       <div class="management-note">
-        Отметьте подразделения из блока «Настройка подразделений активных отключений»,
-        которые должны входить в этот РЭС / район. Их настроенные роли автоматически
-        используются и для аварийного, и для планового чата. Отключения и обращения
-        по выбранным подразделениям суммируются.
+        Выберите подразделения и конкретные роли внутри них, которые должны входить
+        в этот РЭС / район. В сводку попадут только отмеченные роли. Одна настройка
+        применяется одновременно к аварийному и плановому чату.
       </div>
 
       ${
@@ -5851,25 +6068,63 @@ function openDispatcherOutageSourceEditor(
                 const divisionSources =
                   Array.isArray(division.sources)
                     ? division.sources
+                        .map((source) => String(source || "").trim())
+                        .filter(Boolean)
                     : [];
+                const selectedRoles =
+                  selectedRolesByDivision.get(String(division.id)) ||
+                  new Set();
+                const selectedCount = divisionSources.filter(
+                  (source) => selectedRoles.has(source)
+                ).length;
 
                 return `
-                  <label class="dispatcher-outage-division-option">
-                    <input
-                      type="checkbox"
-                      name="dispatcherOutageDivision"
-                      value="${escapeHtml(division.id)}"
-                      ${selectedDivisionIds.has(division.id) ? "checked" : ""}
-                    />
-                    <span>
-                      <strong>${escapeHtml(division.name)}</strong>
-                      <small>
-                        ${divisionSources.length
-                          ? escapeHtml(divisionSources.join(" + "))
-                          : "Роли/источники ещё не настроены"}
-                      </small>
-                    </span>
-                  </label>
+                  <article
+                    class="dispatcher-outage-division-option ${selectedCount ? "is-selected" : ""}"
+                    data-dispatcher-outage-division-group="${escapeHtml(division.id)}"
+                  >
+                    <div class="dispatcher-outage-division-option-head">
+                      <label class="dispatcher-outage-division-master">
+                        <input
+                          type="checkbox"
+                          name="dispatcherOutageDivisionToggle"
+                          data-division-id="${escapeHtml(division.id)}"
+                          ${divisionSources.length && selectedCount === divisionSources.length ? "checked" : ""}
+                          ${divisionSources.length ? "" : "disabled"}
+                        />
+                        <span>
+                          <strong>${escapeHtml(division.name)}</strong>
+                          <small>
+                            ${divisionSources.length
+                              ? "Отметьте нужные роли или выберите подразделение целиком"
+                              : "Роли/источники ещё не настроены"}
+                          </small>
+                        </span>
+                      </label>
+                      <span class="dispatcher-outage-role-count" data-dispatcher-outage-role-count>
+                        ${selectedCount}/${divisionSources.length}
+                      </span>
+                    </div>
+
+                    ${divisionSources.length
+                      ? `
+                        <div class="dispatcher-outage-role-picker">
+                          ${divisionSources.map((source) => `
+                            <label class="dispatcher-outage-role-option">
+                              <input
+                                type="checkbox"
+                                name="dispatcherOutageRole"
+                                data-division-id="${escapeHtml(division.id)}"
+                                value="${escapeHtml(source)}"
+                                ${selectedRoles.has(source) ? "checked" : ""}
+                              />
+                              <span>${escapeHtml(source)}</span>
+                            </label>
+                          `).join("")}
+                        </div>
+                      `
+                      : ""}
+                  </article>
                 `;
               }).join("")}
             </div>
@@ -5883,6 +6138,8 @@ function openDispatcherOutageSourceEditor(
       }
     `
   });
+
+  bindDispatcherOutageRolePicker();
 }
 
 function openManagementModal({
@@ -7006,11 +7263,32 @@ async function saveManagementEditor() {
       managementContext.type ===
       "dispatcher-outage-source"
     ) {
-      const divisionIds = [
+      const selectionMap = new Map();
+      const selectedRoleInputs = [
         ...managementBody.querySelectorAll(
-          'input[name="dispatcherOutageDivision"]:checked'
+          'input[name="dispatcherOutageRole"]:checked'
         )
-      ].map((input) => input.value);
+      ];
+
+      for (const input of selectedRoleInputs) {
+        const divisionId = String(input.dataset.divisionId || "").trim();
+        const source = String(input.value || "").trim();
+        if (!divisionId || !source) continue;
+
+        if (!selectionMap.has(divisionId)) {
+          selectionMap.set(divisionId, []);
+        }
+        selectionMap.get(divisionId).push(source);
+      }
+
+      const selections = [...selectionMap.entries()]
+        .map(([divisionId, sources]) => ({
+          divisionId,
+          sources: [...new Set(sources)]
+        }));
+      const divisionIds = selections.map(
+        (selection) => selection.divisionId
+      );
 
       const response = await fetch(
         API_ADMIN_DISPATCHER_CONFIG,
@@ -7025,7 +7303,8 @@ async function saveManagementEditor() {
           body: JSON.stringify({
             action: "save_outages",
             unitId: managementContext.unitId,
-            divisionIds
+            divisionIds,
+            selections
           })
         }
       );

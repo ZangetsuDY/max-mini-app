@@ -31,7 +31,8 @@ import {
 
 import {
   getLatestOutageSnapshot as getLatestEmergencyOutageSnapshot,
-  aggregateOutageSources as aggregateEmergencyOutageSources
+  aggregateOutageSources as aggregateEmergencyOutageSources,
+  normalizeOutageSourceLabel
 } from "../lib/outage-data.js";
 
 import {
@@ -336,8 +337,48 @@ export default {
         .map((division) => [String(division.id), division])
     );
 
+    const explicitOutageSelections =
+      unitConfig?.outageSelectionMode === "roles" &&
+      Array.isArray(unitConfig?.outageSelections)
+        ? unitConfig.outageSelections
+        : [];
+
+    const explicitOutageSelectionMap = new Map(
+      explicitOutageSelections.map((selection) => [
+        String(selection?.divisionId || ""),
+        Array.isArray(selection?.sources) ? selection.sources : []
+      ])
+    );
+
     const selectedOutageDivisions = selectedOutageDivisionIds
-      .map((divisionId) => outageDivisionMap.get(String(divisionId)))
+      .map((divisionId) => {
+        const division = outageDivisionMap.get(String(divisionId));
+        if (!division) return null;
+
+        const divisionSources = Array.isArray(division.sources)
+          ? division.sources
+              .map((source) => String(source || "").trim())
+              .filter(Boolean)
+          : [];
+
+        const sourceMap = new Map(
+          divisionSources.map((source) => [
+            normalizeOutageSourceLabel(source),
+            source
+          ])
+        );
+
+        const selectedSources = unitConfig?.outageSelectionMode === "roles"
+          ? (explicitOutageSelectionMap.get(String(division.id)) || [])
+              .map((source) => sourceMap.get(normalizeOutageSourceLabel(source)))
+              .filter(Boolean)
+          : divisionSources;
+
+        return {
+          ...division,
+          selectedSources
+        };
+      })
       .filter(Boolean);
 
     const aggregateConfiguredOutageDivisions = (snapshot, aggregateSources) => {
@@ -348,8 +389,8 @@ export default {
       const breakdown = [];
 
       for (const division of selectedOutageDivisions) {
-        const sources = Array.isArray(division.sources)
-          ? division.sources
+        const sources = Array.isArray(division.selectedSources)
+          ? division.selectedSources
           : [];
         const aggregate = aggregateSources(snapshot, sources);
 
@@ -368,12 +409,16 @@ export default {
           id: division.id,
           source: division.name,
           label: division.name,
-          matched: aggregate.matchedSources.length > 0 || sources.length === 0,
+          matched: aggregate.matchedSources.length > 0,
           count: Number(aggregate.count || 0),
           appeals: Number(aggregate.appeals || 0),
           sourceCount: sources.length,
+          selectedSources: sources,
           matchedSources: aggregate.matchedSources,
-          missingSources: aggregate.missingSources
+          missingSources: aggregate.missingSources,
+          sourceBreakdown: Array.isArray(aggregate.sourceBreakdown)
+            ? aggregate.sourceBreakdown
+            : []
         });
       }
 
@@ -533,6 +578,13 @@ export default {
         sources: {
           configured: selectedOutageDivisions.map((division) => division.name),
           configuredDivisionIds: selectedOutageDivisions.map((division) => division.id),
+          selections: selectedOutageDivisions.map((division) => ({
+            divisionId: division.id,
+            divisionName: division.name,
+            sources: Array.isArray(division.selectedSources)
+              ? division.selectedSources
+              : []
+          })),
           customized: Boolean(unitConfig?.outageCustomized)
         },
         emergency: {

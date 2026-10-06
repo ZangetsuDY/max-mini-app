@@ -802,6 +802,106 @@
 
         <div id="dispatcherDataNotice" class="dispatcher-data-notice" hidden></div>
 
+        <article class="dispatcher-panel glass-panel dispatcher-outages-panel">
+          <div class="dispatcher-panel-head">
+            <div>
+              <span class="micro-label">АКТИВНЫЕ ОТКЛЮЧЕНИЯ</span>
+              <h2>Сводка по выбранному РЭС / району</h2>
+            </div>
+            <div id="dispatcherOutagesLiveBadge" class="dispatcher-live-badge">
+              <i></i>
+              LIVE
+            </div>
+          </div>
+
+          <div class="dispatcher-source-meta dispatcher-outages-meta">
+            <span id="dispatcherOutagesMeta">Ожидание данных активных отключений</span>
+            <span id="dispatcherOutagesSourcesText">Подразделения: —</span>
+          </div>
+
+          <div id="dispatcherOutagesNotice" class="dispatcher-data-notice dispatcher-outages-notice" hidden></div>
+
+          <div class="dispatcher-outage-kpis">
+            <div class="dispatcher-outage-kpi is-emergency">
+              <span>Аварийные отключения</span>
+              <strong id="dispatcherEmergencyOutagesCount">0</strong>
+              <small><b id="dispatcherEmergencyAppealsCount">0</b> обращений</small>
+            </div>
+
+            <div class="dispatcher-outage-kpi is-planned">
+              <span>Плановые отключения</span>
+              <strong id="dispatcherPlannedOutagesCount">0</strong>
+              <small><b id="dispatcherPlannedAppealsCount">0</b> обращений</small>
+            </div>
+          </div>
+
+          <div class="dispatcher-outage-tables">
+            <section class="dispatcher-outage-table-card is-emergency">
+              <div class="dispatcher-outage-table-head">
+                <div>
+                  <span class="micro-label">АВАРИЙНЫЕ</span>
+                  <h3>Подразделения и обращения</h3>
+                </div>
+              </div>
+              <div class="dispatcher-table-scroll">
+                <table class="dispatcher-outage-table">
+                  <thead>
+                    <tr>
+                      <th>Подразделение</th>
+                      <th>Отключений</th>
+                      <th>Обращений</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dispatcherEmergencyOutagesTableBody">
+                    <tr><td colspan="3">Ожидание данных…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <details class="dispatcher-outage-details">
+                <summary>
+                  <span>Подробно об аварийных отключениях</span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"></path></svg>
+                </summary>
+                <div id="dispatcherEmergencyOutagesDetails" class="dispatcher-outage-details-body">
+                  <div class="dispatcher-outage-detail-empty">Ожидание данных…</div>
+                </div>
+              </details>
+            </section>
+
+            <section class="dispatcher-outage-table-card is-planned">
+              <div class="dispatcher-outage-table-head">
+                <div>
+                  <span class="micro-label">ПЛАНОВЫЕ</span>
+                  <h3>Подразделения и обращения</h3>
+                </div>
+              </div>
+              <div class="dispatcher-table-scroll">
+                <table class="dispatcher-outage-table">
+                  <thead>
+                    <tr>
+                      <th>Подразделение</th>
+                      <th>Отключений</th>
+                      <th>Обращений</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dispatcherPlannedOutagesTableBody">
+                    <tr><td colspan="3">Ожидание данных…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <details class="dispatcher-outage-details">
+                <summary>
+                  <span>Подробно о плановых отключениях</span>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"></path></svg>
+                </summary>
+                <div id="dispatcherPlannedOutagesDetails" class="dispatcher-outage-details-body">
+                  <div class="dispatcher-outage-detail-empty">Ожидание данных…</div>
+                </div>
+              </details>
+            </section>
+          </div>
+        </article>
+
         <div class="dispatcher-grid">
           <article class="dispatcher-panel glass-panel">
             <div class="dispatcher-panel-head">
@@ -983,87 +1083,7 @@
           </div>
         </div>
 
-        <article class="dispatcher-panel glass-panel dispatcher-outages-panel">
-          <div class="dispatcher-panel-head">
-            <div>
-              <span class="micro-label">АКТИВНЫЕ ОТКЛЮЧЕНИЯ</span>
-              <h2>Сводка по выбранному РЭС / району</h2>
-            </div>
-            <div id="dispatcherOutagesLiveBadge" class="dispatcher-live-badge">
-              <i></i>
-              LIVE
-            </div>
-          </div>
 
-          <div class="dispatcher-source-meta dispatcher-outages-meta">
-            <span id="dispatcherOutagesMeta">Ожидание данных активных отключений</span>
-            <span id="dispatcherOutagesSourcesText">Подразделения: —</span>
-          </div>
-
-          <div id="dispatcherOutagesNotice" class="dispatcher-data-notice dispatcher-outages-notice" hidden></div>
-
-          <div class="dispatcher-outage-kpis">
-            <div class="dispatcher-outage-kpi is-emergency">
-              <span>Аварийные отключения</span>
-              <strong id="dispatcherEmergencyOutagesCount">0</strong>
-              <small><b id="dispatcherEmergencyAppealsCount">0</b> обращений</small>
-            </div>
-
-            <div class="dispatcher-outage-kpi is-planned">
-              <span>Плановые отключения</span>
-              <strong id="dispatcherPlannedOutagesCount">0</strong>
-              <small><b id="dispatcherPlannedAppealsCount">0</b> обращений</small>
-            </div>
-          </div>
-
-          <div class="dispatcher-outage-tables">
-            <section class="dispatcher-outage-table-card is-emergency">
-              <div class="dispatcher-outage-table-head">
-                <div>
-                  <span class="micro-label">АВАРИЙНЫЕ</span>
-                  <h3>Подразделения и обращения</h3>
-                </div>
-              </div>
-              <div class="dispatcher-table-scroll">
-                <table class="dispatcher-outage-table">
-                  <thead>
-                    <tr>
-                      <th>Подразделение</th>
-                      <th>Отключений</th>
-                      <th>Обращений</th>
-                    </tr>
-                  </thead>
-                  <tbody id="dispatcherEmergencyOutagesTableBody">
-                    <tr><td colspan="3">Ожидание данных…</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section class="dispatcher-outage-table-card is-planned">
-              <div class="dispatcher-outage-table-head">
-                <div>
-                  <span class="micro-label">ПЛАНОВЫЕ</span>
-                  <h3>Подразделения и обращения</h3>
-                </div>
-              </div>
-              <div class="dispatcher-table-scroll">
-                <table class="dispatcher-outage-table">
-                  <thead>
-                    <tr>
-                      <th>Подразделение</th>
-                      <th>Отключений</th>
-                      <th>Обращений</th>
-                    </tr>
-                  </thead>
-                  <tbody id="dispatcherPlannedOutagesTableBody">
-                    <tr><td colspan="3">Ожидание данных…</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          </div>
-        </article>
       </div>
     </section>
 
@@ -1290,7 +1310,7 @@
             <h2>Настройка РЭС / районов и источников</h2>
             <p class="access-heading-copy">
               Управляйте структурой подразделений и РЭС / районов, строками заявок СК-11
-              и привязкой подразделений активных отключений.
+              и привязкой подразделений и ролей активных отключений.
             </p>
           </div>
 
