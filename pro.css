@@ -1,0 +1,180 @@
+/* ===== PRO LAYER: диспетчерская тёмная тема (подключается после style.css) ===== */
+:root{
+  --bg-0:#04070b;--bg-1:#070c12;--bg-2:#0c141d;
+  --panel:rgba(12,19,28,.86);--panel-strong:rgba(14,22,32,.96);--panel-soft:rgba(18,28,40,.7);
+  --line:rgba(140,170,190,.12);--line-strong:rgba(214,164,70,.38);
+  --text:#e9eef3;--text-2:#a3b2bf;--muted:#66788a;
+  --cyan:#3cc3e8;--cyan-bright:#7adcf5;--green:#3fd29a;--amber:#e3a83c;--red:#f0545f;
+  --gold:#d6a446;--k110:#f0545f;--k35:#e3a83c;--k10:#3fd29a;--k04:#3cc3e8;
+  --radius-xl:10px;--radius-lg:8px;--radius-md:6px;
+  --mono:ui-monospace,"JetBrains Mono","SF Mono",Consolas,monospace;
+  --shadow:0 18px 50px rgba(0,0,0,.55);
+}
+html body{background:#04070b;font-feature-settings:"tnum" 1,"lnum" 1;letter-spacing:.003em}
+html body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(1200px 500px at 85% -10%,rgba(214,164,70,.07),transparent 60%),
+  radial-gradient(900px 500px at 0% 0%,rgba(60,195,232,.06),transparent 60%)}
+.scene-orb,.scene-beam{display:none!important}
+.scene-grid{opacity:.5!important;background-image:linear-gradient(rgba(140,170,190,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(140,170,190,.05) 1px,transparent 1px)!important;background-size:32px 32px!important}
+.scene-noise{opacity:.06!important}
+
+/* панели: техническая рамка с угловыми метками */
+html body .glass-panel,html body .admin-panel,html body .admin-stat-card,html body .division-card,
+html body .dispatcher-panel,html body .executive-panel,html body .module-card,html body .active-outage-type-card,
+html body .summary-tile,html body .dispatcher-outage-table-card,html body .executive-kpi-tile,html body .dispatcher-assigned-tile{
+  border-radius:8px!important;background:linear-gradient(180deg,rgba(18,27,38,.92),rgba(10,16,24,.94))!important;
+  border:1px solid var(--line)!important;box-shadow:0 1px 0 rgba(255,255,255,.04) inset,0 14px 34px rgba(0,0,0,.45)!important;
+  backdrop-filter:none!important;position:relative}
+html body .glass-panel::before,html body .executive-panel::before,html body .dispatcher-panel::before,html body .division-card::before{
+  content:"";position:absolute;left:-1px;top:-1px;width:14px;height:14px;border-left:2px solid var(--gold);border-top:2px solid var(--gold);border-top-left-radius:8px;pointer-events:none;opacity:.85}
+html body .glass-panel::after,html body .executive-panel::after,html body .dispatcher-panel::after{
+  content:"";position:absolute;right:-1px;bottom:-1px;width:14px;height:14px;border-right:2px solid rgba(214,164,70,.45);border-bottom:2px solid rgba(214,164,70,.45);border-bottom-right-radius:8px;pointer-events:none}
+html body .glass-panel:hover,html body .module-card:hover,html body .division-card:hover,html body .active-outage-type-card:hover{
+  transform:none!important;border-color:var(--line-strong)!important}
+
+/* типографика */
+html body h1{font-weight:600!important;letter-spacing:-.01em!important;font-size:clamp(22px,3.2vw,34px)!important;line-height:1.12!important}
+html body h2{font-weight:600!important;letter-spacing:0!important;font-size:clamp(15px,1.8vw,19px)!important}
+html body .micro-label,html body .division-kicker,html body .outage-event-kicker{
+  font-family:var(--mono)!important;font-size:10.5px!important;letter-spacing:.14em!important;color:var(--gold)!important;font-weight:600!important}
+html body p{color:var(--text-2)}
+html body strong,html body .division-count,html body .executive-table-number{font-variant-numeric:tabular-nums}
+
+/* топбар */
+html body .topbar{background:rgba(6,10,15,.94)!important;border-bottom:1px solid var(--line)!important;box-shadow:0 1px 0 rgba(214,164,70,.25)!important;border-radius:0!important;backdrop-filter:blur(8px)}
+html body .logo-surface{border-radius:6px!important;box-shadow:none!important}
+html body .role-badge{border-radius:4px!important;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase}
+html body .brand-context span{font-weight:600}
+
+/* лента телеметрии */
+.grid-ribbon{display:flex;align-items:center;gap:18px;padding:7px 16px;border-bottom:1px solid var(--line);background:rgba(8,13,19,.9);font-family:var(--mono);font-size:11px;color:var(--text-2);overflow-x:auto;white-space:nowrap;scrollbar-width:none;position:relative;z-index:2}
+.grid-ribbon::-webkit-scrollbar{display:none}
+.grid-ribbon .rb-clock{color:var(--text);font-weight:700;font-size:12.5px;letter-spacing:.04em}
+.grid-ribbon .rb-sep{width:1px;height:14px;background:var(--line);flex:none}
+.grid-ribbon .kv{display:inline-flex;align-items:center;gap:6px}
+.grid-ribbon .kv i{width:14px;height:3px;border-radius:2px;display:inline-block}
+.grid-ribbon .k110 i{background:var(--k110)}.grid-ribbon .k35 i{background:var(--k35)}
+.grid-ribbon .k10 i{background:var(--k10)}.grid-ribbon .k04 i{background:var(--k04)}
+.grid-ribbon .rb-live{margin-left:auto;display:inline-flex;align-items:center;gap:6px;color:var(--green);font-weight:700}
+.grid-ribbon .rb-live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:rbp 2s infinite}
+@keyframes rbp{50%{opacity:.35}}
+
+/* hero: однолинейная схема подстанции */
+html body .home-hero{border:1px solid var(--line);border-radius:8px;background:linear-gradient(120deg,rgba(18,27,38,.95),rgba(8,13,19,.95));overflow:hidden;padding:26px 28px!important}
+html body .hero-visual{border-radius:6px;overflow:hidden;opacity:1!important;background:radial-gradient(circle at 50% 50%,rgba(214,164,70,.08),transparent 70%)}
+html body .hero-visual>*{display:none!important}
+html body .hero-visual svg.sld{display:block!important;width:100%;height:100%}
+.sld .bus{stroke-width:3.2;stroke-linecap:round}.sld .ln{stroke:var(--text-2);stroke-width:1.4;fill:none;opacity:.8}
+.sld .tx circle{fill:none;stroke-width:1.6}.sld .br{fill:#0b121a;stroke:var(--text);stroke-width:1.3}
+.sld text{font:600 8.5px var(--mono);fill:var(--muted);letter-spacing:.06em}
+.sld .flow{stroke-dasharray:5 7;animation:flow 1.6s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-24}}
+html body .system-line{font-family:var(--mono);font-size:12px;border-radius:4px!important}
+
+/* модули */
+html body .module-card{padding:18px!important;gap:14px}
+html body .module-icon{border-radius:6px!important;background:rgba(214,164,70,.1)!important;border:1px solid rgba(214,164,70,.35)!important;color:var(--gold)!important}
+html body .module-icon svg{stroke:var(--gold)!important}
+html body .module-card h3{font-size:17px!important;font-weight:600}
+html body .module-status{border-radius:3px!important;font-family:var(--mono);font-size:10px!important;letter-spacing:.1em}
+html body .module-footer{border-top:1px solid var(--line);padding-top:12px;color:var(--gold)!important;font-weight:600;font-size:13px}
+
+/* кнопки и поля */
+html body .primary-action{border-radius:6px!important;background:linear-gradient(180deg,#e0b152,#b88a2e)!important;color:#15100a!important;font-weight:700!important;border:0!important;box-shadow:0 6px 20px rgba(214,164,70,.22)!important;letter-spacing:.02em}
+html body .secondary-action,html body .back-button,html body .icon-button,html body .role-action{border-radius:6px!important;background:rgba(255,255,255,.03)!important;border:1px solid var(--line)!important;color:var(--text)!important}
+html body .input-shell,html body .dispatcher-select,html body select,html body textarea{border-radius:6px!important;background:#070b11!important;border:1px solid var(--line)!important;color:var(--text)!important}
+html body .input-shell:focus-within,html body select:focus,html body textarea:focus{border-color:var(--gold)!important;box-shadow:0 0 0 3px rgba(214,164,70,.15)!important}
+html body .auth-panel{border-radius:10px!important;background:linear-gradient(180deg,rgba(18,27,38,.96),rgba(8,13,19,.97))!important;border:1px solid var(--line)!important;border-top:2px solid var(--gold)!important}
+
+/* KPI / цифры */
+html body .summary-tile strong,html body .executive-kpi-tile strong,html body .dispatcher-outage-kpi strong,html body .active-outage-type-count strong,html body .counter strong,html body .admin-stat-card strong{
+  font-family:var(--mono)!important;font-weight:700!important;letter-spacing:-.02em;text-shadow:0 0 22px currentColor}
+html body .executive-kpi-tile{border-left:3px solid var(--gold)!important;padding:14px 16px!important}
+html body .executive-kpi-outages{border-left-color:var(--red)!important}html body .executive-kpi-outages strong{color:#ff7d86}
+html body .executive-kpi-appeals{border-left-color:var(--amber)!important}html body .executive-kpi-appeals strong{color:#f0c060}
+html body .executive-kpi-requests{border-left-color:var(--cyan)!important}html body .executive-kpi-requests strong{color:#7adcf5}
+html body .executive-kpi-workorders{border-left-color:var(--green)!important}html body .executive-kpi-workorders strong{color:#6fe3b4}
+html body .executive-kpi-tile span,html body .dispatcher-outage-kpi span{font-size:11.5px;color:var(--text-2);text-transform:uppercase;letter-spacing:.08em}
+html body .dispatcher-outage-kpi{border-radius:6px!important;border:1px solid var(--line)!important;background:#0a1018!important;border-left:3px solid var(--red)!important}
+html body .dispatcher-outage-kpi.is-planned{border-left-color:var(--cyan)!important}
+html body .executive-delta{border-radius:3px!important;font-family:var(--mono);font-size:11px}
+
+/* кольцевые диаграммы: тонкое кольцо + риски */
+html body .dispatcher-workorders-donut{position:relative;-webkit-mask:radial-gradient(circle,transparent 57%,#000 58%);mask:radial-gradient(circle,transparent 57%,#000 58%);filter:drop-shadow(0 0 14px rgba(60,195,232,.18))}
+html body .dispatcher-workorders-donut::after{display:none!important}
+html body .dispatcher-workorders-donut-center{-webkit-mask:none;mask:none;z-index:2}
+html body .dispatcher-workorders-donut-center strong{font-family:var(--mono);font-size:30px;color:#fff}
+html body .dispatcher-donut-marker{border-radius:3px!important;font-family:var(--mono);font-size:10px!important;color:#0a0f14!important;font-weight:800;box-shadow:0 0 0 2px #0a1018}
+html body .dispatcher-workorders-legend-item{border-radius:4px!important;background:rgba(255,255,255,.025)!important;border:1px solid var(--line)!important;border-left-width:3px!important;padding:7px 10px!important}
+html body .dispatcher-workorders-legend-item strong{font-family:var(--mono)}
+html body .dispatcher-workorders-legend-item i{border-radius:2px!important;width:10px;height:10px}
+
+/* динамика: сетка осциллографа */
+html body .executive-trend-card{border-radius:6px!important;background:#080d13!important;border:1px solid var(--line)!important}
+html body .executive-sparkline-canvas{background-image:linear-gradient(rgba(140,170,190,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(140,170,190,.07) 1px,transparent 1px);background-size:28px 24px;border-radius:4px}
+html body .executive-sparkline-line{stroke-width:2.2!important;filter:drop-shadow(0 0 5px currentColor);vector-effect:non-scaling-stroke}
+html body .executive-sparkline-point{filter:drop-shadow(0 0 6px currentColor)}
+html body .executive-trend-outages{color:var(--red)}html body .executive-trend-appeals{color:var(--amber)}
+html body .executive-trend-requests{color:var(--cyan)}html body .executive-trend-workorders{color:var(--green)}
+html body .executive-trend-card>*{color:var(--text)}html body .executive-sparkline{color:inherit}
+html body .executive-sparkline-chip{border-radius:3px!important;font-family:var(--mono);font-size:10px}
+
+/* рейтинги → горизонтальные «шкалы» */
+html body .executive-ranking-row{border-radius:4px!important;background:rgba(255,255,255,.025)!important;border:1px solid var(--line)!important;border-left:2px solid var(--gold)!important;padding:8px 12px!important}
+html body .executive-ranking-index{font-family:var(--mono);color:var(--gold);background:none!important;border-radius:3px!important}
+html body .executive-ranking-row strong{font-family:var(--mono);font-size:15px}
+
+/* таблицы: плотные, диспетчерские */
+html body table{border-collapse:separate;border-spacing:0}
+html body th{font-family:var(--mono);font-size:10.5px!important;letter-spacing:.09em;text-transform:uppercase;color:var(--gold)!important;background:#0a1118!important;border-bottom:1px solid var(--line-strong)!important;padding:9px 12px!important;position:sticky;top:0}
+html body td{padding:9px 12px!important;border-bottom:1px solid var(--line)!important;font-size:13px}
+html body tbody tr:nth-child(even) td{background:rgba(255,255,255,.015)}
+html body tbody tr:hover td{background:rgba(214,164,70,.06)}
+html body .executive-status-chip{border-radius:3px!important;font-family:var(--mono);font-size:10.5px;text-transform:uppercase;letter-spacing:.06em}
+
+/* карточки подразделений и отключения */
+html body .division-card{border-left:3px solid var(--red)!important}
+html body .division-icon{border-radius:5px!important;background:rgba(240,84,95,.1)!important;border:1px solid rgba(240,84,95,.4)!important}
+html body .outage-card-shift-unassigned{border-left-color:var(--amber)!important}
+html body .active-outage-type-card.is-emergency{border-left:3px solid var(--red)!important}
+html body .active-outage-type-card.is-planned{border-left:3px solid var(--cyan)!important}
+html body .outage-event-card,html body .outage-source-details{border-radius:5px!important;background:#080d13!important;border:1px solid var(--line)!important}
+html body .outage-object-chip{border-radius:3px!important;font-family:var(--mono);font-size:11px;background:rgba(60,195,232,.08)!important;border:1px solid rgba(60,195,232,.25)!important}
+html body .outage-event-appeals.has-appeals strong,html body .has-appeals b{color:var(--amber)}
+html body .dispatcher-live-badge{border-radius:3px!important;font-family:var(--mono);letter-spacing:.12em;color:var(--green)!important;border:1px solid rgba(63,210,154,.4)!important;background:rgba(63,210,154,.08)!important}
+html body .management-card,html body .modal-card{border-radius:10px!important;background:#0b1118!important;border:1px solid var(--line-strong)!important}
+
+/* ===== МОБИЛЬНАЯ ВЕРСИЯ: компактнее, больше панелей по вертикали ===== */
+@media (max-width:700px){
+  html body .app-shell{zoom:.88}
+  html body .grid-ribbon{padding:6px 12px;gap:12px;font-size:10.5px}
+  html body .topbar{padding:8px 12px!important}
+  html body .home-hero{padding:16px!important;gap:10px!important}
+  html body .hero-visual{display:none!important}
+  html body h1{font-size:21px!important}
+  html body .module-grid,html body .active-outage-type-grid,html body .executive-grid,html body .dispatcher-grid,html body .admin-layout{gap:10px!important}
+  html body .glass-panel,html body .executive-panel,html body .dispatcher-panel,html body .module-card,html body .division-card{padding:13px!important}
+  html body .executive-hero-stats{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+  html body .executive-kpi-tile{padding:10px 12px!important}
+  html body .executive-kpi-tile strong{font-size:30px!important}
+  html body .executive-kpi-foot small{font-size:10px!important;line-height:1.25}
+  html body .executive-highlight-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+  html body .executive-ranking-columns{grid-template-columns:1fr!important;gap:10px!important}
+  html body .executive-trend-grid{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+  html body .executive-trend-card{padding:9px!important}
+  html body .executive-sparkline-canvas svg{height:70px!important}
+  html body .executive-chart-layout,html body .dispatcher-workorders-chart-layout,html body .dispatcher-requests-chart-layout{display:grid!important;grid-template-columns:132px 1fr!important;gap:12px!important;align-items:center}
+  html body .dispatcher-workorders-donut{width:132px!important;height:132px!important}
+  html body .dispatcher-workorders-donut-center strong{font-size:22px!important}
+  html body .dispatcher-workorders-legend{gap:5px!important}
+  html body .dispatcher-workorders-legend-item{padding:5px 8px!important;font-size:11.5px!important}
+  html body .dispatcher-outage-kpis{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+  html body .dispatcher-outage-kpi strong{font-size:30px!important}
+  html body .admin-stats{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+  html body .outage-counter-metrics{display:grid!important;grid-template-columns:1fr 1fr!important;gap:8px!important}
+  html body td,html body th{padding:7px 8px!important;font-size:12px!important}
+  html body .executive-table-wrap,html body .dispatcher-table-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  html body .micro-label{font-size:9.5px!important}
+}
+@media (max-width:380px){html body .app-shell{zoom:.82}}
+@media (prefers-reduced-motion:reduce){.sld .flow,.grid-ribbon .rb-live::before{animation:none}}

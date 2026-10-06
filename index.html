@@ -6,9 +6,10 @@
     name="viewport"
     content="width=device-width, initial-scale=1.0, viewport-fit=cover"
   />
-  <meta name="theme-color" content="#03182b" />
+  <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="pro.css" />
 </head>
 
 <body class="auth-pending">
@@ -167,6 +168,14 @@
       </div>
     </header>
 
+    <div class="grid-ribbon" aria-hidden="true">
+      <span class="rb-clock" id="ribbonClock">--:--:--</span><span id="ribbonDate">МСК</span>
+      <span class="rb-sep"></span>
+      <span class="kv k110"><i></i>110 кВ</span><span class="kv k35"><i></i>35 кВ</span><span class="kv k10"><i></i>6–10 кВ</span><span class="kv k04"><i></i>0,4 кВ</span>
+      <span class="rb-sep"></span><span>СК-11 · OMS</span><span>ЛО · СПб</span>
+      <span class="rb-live">ОПЕРАТИВНЫЙ КОНТУР</span>
+    </div>
+
     <!-- HOME MENU -->
     <section id="homeView" class="app-view is-active">
       <div class="home-hero">
@@ -184,6 +193,18 @@
         </div>
 
         <div class="hero-visual" aria-hidden="true">
+          <svg class="sld" viewBox="0 0 220 180" aria-hidden="true">
+            <line class="bus" x1="20" y1="34" x2="200" y2="34" stroke="#f0545f"/><text x="22" y="26">110 кВ</text>
+            <g class="ln flow"><path d="M60 34V70M160 34V70"/></g>
+            <rect class="br" x="55" y="46" width="10" height="10"/><rect class="br" x="155" y="46" width="10" height="10"/>
+            <g class="tx"><circle cx="60" cy="82" r="12" stroke="#f0545f"/><circle cx="60" cy="94" r="12" stroke="#3fd29a"/><circle cx="160" cy="82" r="12" stroke="#f0545f"/><circle cx="160" cy="94" r="12" stroke="#3fd29a"/></g>
+            <text x="74" y="90">Т1</text><text x="174" y="90">Т2</text>
+            <g class="ln flow"><path d="M60 106V128M160 106V128"/></g>
+            <line class="bus" x1="20" y1="128" x2="200" y2="128" stroke="#3fd29a"/><text x="22" y="120">10 кВ</text>
+            <rect class="br" x="105" y="122" width="10" height="12" style="fill:#3fd29a;stroke:#3fd29a"/>
+            <g class="ln flow"><path d="M40 128V160M90 128V160M130 128V160M180 128V160"/></g>
+            <text x="30" y="173">Ф-1</text><text x="80" y="173">Ф-2</text><text x="120" y="173">Ф-3</text><text x="170" y="173">Ф-4</text>
+          </svg>
           <div class="radar-ring radar-ring-1"></div>
           <div class="radar-ring radar-ring-2"></div>
           <div class="radar-ring radar-ring-3"></div>

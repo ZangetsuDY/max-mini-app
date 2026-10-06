@@ -8349,3 +8349,14 @@ document.addEventListener(
     }
   }
 );
+
+
+/* Лента телеметрии: часы (МСК) */
+(function(){
+  const c=document.getElementById("ribbonClock"),d=document.getElementById("ribbonDate");
+  if(!c)return;
+  const tick=()=>{const n=new Date();
+    c.textContent=n.toLocaleTimeString("ru-RU",{timeZone:"Europe/Moscow",hour12:false});
+    d.textContent=n.toLocaleDateString("ru-RU",{timeZone:"Europe/Moscow",day:"2-digit",month:"short"}).toUpperCase()+" · МСК";};
+  tick();setInterval(tick,1000);
+})();
