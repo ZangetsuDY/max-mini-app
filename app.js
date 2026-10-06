@@ -189,6 +189,17 @@ const dispatcherWorkordersAdmission = document.getElementById("dispatcherWorkord
 const dispatcherWorkordersPreparation = document.getElementById("dispatcherWorkordersPreparation");
 const dispatcherWorkordersBreak = document.getElementById("dispatcherWorkordersBreak");
 
+const dispatcherOutagesLiveBadge = document.getElementById("dispatcherOutagesLiveBadge");
+const dispatcherOutagesMeta = document.getElementById("dispatcherOutagesMeta");
+const dispatcherOutagesSourcesText = document.getElementById("dispatcherOutagesSourcesText");
+const dispatcherOutagesNotice = document.getElementById("dispatcherOutagesNotice");
+const dispatcherEmergencyOutagesCount = document.getElementById("dispatcherEmergencyOutagesCount");
+const dispatcherEmergencyAppealsCount = document.getElementById("dispatcherEmergencyAppealsCount");
+const dispatcherPlannedOutagesCount = document.getElementById("dispatcherPlannedOutagesCount");
+const dispatcherPlannedAppealsCount = document.getElementById("dispatcherPlannedAppealsCount");
+const dispatcherEmergencyOutagesTableBody = document.getElementById("dispatcherEmergencyOutagesTableBody");
+const dispatcherPlannedOutagesTableBody = document.getElementById("dispatcherPlannedOutagesTableBody");
+
 const outageManagementPanel = document.getElementById("outageManagementPanel");
 const outageCreateDivisionButton = document.getElementById("outageCreateDivisionButton");
 const outageConfigStatus = document.getElementById("outageConfigStatus");
@@ -258,6 +269,7 @@ let accessCatalog = {
 let outageConfigCatalog = {
   divisions: [],
   availableSourceLabels: [],
+  unassignedSources: { emergency: [], planned: [] },
   sourceData: {},
   storageConfigured: false
 };
@@ -266,6 +278,8 @@ let dispatcherConfigCatalog = {
   groups: [],
   units: [],
   availableSourceLabels: [],
+  outageDivisions: [],
+  outageSourceData: { emergency: {}, planned: {} },
   sourceData: {},
   storageConfigured: false
 };
@@ -2586,6 +2600,165 @@ function renderDispatcherWorkorders(
   );
 }
 
+function renderDispatcherOutageTable(
+  tbody,
+  data,
+  emptyLabel
+) {
+  if (!tbody) return;
+
+  const breakdown =
+    Array.isArray(data?.breakdown)
+      ? data.breakdown
+      : [];
+
+  if (!breakdown.length) {
+    tbody.innerHTML = `
+      <tr class="is-empty">
+        <td colspan="3">${escapeHtml(emptyLabel)}</td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = breakdown
+    .map((row) => `
+      <tr class="${row?.matched ? "" : "is-missing"}">
+        <td>
+          <strong>${escapeHtml(row?.label || row?.source || "—")}</strong>
+          ${row?.matched ? "" : "<small>строка не найдена в последней сводке</small>"}
+        </td>
+        <td>${Number(row?.count || 0)}</td>
+        <td>${Number(row?.appeals || 0)}</td>
+      </tr>
+    `)
+    .join("");
+}
+
+function renderDispatcherOutages(payload) {
+  const outages = payload?.outages || {};
+  const emergency = outages?.emergency || {};
+  const planned = outages?.planned || {};
+  const configuredSources =
+    Array.isArray(outages?.sources?.configured)
+      ? outages.sources.configured
+      : [];
+
+  dispatcherEmergencyOutagesCount.textContent =
+    Number(emergency?.count || 0);
+  dispatcherEmergencyAppealsCount.textContent =
+    Number(emergency?.appeals || 0);
+  dispatcherPlannedOutagesCount.textContent =
+    Number(planned?.count || 0);
+  dispatcherPlannedAppealsCount.textContent =
+    Number(planned?.appeals || 0);
+
+  dispatcherOutagesSourcesText.textContent =
+    configuredSources.length
+      ? `Подразделения: ${configuredSources.join(" + ")}`
+      : "Подразделения активных отключений не настроены";
+
+  renderDispatcherOutageTable(
+    dispatcherEmergencyOutagesTableBody,
+    emergency,
+    configuredSources.length
+      ? "По выбранным подразделениям нет строк аварийных отключений"
+      : "Настройте подразделения отключений в Управлении приложением"
+  );
+
+  renderDispatcherOutageTable(
+    dispatcherPlannedOutagesTableBody,
+    planned,
+    configuredSources.length
+      ? "По выбранным подразделениям нет строк плановых отключений"
+      : "Настройте подразделения отключений в Управлении приложением"
+  );
+
+  const emergencySourceData = emergency?.sourceData || {};
+  const plannedSourceData = planned?.sourceData || {};
+  const metaParts = [];
+
+  if (emergencySourceData.sourceUpdatedAt) {
+    metaParts.push(`Аварийные: ${emergencySourceData.sourceUpdatedAt}`);
+  }
+
+  if (plannedSourceData.sourceUpdatedAt) {
+    metaParts.push(`Плановые: ${plannedSourceData.sourceUpdatedAt}`);
+  }
+
+  dispatcherOutagesMeta.textContent =
+    metaParts.length
+      ? metaParts.join(" · ")
+      : "Данные активных отключений пока не получены";
+
+  const notices = [];
+  const emergencyMissing =
+    Array.isArray(emergency?.missing)
+      ? emergency.missing
+      : [];
+  const plannedMissing =
+    Array.isArray(planned?.missing)
+      ? planned.missing
+      : [];
+
+  if (
+    emergencySourceData.status &&
+    emergencySourceData.status !== "ok"
+  ) {
+    notices.push(
+      `Аварийные: ${emergencySourceData.message || "источник временно недоступен"}`
+    );
+  } else if (emergencyMissing.length) {
+    notices.push(
+      `Аварийные — не найдены: ${emergencyMissing.join(", ")}`
+    );
+  }
+
+  if (
+    plannedSourceData.status &&
+    plannedSourceData.status !== "ok"
+  ) {
+    notices.push(
+      `Плановые: ${plannedSourceData.message || "источник временно недоступен"}`
+    );
+  } else if (plannedMissing.length) {
+    notices.push(
+      `Плановые — не найдены: ${plannedMissing.join(", ")}`
+    );
+  }
+
+  dispatcherOutagesNotice.hidden = !notices.length;
+  dispatcherOutagesNotice.textContent = notices.join(" · ");
+  dispatcherOutagesNotice.classList.remove(
+    "is-warning",
+    "is-error",
+    "is-stale"
+  );
+
+  if (notices.length) {
+    const hasError =
+      emergencySourceData.status === "error" ||
+      plannedSourceData.status === "error";
+    const isStale =
+      Boolean(emergencySourceData.stale) ||
+      Boolean(plannedSourceData.stale);
+
+    dispatcherOutagesNotice.classList.add(
+      hasError
+        ? "is-error"
+        : isStale
+          ? "is-stale"
+          : "is-warning"
+    );
+  }
+
+  dispatcherOutagesLiveBadge.classList.toggle(
+    "is-stale",
+    Boolean(emergencySourceData.stale) ||
+    Boolean(plannedSourceData.stale)
+  );
+}
+
 function renderDispatcherDashboard(payload) {
   const groups =
     Array.isArray(
@@ -2758,13 +2931,25 @@ function renderDispatcherDashboard(payload) {
     payload
   );
 
+  renderDispatcherOutages(
+    payload
+  );
+
   const workordersUpdatedAt =
     payload?.workorders?.sourceData?.sourceUpdatedAt ||
+    "";
+  const emergencyOutagesUpdatedAt =
+    payload?.outages?.emergency?.sourceData?.sourceUpdatedAt ||
+    "";
+  const plannedOutagesUpdatedAt =
+    payload?.outages?.planned?.sourceData?.sourceUpdatedAt ||
     "";
 
   if (
     sourceData.sourceUpdatedAt ||
-    workordersUpdatedAt
+    workordersUpdatedAt ||
+    emergencyOutagesUpdatedAt ||
+    plannedOutagesUpdatedAt
   ) {
     const updateParts = [];
 
@@ -2777,6 +2962,18 @@ function renderDispatcherDashboard(payload) {
     if (workordersUpdatedAt) {
       updateParts.push(
         `НДР: ${workordersUpdatedAt}`
+      );
+    }
+
+    if (emergencyOutagesUpdatedAt) {
+      updateParts.push(
+        `Авар.: ${emergencyOutagesUpdatedAt}`
+      );
+    }
+
+    if (plannedOutagesUpdatedAt) {
+      updateParts.push(
+        `План.: ${plannedOutagesUpdatedAt}`
       );
     }
 
@@ -4008,11 +4205,55 @@ function renderOutageConfigList() {
       ? outageConfigCatalog.divisions
       : [];
 
+  const unassignedEmergency =
+    Array.isArray(outageConfigCatalog?.unassignedSources?.emergency)
+      ? outageConfigCatalog.unassignedSources.emergency
+      : [];
+
+  const unassignedPlanned =
+    Array.isArray(outageConfigCatalog?.unassignedSources?.planned)
+      ? outageConfigCatalog.unassignedSources.planned
+      : [];
+
+  const unassignedHtml = `
+    <div class="outage-unassigned-grid">
+      <section class="outage-unassigned-card ${unassignedEmergency.length ? "has-items" : "is-clear"}">
+        <div class="outage-unassigned-head">
+          <div>
+            <span class="micro-label">АВАРИЙНЫЙ ЧАТ</span>
+            <strong>Не распределённые роли</strong>
+          </div>
+          <b>${unassignedEmergency.length}</b>
+        </div>
+        <div class="outage-unassigned-list">
+          ${unassignedEmergency.length
+            ? unassignedEmergency.map((label) => `<span>${escapeHtml(label)}</span>`).join("")
+            : `<span class="is-clear-label">Все найденные роли уже используются в настройках подразделений.</span>`}
+        </div>
+      </section>
+
+      <section class="outage-unassigned-card is-planned ${unassignedPlanned.length ? "has-items" : "is-clear"}">
+        <div class="outage-unassigned-head">
+          <div>
+            <span class="micro-label">ПЛАНОВЫЙ ЧАТ</span>
+            <strong>Не распределённые роли</strong>
+          </div>
+          <b>${unassignedPlanned.length}</b>
+        </div>
+        <div class="outage-unassigned-list">
+          ${unassignedPlanned.length
+            ? unassignedPlanned.map((label) => `<span>${escapeHtml(label)}</span>`).join("")
+            : `<span class="is-clear-label">Все найденные роли уже используются в настройках подразделений.</span>`}
+        </div>
+      </section>
+    </div>
+  `;
+
   outageCreateDivisionButton.disabled =
     !outageConfigCatalog.storageConfigured;
 
   if (!divisions.length) {
-    outageConfigList.innerHTML = `
+    outageConfigList.innerHTML = `${unassignedHtml}
       <div class="access-empty dispatcher-structure-empty">
         <strong>Подразделений пока нет</strong>
         <span>
@@ -4025,6 +4266,7 @@ function renderOutageConfigList() {
   }
 
   outageConfigList.innerHTML =
+    unassignedHtml +
     divisions.map(
       (division) => {
         const sources =
@@ -4036,7 +4278,7 @@ function renderOutageConfigList() {
           <article class="dispatcher-config-card outage-config-card">
             <div class="dispatcher-config-card-head">
               <div>
-                <span class="micro-label">АВАРИЙНЫЙ МОНИТОРИНГ</span>
+                <span class="micro-label">АКТИВНЫЕ ОТКЛЮЧЕНИЯ</span>
                 <h3>${escapeHtml(division.name)}</h3>
               </div>
 
@@ -4142,9 +4384,9 @@ function outageSourceEditorHtml({
     </label>
 
     <div class="management-note">
-      Каждая выбранная строка соответствует названию подразделения из сообщения
-      «СК-11 OMS • Аварийные отключения». Если добавить несколько строк,
-      их значения «Активных аварийных» будут суммироваться в один счётчик.
+      Каждая выбранная строка соответствует роли/строке подразделения из сводок
+      «СК-11 OMS • Аварийные отключения» или «Плановые отключения». Одна и та же
+      настройка применяется к обоим чатам, а несколько строк суммируются в один счётчик.
     </div>
 
     ${
@@ -4356,6 +4598,16 @@ async function loadOutageConfigManagement() {
         Array.isArray(payload.availableSourceLabels)
           ? payload.availableSourceLabels
           : [],
+      unassignedSources: {
+        emergency:
+          Array.isArray(payload?.unassignedSources?.emergency)
+            ? payload.unassignedSources.emergency
+            : [],
+        planned:
+          Array.isArray(payload?.unassignedSources?.planned)
+            ? payload.unassignedSources.planned
+            : []
+      },
       sourceData:
         payload.sourceData || {},
       storageConfigured:
@@ -4447,6 +4699,18 @@ function renderDispatcherConfigList() {
           Array.isArray(unit.sources)
             ? unit.sources
             : [];
+        const outageDivisionIds =
+          Array.isArray(unit.outageDivisionIds)
+            ? unit.outageDivisionIds
+            : [];
+        const outageDivisionNames =
+          outageDivisionIds
+            .map((divisionId) =>
+              dispatcherConfigCatalog.outageDivisions.find(
+                (division) => division.id === divisionId
+              )?.name || divisionId
+            )
+            .filter(Boolean);
 
         return `
           <article class="dispatcher-config-card">
@@ -4467,6 +4731,7 @@ function renderDispatcherConfigList() {
               </span>
             </div>
 
+            <div class="dispatcher-config-section-label">Заявки СК-11</div>
             <div class="dispatcher-config-sources">
               ${
                 sources.length
@@ -4479,7 +4744,26 @@ function renderDispatcherConfigList() {
                       .join("")
                   : `
                     <span class="is-empty">
-                      Источники отключены · счётчики будут по нулям
+                      Источники заявок отключены · счётчики будут по нулям
+                    </span>
+                  `
+              }
+            </div>
+
+            <div class="dispatcher-config-section-label is-outages">Активные отключения</div>
+            <div class="dispatcher-config-sources dispatcher-config-outage-sources">
+              ${
+                outageDivisionNames.length
+                  ? outageDivisionNames
+                      .map(
+                        (source) => `
+                          <span>${escapeHtml(source)}</span>
+                        `
+                      )
+                      .join("")
+                  : `
+                    <span class="is-empty">
+                      Подразделения отключений не выбраны · аварийные и плановые будут по нулям
                     </span>
                   `
               }
@@ -4492,6 +4776,14 @@ function renderDispatcherConfigList() {
                 data-dispatcher-unit="${escapeHtml(unit.id)}"
               >
                 Настроить источники
+              </button>
+
+              <button
+                class="role-action dispatcher-config-edit dispatcher-outage-config-edit"
+                type="button"
+                data-dispatcher-outages-unit="${escapeHtml(unit.id)}"
+              >
+                Настроить отключения
               </button>
 
               <button
@@ -4520,6 +4812,23 @@ function renderDispatcherConfigList() {
             openDispatcherSourceEditor(
               button.dataset
                 .dispatcherUnit
+            )
+        );
+      }
+    );
+
+  dispatcherConfigList
+    .querySelectorAll(
+      "[data-dispatcher-outages-unit]"
+    )
+    .forEach(
+      (button) => {
+        button.addEventListener(
+          "click",
+          () =>
+            openDispatcherOutageSourceEditor(
+              button.dataset
+                .dispatcherOutagesUnit
             )
         );
       }
@@ -4906,6 +5215,14 @@ async function loadDispatcherConfigManagement() {
         )
           ? payload.availableSourceLabels
           : [],
+      outageDivisions:
+        Array.isArray(payload?.outages?.divisions)
+          ? payload.outages.divisions
+          : [],
+      outageSourceData: {
+        emergency: payload?.outages?.emergencySourceData || {},
+        planned: payload?.outages?.plannedSourceData || {}
+      },
       sourceData:
         payload.sourceData || {},
       storageConfigured:
@@ -4945,10 +5262,22 @@ async function loadDispatcherConfigManagement() {
           ? ` ${sourceInfo.message}`
           : "";
 
+    const outageInfo = dispatcherConfigCatalog.outageSourceData || {};
+    const emergencyOutageInfo = outageInfo.emergency || {};
+    const plannedOutageInfo = outageInfo.planned || {};
+    const outageSuffix = [
+      emergencyOutageInfo?.sourceUpdatedAt
+        ? `Аварийные: ${emergencyOutageInfo.sourceUpdatedAt}`
+        : "",
+      plannedOutageInfo?.sourceUpdatedAt
+        ? `Плановые: ${plannedOutageInfo.sourceUpdatedAt}`
+        : ""
+    ].filter(Boolean).join(" · ");
+
     dispatcherConfigStatus.textContent =
       dispatcherConfigCatalog.storageConfigured
-        ? `Структура подразделений, РЭС / районов и источники сохраняются в Redis. Одна строка источника = одна строка из сообщения СК-11.${sourceSuffix}`
-        : `Redis не подключён: отображается только базовая структура, изменения сохранить нельзя.${sourceSuffix}`;
+        ? `Структура подразделений, РЭС / районов, источники заявок и привязки активных отключений сохраняются в Redis. Отключения настраиваются через подразделения из блока активных отключений.${sourceSuffix}${outageSuffix ? ` ${outageSuffix}.` : ""}`
+        : `Redis не подключён: отображается только базовая структура, изменения сохранить нельзя.${sourceSuffix}${outageSuffix ? ` ${outageSuffix}.` : ""}`;
 
     dispatcherConfigStatus.classList.toggle(
       "is-warning",
@@ -5474,6 +5803,86 @@ function openDispatcherSourceEditor(
       }
     }
   );
+}
+
+function openDispatcherOutageSourceEditor(
+  unitId
+) {
+  const unit =
+    dispatcherConfigCatalog.units.find(
+      (item) => item.id === unitId
+    );
+
+  if (!unit) {
+    return;
+  }
+
+  const selectedDivisionIds = new Set(
+    Array.isArray(unit.outageDivisionIds)
+      ? unit.outageDivisionIds
+      : []
+  );
+
+  const outageDivisions =
+    Array.isArray(dispatcherConfigCatalog.outageDivisions)
+      ? dispatcherConfigCatalog.outageDivisions
+      : [];
+
+  openManagementModal({
+    eyebrow: "АКТИВНЫЕ ОТКЛЮЧЕНИЯ · ДИСПЕТЧЕР",
+    title: `${dispatcherConfigGroupName(unit.groupId)} · ${unit.name}`,
+    context: {
+      type: "dispatcher-outage-source",
+      unitId: unit.id
+    },
+    bodyHtml: `
+      <div class="management-note">
+        Отметьте подразделения из блока «Настройка подразделений активных отключений»,
+        которые должны входить в этот РЭС / район. Их настроенные роли автоматически
+        используются и для аварийного, и для планового чата. Отключения и обращения
+        по выбранным подразделениям суммируются.
+      </div>
+
+      ${
+        outageDivisions.length
+          ? `
+            <div class="dispatcher-outage-division-picker">
+              ${outageDivisions.map((division) => {
+                const divisionSources =
+                  Array.isArray(division.sources)
+                    ? division.sources
+                    : [];
+
+                return `
+                  <label class="dispatcher-outage-division-option">
+                    <input
+                      type="checkbox"
+                      name="dispatcherOutageDivision"
+                      value="${escapeHtml(division.id)}"
+                      ${selectedDivisionIds.has(division.id) ? "checked" : ""}
+                    />
+                    <span>
+                      <strong>${escapeHtml(division.name)}</strong>
+                      <small>
+                        ${divisionSources.length
+                          ? escapeHtml(divisionSources.join(" + "))
+                          : "Роли/источники ещё не настроены"}
+                      </small>
+                    </span>
+                  </label>
+                `;
+              }).join("")}
+            </div>
+          `
+          : `
+            <div class="management-note is-warning">
+              Сначала создайте хотя бы одно подразделение в блоке
+              «Настройка подразделений активных отключений».
+            </div>
+          `
+      }
+    `
+  });
 }
 
 function openManagementModal({
@@ -6589,6 +6998,46 @@ async function saveManagementEditor() {
         throw new Error(
           payload?.error ||
           "Не удалось сохранить источники НДР"
+        );
+      }
+    }
+
+    if (
+      managementContext.type ===
+      "dispatcher-outage-source"
+    ) {
+      const divisionIds = [
+        ...managementBody.querySelectorAll(
+          'input[name="dispatcherOutageDivision"]:checked'
+        )
+      ].map((input) => input.value);
+
+      const response = await fetch(
+        API_ADMIN_DISPATCHER_CONFIG,
+        {
+          method: "POST",
+          cache: "no-store",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            ...getSessionHeaders()
+          },
+          body: JSON.stringify({
+            action: "save_outages",
+            unitId: managementContext.unitId,
+            divisionIds
+          })
+        }
+      );
+
+      const payload = await response
+        .json()
+        .catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(
+          payload?.error ||
+          "Не удалось сохранить источники активных отключений"
         );
       }
     }

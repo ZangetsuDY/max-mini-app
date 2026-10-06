@@ -18,7 +18,8 @@ import {
 } from "../../lib/outage-config.js";
 
 import {
-  getLatestOutageSnapshot as getLatestEmergencyOutageSnapshot
+  getLatestOutageSnapshot as getLatestEmergencyOutageSnapshot,
+  normalizeOutageSourceLabel
 } from "../../lib/outage-data.js";
 
 import {
@@ -93,19 +94,63 @@ export default {
           getLatestPlannedOutageSnapshot()
         ]);
 
+        const emergencySourceLabels = Array.isArray(
+          emergencyState.snapshot?.rowList
+        )
+          ? emergencyState.snapshot.rowList
+              .map((row) => String(row?.label || "").trim())
+              .filter(Boolean)
+          : [];
+
+        const plannedSourceLabels = Array.isArray(
+          plannedState.snapshot?.rowList
+        )
+          ? plannedState.snapshot.rowList
+              .map((row) => String(row?.label || "").trim())
+              .filter(Boolean)
+          : [];
+
         const availableSourceLabels = [
-          ...(Array.isArray(emergencyState.snapshot?.rowList)
-            ? emergencyState.snapshot.rowList.map((row) => row.label)
-            : []),
-          ...(Array.isArray(plannedState.snapshot?.rowList)
-            ? plannedState.snapshot.rowList.map((row) => row.label)
-            : [])
-        ].filter(Boolean);
+          ...emergencySourceLabels,
+          ...plannedSourceLabels
+        ];
+
+        const configuredSourceKeys = new Set(
+          divisions
+            .flatMap((division) =>
+              Array.isArray(division?.sources)
+                ? division.sources
+                : []
+            )
+            .map(normalizeOutageSourceLabel)
+            .filter(Boolean)
+        );
+
+        const uniqueUnassigned = (labels) => {
+          const result = [];
+          const seen = new Set();
+
+          for (const label of labels) {
+            const key = normalizeOutageSourceLabel(label);
+            if (!key || configuredSourceKeys.has(key) || seen.has(key)) {
+              continue;
+            }
+
+            seen.add(key);
+            result.push(label);
+          }
+
+          return result;
+        };
 
         return json({
           storageConfigured: isRuntimeStoreConfigured(),
           divisions,
           availableSourceLabels: [...new Set(availableSourceLabels)],
+          unassignedSources: {
+            emergency: uniqueUnassigned(emergencySourceLabels),
+            planned: uniqueUnassigned(plannedSourceLabels)
+          },
           sourceData: {
             configured: Boolean(emergencyState.configured),
             status: emergencyState.status,

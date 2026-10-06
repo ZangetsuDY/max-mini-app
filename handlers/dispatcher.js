@@ -29,6 +29,20 @@ import {
   aggregateWorkordersSources
 } from "../lib/dispatcher-workorders-data.js";
 
+import {
+  getLatestOutageSnapshot as getLatestEmergencyOutageSnapshot,
+  aggregateOutageSources as aggregateEmergencyOutageSources
+} from "../lib/outage-data.js";
+
+import {
+  getLatestOutageSnapshot as getLatestPlannedOutageSnapshot,
+  aggregateOutageSources as aggregatePlannedOutageSources
+} from "../lib/planned-outage-data.js";
+
+import {
+  getOutageDivisions
+} from "../lib/outage-config.js";
+
 function json(data, status = 200) {
   return new Response(
     JSON.stringify(data),
@@ -282,7 +296,10 @@ export default {
       unitConfig,
       workordersUnitConfig,
       snapshotState,
-      workordersSnapshotState
+      workordersSnapshotState,
+      emergencyOutageState,
+      plannedOutageState,
+      outageDivisions
     ] = await Promise.all([
       getDispatcherUnitConfig(
         selectedUnit.id
@@ -291,7 +308,10 @@ export default {
         selectedUnit.id
       ),
       getLatestDispatcherSnapshot(),
-      getLatestWorkordersSnapshot()
+      getLatestWorkordersSnapshot(),
+      getLatestEmergencyOutageSnapshot(),
+      getLatestPlannedOutageSnapshot(),
+      getOutageDivisions()
     ]);
 
     const aggregation =
@@ -304,6 +324,78 @@ export default {
       aggregateWorkordersSources(
         workordersSnapshotState.snapshot,
         workordersUnitConfig?.sources || []
+      );
+
+    const selectedOutageDivisionIds =
+      Array.isArray(unitConfig?.outageDivisionIds)
+        ? unitConfig.outageDivisionIds
+        : [];
+
+    const outageDivisionMap = new Map(
+      (Array.isArray(outageDivisions) ? outageDivisions : [])
+        .map((division) => [String(division.id), division])
+    );
+
+    const selectedOutageDivisions = selectedOutageDivisionIds
+      .map((divisionId) => outageDivisionMap.get(String(divisionId)))
+      .filter(Boolean);
+
+    const aggregateConfiguredOutageDivisions = (snapshot, aggregateSources) => {
+      let count = 0;
+      let appeals = 0;
+      const missing = [];
+      const matched = [];
+      const breakdown = [];
+
+      for (const division of selectedOutageDivisions) {
+        const sources = Array.isArray(division.sources)
+          ? division.sources
+          : [];
+        const aggregate = aggregateSources(snapshot, sources);
+
+        count += Number(aggregate.count || 0);
+        appeals += Number(aggregate.appeals || 0);
+
+        if (aggregate.matchedSources.length) {
+          matched.push(division.name);
+        }
+
+        if (aggregate.missingSources.length) {
+          missing.push(`${division.name}: ${aggregate.missingSources.join(", ")}`);
+        }
+
+        breakdown.push({
+          id: division.id,
+          source: division.name,
+          label: division.name,
+          matched: aggregate.matchedSources.length > 0 || sources.length === 0,
+          count: Number(aggregate.count || 0),
+          appeals: Number(aggregate.appeals || 0),
+          sourceCount: sources.length,
+          matchedSources: aggregate.matchedSources,
+          missingSources: aggregate.missingSources
+        });
+      }
+
+      return {
+        count,
+        appeals,
+        matched,
+        missing,
+        breakdown
+      };
+    };
+
+    const emergencyOutagesAggregation =
+      aggregateConfiguredOutageDivisions(
+        emergencyOutageState.snapshot,
+        aggregateEmergencyOutageSources
+      );
+
+    const plannedOutagesAggregation =
+      aggregateConfiguredOutageDivisions(
+        plannedOutageState.snapshot,
+        aggregatePlannedOutageSources
       );
 
     return json({
@@ -435,6 +527,47 @@ export default {
             workordersSnapshotState.snapshot?.withoutJournal ?? null,
           journals:
             workordersSnapshotState.snapshot?.journals ?? null
+        }
+      },
+      outages: {
+        sources: {
+          configured: selectedOutageDivisions.map((division) => division.name),
+          configuredDivisionIds: selectedOutageDivisions.map((division) => division.id),
+          customized: Boolean(unitConfig?.outageCustomized)
+        },
+        emergency: {
+          count: emergencyOutagesAggregation.count,
+          appeals: emergencyOutagesAggregation.appeals,
+          matched: emergencyOutagesAggregation.matched,
+          missing: emergencyOutagesAggregation.missing,
+          breakdown: emergencyOutagesAggregation.breakdown,
+          sourceData: {
+            configured: Boolean(emergencyOutageState.configured),
+            status: emergencyOutageState.status,
+            message: emergencyOutageState.message || "",
+            stale: Boolean(emergencyOutageState.stale),
+            cached: Boolean(emergencyOutageState.cached),
+            sourceUpdatedAt: emergencyOutageState.snapshot?.sourceUpdatedAt || "",
+            messageTimestamp: emergencyOutageState.snapshot?.messageTimestamp || null,
+            rowCount: emergencyOutageState.snapshot?.rowCount || 0
+          }
+        },
+        planned: {
+          count: plannedOutagesAggregation.count,
+          appeals: plannedOutagesAggregation.appeals,
+          matched: plannedOutagesAggregation.matched,
+          missing: plannedOutagesAggregation.missing,
+          breakdown: plannedOutagesAggregation.breakdown,
+          sourceData: {
+            configured: Boolean(plannedOutageState.configured),
+            status: plannedOutageState.status,
+            message: plannedOutageState.message || "",
+            stale: Boolean(plannedOutageState.stale),
+            cached: Boolean(plannedOutageState.cached),
+            sourceUpdatedAt: plannedOutageState.snapshot?.sourceUpdatedAt || "",
+            messageTimestamp: plannedOutageState.snapshot?.messageTimestamp || null,
+            rowCount: plannedOutageState.snapshot?.rowCount || 0
+          }
         }
       },
       defects: {

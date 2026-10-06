@@ -767,10 +767,10 @@
         <div class="dispatcher-hero">
           <div>
             <span class="micro-label">ИНТЕРФЕЙС ДИСПЕТЧЕРА</span>
-            <h1>Оперативная панель заявок</h1>
+            <h1>Оперативная панель диспетчера</h1>
             <p>
-              Данные автоматически берутся из последнего сообщения
-              «СК-11 — счётчик заявок РЭС» в подключённом чате MAX.
+              Заявки, НДР, аварийные и плановые отключения автоматически
+              собираются из подключённых чатов MAX для выбранного РЭС / района.
             </p>
           </div>
 
@@ -982,6 +982,88 @@
             </article>
           </div>
         </div>
+
+        <article class="dispatcher-panel glass-panel dispatcher-outages-panel">
+          <div class="dispatcher-panel-head">
+            <div>
+              <span class="micro-label">АКТИВНЫЕ ОТКЛЮЧЕНИЯ</span>
+              <h2>Сводка по выбранному РЭС / району</h2>
+            </div>
+            <div id="dispatcherOutagesLiveBadge" class="dispatcher-live-badge">
+              <i></i>
+              LIVE
+            </div>
+          </div>
+
+          <div class="dispatcher-source-meta dispatcher-outages-meta">
+            <span id="dispatcherOutagesMeta">Ожидание данных активных отключений</span>
+            <span id="dispatcherOutagesSourcesText">Подразделения: —</span>
+          </div>
+
+          <div id="dispatcherOutagesNotice" class="dispatcher-data-notice dispatcher-outages-notice" hidden></div>
+
+          <div class="dispatcher-outage-kpis">
+            <div class="dispatcher-outage-kpi is-emergency">
+              <span>Аварийные отключения</span>
+              <strong id="dispatcherEmergencyOutagesCount">0</strong>
+              <small><b id="dispatcherEmergencyAppealsCount">0</b> обращений</small>
+            </div>
+
+            <div class="dispatcher-outage-kpi is-planned">
+              <span>Плановые отключения</span>
+              <strong id="dispatcherPlannedOutagesCount">0</strong>
+              <small><b id="dispatcherPlannedAppealsCount">0</b> обращений</small>
+            </div>
+          </div>
+
+          <div class="dispatcher-outage-tables">
+            <section class="dispatcher-outage-table-card is-emergency">
+              <div class="dispatcher-outage-table-head">
+                <div>
+                  <span class="micro-label">АВАРИЙНЫЕ</span>
+                  <h3>Подразделения и обращения</h3>
+                </div>
+              </div>
+              <div class="dispatcher-table-scroll">
+                <table class="dispatcher-outage-table">
+                  <thead>
+                    <tr>
+                      <th>Подразделение</th>
+                      <th>Отключений</th>
+                      <th>Обращений</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dispatcherEmergencyOutagesTableBody">
+                    <tr><td colspan="3">Ожидание данных…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="dispatcher-outage-table-card is-planned">
+              <div class="dispatcher-outage-table-head">
+                <div>
+                  <span class="micro-label">ПЛАНОВЫЕ</span>
+                  <h3>Подразделения и обращения</h3>
+                </div>
+              </div>
+              <div class="dispatcher-table-scroll">
+                <table class="dispatcher-outage-table">
+                  <thead>
+                    <tr>
+                      <th>Подразделение</th>
+                      <th>Отключений</th>
+                      <th>Обращений</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dispatcherPlannedOutagesTableBody">
+                    <tr><td colspan="3">Ожидание данных…</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </article>
       </div>
     </section>
 
@@ -1204,11 +1286,11 @@
       >
         <div class="admin-panel-heading access-heading">
           <div>
-            <span class="micro-label">ИСТОЧНИКИ СК-11</span>
-            <h2>Настройка строк для РЭС / районов</h2>
+            <span class="micro-label">ДИСПЕТЧЕРСКИЙ МОНИТОРИНГ</span>
+            <h2>Настройка РЭС / районов и источников</h2>
             <p class="access-heading-copy">
-              Управляйте структурой подразделений и РЭС / районов, а также их строками СК-11.
-              Можно добавлять и удалять даже элементы, которые были в системе изначально.
+              Управляйте структурой подразделений и РЭС / районов, строками заявок СК-11
+              и привязкой подразделений активных отключений.
             </p>
           </div>
 

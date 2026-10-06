@@ -9,7 +9,9 @@ import {
 import {
   getDispatcherSourceConfig,
   setDispatcherUnitSources,
-  resetDispatcherUnitSources
+  resetDispatcherUnitSources,
+  setDispatcherUnitOutageSources,
+  resetDispatcherUnitOutageSources
 } from "../../lib/dispatcher-config.js";
 
 import {
@@ -32,12 +34,24 @@ import {
 } from "../../lib/runtime-store.js";
 
 import {
+  getOutageDivisions
+} from "../../lib/outage-config.js";
+
+import {
   getLatestDispatcherSnapshot
 } from "../../lib/dispatcher-data.js";
 
 import {
   getLatestWorkordersSnapshot
 } from "../../lib/dispatcher-workorders-data.js";
+
+import {
+  getLatestOutageSnapshot as getLatestEmergencyOutageSnapshot
+} from "../../lib/outage-data.js";
+
+import {
+  getLatestOutageSnapshot as getLatestPlannedOutageSnapshot
+} from "../../lib/planned-outage-data.js";
 
 function json(data, status = 200) {
   return new Response(
@@ -96,14 +110,20 @@ export default {
           sourceState,
           structure,
           workordersUnits,
-          workordersSourceState
+          workordersSourceState,
+          emergencyOutageState,
+          plannedOutageState,
+          outageDivisions
         ] =
           await Promise.all([
             getDispatcherSourceConfig(),
             getLatestDispatcherSnapshot(),
             getDispatcherStructure(),
             getWorkordersSourceConfig(),
-            getLatestWorkordersSnapshot()
+            getLatestWorkordersSnapshot(),
+            getLatestEmergencyOutageSnapshot(),
+            getLatestPlannedOutageSnapshot(),
+            getOutageDivisions()
           ]);
 
         return json({
@@ -131,6 +151,39 @@ export default {
               sourceState.snapshot?.sourceUpdatedAt || "",
             rowCount:
               sourceState.snapshot?.rowCount || 0
+          },
+          outages: {
+            divisions: Array.isArray(outageDivisions)
+              ? outageDivisions.map((division) => ({
+                  id: division.id,
+                  name: division.name,
+                  sources: Array.isArray(division.sources) ? division.sources : []
+                }))
+              : [],
+            availableSourceLabels: [
+              ...new Set([
+                ...(Array.isArray(emergencyOutageState.snapshot?.rowList)
+                  ? emergencyOutageState.snapshot.rowList.map((row) => row.label)
+                  : []),
+                ...(Array.isArray(plannedOutageState.snapshot?.rowList)
+                  ? plannedOutageState.snapshot.rowList.map((row) => row.label)
+                  : [])
+              ].filter(Boolean))
+            ],
+            emergencySourceData: {
+              configured: Boolean(emergencyOutageState.configured),
+              status: emergencyOutageState.status,
+              message: emergencyOutageState.message || "",
+              sourceUpdatedAt: emergencyOutageState.snapshot?.sourceUpdatedAt || "",
+              rowCount: emergencyOutageState.snapshot?.rowCount || 0
+            },
+            plannedSourceData: {
+              configured: Boolean(plannedOutageState.configured),
+              status: plannedOutageState.status,
+              message: plannedOutageState.message || "",
+              sourceUpdatedAt: plannedOutageState.snapshot?.sourceUpdatedAt || "",
+              rowCount: plannedOutageState.snapshot?.rowCount || 0
+            }
           },
           workorders: {
             units: workordersUnits,
@@ -255,6 +308,35 @@ export default {
         });
 
         return json({ ok: true });
+      }
+
+      if (action === "reset_outages") {
+        const unit =
+          await resetDispatcherUnitOutageSources({
+            unitId: body?.unitId
+          });
+
+        return json({
+          ok: true,
+          unit
+        });
+      }
+
+      if (action === "save_outages") {
+        const unit =
+          await setDispatcherUnitOutageSources({
+            unitId: body?.unitId,
+            divisionIds:
+              Array.isArray(body?.divisionIds)
+                ? body.divisionIds
+                : [],
+            actor: auth.access
+          });
+
+        return json({
+          ok: true,
+          unit
+        });
       }
 
       if (action === "reset_workorders") {
