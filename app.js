@@ -131,6 +131,22 @@ const managementBody =
     "managementBody"
   );
 
+const activeOutagesSelector = document.getElementById("activeOutagesSelector");
+const outageDetailsView = document.getElementById("outageDetailsView");
+const monitoringBackLabel = document.getElementById("monitoringBackLabel");
+const emergencyOutagesChoice = document.getElementById("emergencyOutagesChoice");
+const plannedOutagesChoice = document.getElementById("plannedOutagesChoice");
+const emergencyOutagesChoiceCount = document.getElementById("emergencyOutagesChoiceCount");
+const plannedOutagesChoiceCount = document.getElementById("plannedOutagesChoiceCount");
+const emergencyOutagesChoiceStatus = document.getElementById("emergencyOutagesChoiceStatus");
+const plannedOutagesChoiceStatus = document.getElementById("plannedOutagesChoiceStatus");
+const monitoringDetailEyebrow = document.getElementById("monitoringDetailEyebrow");
+const monitoringDetailTitle = document.getElementById("monitoringDetailTitle");
+const monitoringDetailCopy = document.getElementById("monitoringDetailCopy");
+const totalOutagesLabel = document.getElementById("totalOutagesLabel");
+const totalOutagesHint = document.getElementById("totalOutagesHint");
+const monitoringHeadingLabel = document.getElementById("monitoringHeadingLabel");
+const monitoringHeadingTitle = document.getElementById("monitoringHeadingTitle");
 const divisionGrid = document.getElementById("divisionGrid");
 const totalOutages = document.getElementById("totalOutages");
 const updatedAt = document.getElementById("updatedAt");
@@ -225,6 +241,7 @@ let dispatcherBreakdownExpanded = false;
 let dispatcherWorkordersBreakdownUnitId = "";
 let dispatcherWorkordersBreakdownSelection = "__all__";
 let dispatcherWorkordersBreakdownExpanded = true;
+let selectedOutageKind = "";
 let expandedOutageDivisionIds = new Set();
 let outageDivisionsState = [];
 let outageSourceUpdatedAt = "";
@@ -284,6 +301,7 @@ function setAppSessionToken(token) {
 
     if (previous !== next) {
       apiJsonCache.clear();
+      selectedOutageKind = "";
       outageDivisionsState = [];
       outageDetailLoadingIds.clear();
     }
@@ -961,48 +979,68 @@ function navigateHome() {
   setView("home");
 }
 
-function navigateMonitoring() {
-  if (
-    !hasPanelAccess(
-      "monitoring"
-    )
-  ) {
-    openModal({
-      type: "denied",
-      eyebrow: "ДОСТУП ПО РОЛИ",
-      title: "Нет доступа",
-      message:
-        "У вашей текущей роли нет доступа к аварийному мониторингу."
-    });
+function outageKindMeta(kind = selectedOutageKind) {
+  const planned = kind === "planned";
 
-    return;
+  return planned
+    ? {
+        kind: "planned",
+        label: "Плановые отключения",
+        eyebrow: "ПЛАНОВЫЕ ОТКЛЮЧЕНИЯ",
+        activeLabel: "Активные плановые отключения",
+        copy: "Сводные счётчики из последнего сообщения «СК-11 OMS • Плановые отключения».",
+        error: "Не удалось получить плановые отключения."
+      }
+    : {
+        kind: "emergency",
+        label: "Аварийные отключения",
+        eyebrow: "АКТИВНЫЕ ОТКЛЮЧЕНИЯ",
+        activeLabel: "Активные аварийные отключения",
+        copy: "Сводные счётчики из последнего сообщения «СК-11 OMS • Аварийные отключения».",
+        error: "Не удалось получить аварийные отключения."
+      };
+}
+
+function showOutageTypeSelector({ refresh = true } = {}) {
+  loadVersion += 1;
+  selectedOutageKind = "";
+  expandedOutageDivisionIds.clear();
+  outageDetailLoadingIds.clear();
+  outageDivisionsState = [];
+  outageSourceUpdatedAt = "";
+
+  activeOutagesSelector.hidden = false;
+  outageDetailsView.hidden = true;
+  monitoringBackLabel.textContent = "Главное меню";
+  dashboardStatus.textContent = "Выберите тип отключений";
+
+  if (refresh) {
+    loadOutageTypeOverview();
   }
+}
 
-  if (
-    currentSystemState.mode !== "normal" &&
-    !hasPanelAccess(
-      "system-control"
-    )
-  ) {
-    const title =
-      currentSystemState.mode === "maintenance"
-        ? "Технические работы"
-        : "Система временно остановлена";
+function openOutageKind(kind) {
+  loadVersion += 1;
+  selectedOutageKind = kind === "planned" ? "planned" : "emergency";
+  expandedOutageDivisionIds.clear();
+  outageDetailLoadingIds.clear();
+  outageDivisionsState = [];
+  outageSourceUpdatedAt = "";
 
-    openModal({
-      type: "denied",
-      eyebrow: "СОСТОЯНИЕ СИСТЕМЫ",
-      title,
-      message:
-        currentSystemState.message ||
-        "Оперативный доступ временно ограничен."
-    });
-
-    return;
-  }
-
-  setView("monitoring");
-
+  const meta = outageKindMeta(selectedOutageKind);
+  activeOutagesSelector.hidden = true;
+  outageDetailsView.hidden = false;
+  monitoringBackLabel.textContent = "Активные отключения";
+  monitoringDetailEyebrow.textContent = meta.eyebrow;
+  monitoringDetailTitle.textContent = meta.label;
+  monitoringDetailCopy.textContent = meta.copy;
+  totalOutagesLabel.textContent = meta.activeLabel;
+  totalOutagesHint.textContent = "по последней сводке СК-11 OMS";
+  monitoringHeadingLabel.textContent = "ПОДРАЗДЕЛЕНИЯ";
+  monitoringHeadingTitle.textContent = meta.label;
+  dashboardStatus.textContent = "Получение последней сводки СК-11 OMS";
+  totalOutages.textContent = "—";
+  updatedAt.textContent = "Обновлено —";
   divisionGrid.innerHTML = `
     <div class="monitoring-loading-card">
       Получение последней сводки СК-11 OMS…
@@ -1010,6 +1048,38 @@ function navigateMonitoring() {
   `;
 
   loadAllDivisions();
+}
+
+function navigateMonitoring() {
+  if (!hasPanelAccess("monitoring")) {
+    openModal({
+      type: "denied",
+      eyebrow: "ДОСТУП ПО РОЛИ",
+      title: "Нет доступа",
+      message: "У вашей текущей роли нет доступа к панели «Активные отключения»."
+    });
+    return;
+  }
+
+  if (
+    currentSystemState.mode !== "normal" &&
+    !hasPanelAccess("system-control")
+  ) {
+    const title = currentSystemState.mode === "maintenance"
+      ? "Технические работы"
+      : "Система временно остановлена";
+
+    openModal({
+      type: "denied",
+      eyebrow: "СОСТОЯНИЕ СИСТЕМЫ",
+      title,
+      message: currentSystemState.message || "Оперативный доступ временно ограничен."
+    });
+    return;
+  }
+
+  setView("monitoring");
+  showOutageTypeSelector({ refresh: true });
   startAutoRefresh();
 }
 
@@ -2869,7 +2939,14 @@ brandHomeButton.addEventListener(
 
 backToMenuButton.addEventListener(
   "click",
-  navigateHome
+  () => {
+    if (currentView === "monitoring" && selectedOutageKind) {
+      showOutageTypeSelector({ refresh: true });
+      return;
+    }
+
+    navigateHome();
+  }
 );
 
 backFromDispatcherButton.addEventListener(
@@ -2890,6 +2967,16 @@ backFromAdminButton.addEventListener(
 openMonitoringButton.addEventListener(
   "click",
   navigateMonitoring
+);
+
+emergencyOutagesChoice?.addEventListener(
+  "click",
+  () => openOutageKind("emergency")
+);
+
+plannedOutagesChoice?.addEventListener(
+  "click",
+  () => openOutageKind("planned")
 );
 
 openExecutiveButton.addEventListener(
@@ -4134,7 +4221,7 @@ function openCreateOutageDivisionEditor() {
   if (!currentUser?.isDeveloper) return;
 
   openManagementModal({
-    eyebrow: "АВАРИЙНЫЕ ОТКЛЮЧЕНИЯ",
+    eyebrow: "АКТИВНЫЕ ОТКЛЮЧЕНИЯ",
     title: "Новое подразделение",
     saveLabel: "Создать подразделение",
     context: {
@@ -4158,7 +4245,7 @@ function openOutageDivisionEditor(divisionId) {
   if (!division) return;
 
   openManagementModal({
-    eyebrow: "АВАРИЙНЫЕ ОТКЛЮЧЕНИЯ",
+    eyebrow: "АКТИВНЫЕ ОТКЛЮЧЕНИЯ",
     title: `Настройка · ${division.name}`,
     context: {
       type: "outage-division-edit",
@@ -4198,7 +4285,7 @@ async function postOutageConfigAction(payload) {
   if (!response.ok) {
     throw new Error(
       data?.error ||
-      "Не удалось изменить настройки аварийных отключений"
+      "Не удалось изменить настройки активных отключений"
     );
   }
 
@@ -4210,7 +4297,7 @@ async function deleteOutageDivisionFromAdmin(
   divisionName
 ) {
   const confirmed = window.confirm(
-    `Удалить подразделение «${divisionName}» из аварийного мониторинга?`
+    `Удалить подразделение «${divisionName}» из активных отключений?`
   );
 
   if (!confirmed) return;
@@ -4225,7 +4312,7 @@ async function deleteOutageDivisionFromAdmin(
   } catch (error) {
     openModal({
       type: "denied",
-      eyebrow: "АВАРИЙНЫЕ ОТКЛЮЧЕНИЯ",
+      eyebrow: "АКТИВНЫЕ ОТКЛЮЧЕНИЯ",
       title: "Не удалось удалить подразделение",
       message:
         error instanceof Error
@@ -4256,7 +4343,7 @@ async function loadOutageConfigManagement() {
     if (!response.ok) {
       throw new Error(
         payload?.error ||
-        "Не удалось загрузить настройки аварийных отключений"
+        "Не удалось загрузить настройки активных отключений"
       );
     }
 
@@ -4276,17 +4363,21 @@ async function loadOutageConfigManagement() {
     };
 
     const sourceInfo = outageConfigCatalog.sourceData;
-    const sourceSuffix =
-      sourceInfo?.sourceUpdatedAt
-        ? ` Последняя сводка: ${sourceInfo.sourceUpdatedAt}. Распознано строк: ${sourceInfo.rowCount || 0}.`
-        : sourceInfo?.message
-          ? ` ${sourceInfo.message}`
-          : "";
+    const emergencySuffix = sourceInfo?.sourceUpdatedAt
+      ? ` Аварийные: ${sourceInfo.sourceUpdatedAt}, строк: ${sourceInfo.rowCount || 0}.`
+      : sourceInfo?.message
+        ? ` Аварийные: ${sourceInfo.message}`
+        : "";
+    const plannedSuffix = sourceInfo?.plannedSourceUpdatedAt
+      ? ` Плановые: ${sourceInfo.plannedSourceUpdatedAt}, строк: ${sourceInfo.plannedRowCount || 0}.`
+      : sourceInfo?.plannedMessage
+        ? ` Плановые: ${sourceInfo.plannedMessage}`
+        : "";
 
     outageConfigStatus.textContent =
       outageConfigCatalog.storageConfigured
-        ? `Подразделения и их источники сохраняются в Redis. Один общий чат задаётся через OUTAGES_CHAT_ID.${sourceSuffix}`
-        : `Redis не подключён: изменения сохранить нельзя.${sourceSuffix}`;
+        ? `Подразделения и роли сохраняются в Redis. Чаты задаются через OUTAGES_CHAT_ID и PLANNED_OUTAGES_CHAT_ID.${emergencySuffix}${plannedSuffix}`
+        : `Redis не подключён: изменения сохранить нельзя.${emergencySuffix}${plannedSuffix}`;
 
     outageConfigStatus.classList.toggle(
       "is-warning",
@@ -4299,7 +4390,7 @@ async function loadOutageConfigManagement() {
     outageConfigStatus.textContent =
       error instanceof Error
         ? error.message
-        : "Ошибка загрузки аварийных отключений";
+        : "Ошибка загрузки активных отключений";
     outageConfigStatus.classList.add("is-warning");
     outageConfigList.innerHTML = "";
   }
@@ -7026,7 +7117,7 @@ function renderDivisionCards(divisions = []) {
   if (!items.length) {
     divisionGrid.innerHTML = `
       <div class="monitoring-loading-card">
-        Подразделения аварийного мониторинга пока не настроены.
+        Подразделения активных отключений пока не настроены.
       </div>
     `;
     return;
@@ -7060,7 +7151,7 @@ function renderDivisionCards(divisions = []) {
             <div>
               <div class="division-kicker">ПОДРАЗДЕЛЕНИЕ</div>
               <h2>${escapeHtml(division.name)}</h2>
-              <p>Активные аварийные отключения</p>
+              <p>${escapeHtml(outageKindMeta().activeLabel)}</p>
             </div>
           </div>
 
@@ -7177,6 +7268,117 @@ function pluralizeRu(
   return many;
 }
 
+async function fetchOutageTypeOverview(kind) {
+  const initData = getMaxInitData();
+  if (!initData) {
+    throw new Error("Откройте мини-приложение внутри MAX.");
+  }
+
+  const sessionToken = getAppSessionToken();
+  const params = new URLSearchParams({
+    kind,
+    overview: "1"
+  });
+
+  const { response, payload, notModified } = await fetchJsonWithEtag(
+    `${API_OUTAGES}?${params.toString()}`,
+    {
+      method: "GET",
+      credentials: "include",
+      headers: {
+        "X-Max-Init-Data": initData,
+        ...(sessionToken ? { "X-App-Session": sessionToken } : {})
+      }
+    },
+    `outages:overview:${kind}`
+  );
+
+  if (response.status === 401) {
+    setAppSessionToken("");
+    stopAutoRefresh();
+    showLoginScreen();
+    throw new Error("Сессия завершена. Авторизуйтесь снова.");
+  }
+
+  if (!response.ok && !notModified) {
+    throw new Error(payload?.error || `Сервер вернул ошибку ${response.status}`);
+  }
+
+  return payload || {};
+}
+
+function renderOutageTypeOverviewCard(kind, payload) {
+  const planned = kind === "planned";
+  const countEl = planned ? plannedOutagesChoiceCount : emergencyOutagesChoiceCount;
+  const statusEl = planned ? plannedOutagesChoiceStatus : emergencyOutagesChoiceStatus;
+  const cardEl = planned ? plannedOutagesChoice : emergencyOutagesChoice;
+
+  if (!countEl || !statusEl || !cardEl) return;
+
+  const configured = Boolean(payload?.configured);
+  const total = payload?.total;
+
+  countEl.textContent = total === null || total === undefined
+    ? "—"
+    : String(Number(total || 0));
+
+  cardEl.classList.toggle("is-not-configured", !configured);
+
+  if (!configured) {
+    statusEl.textContent = planned
+      ? "Нужно указать PLANNED_OUTAGES_CHAT_ID"
+      : "Чат аварийных отключений не настроен";
+    return;
+  }
+
+  if (payload?.status === "ok") {
+    statusEl.textContent = payload?.sourceUpdatedAt
+      ? `Обновлено ${payload.sourceUpdatedAt}`
+      : "Сводка получена";
+  } else if (payload?.stale) {
+    statusEl.textContent = "Показаны последние сохранённые данные";
+  } else {
+    statusEl.textContent = payload?.message || "Сводка пока недоступна";
+  }
+}
+
+async function loadOutageTypeOverview() {
+  if (currentView !== "monitoring" || selectedOutageKind) return;
+
+  dashboardStatus.textContent = "Обновление сводок отключений";
+  emergencyOutagesChoiceStatus.textContent = "Получение сводки…";
+  plannedOutagesChoiceStatus.textContent = "Получение сводки…";
+
+  const results = await Promise.allSettled([
+    fetchOutageTypeOverview("emergency"),
+    fetchOutageTypeOverview("planned")
+  ]);
+
+  if (currentView !== "monitoring" || selectedOutageKind) return;
+
+  const [emergencyResult, plannedResult] = results;
+
+  if (emergencyResult.status === "fulfilled") {
+    renderOutageTypeOverviewCard("emergency", emergencyResult.value);
+  } else {
+    emergencyOutagesChoiceCount.textContent = "—";
+    emergencyOutagesChoiceStatus.textContent = emergencyResult.reason instanceof Error
+      ? emergencyResult.reason.message
+      : "Не удалось получить сводку";
+  }
+
+  if (plannedResult.status === "fulfilled") {
+    renderOutageTypeOverviewCard("planned", plannedResult.value);
+  } else {
+    plannedOutagesChoiceCount.textContent = "—";
+    plannedOutagesChoiceStatus.textContent = plannedResult.reason instanceof Error
+      ? plannedResult.reason.message
+      : "Не удалось получить сводку";
+  }
+
+  dashboardStatus.textContent = "Аварийные и плановые отключения";
+}
+
 function renderOutageLoadError(message) {
   dashboardStatus.textContent =
     message || "Данные недоступны";
@@ -7186,7 +7388,7 @@ function renderOutageLoadError(message) {
   if (!divisionGrid.children.length) {
     divisionGrid.innerHTML = `
       <div class="monitoring-loading-card is-error">
-        ${escapeHtml(message || "Не удалось получить аварийные отключения.")}
+        ${escapeHtml(message || outageKindMeta().error)}
       </div>
     `;
   }
@@ -7203,7 +7405,9 @@ async function loadOutageDivisionDetails(divisionId) {
   if (!initData) return;
 
   const sessionToken = getAppSessionToken();
+  const requestKind = selectedOutageKind || "emergency";
   const params = new URLSearchParams({
+    kind: requestKind,
     division: id,
     details: "1"
   });
@@ -7226,7 +7430,7 @@ async function loadOutageDivisionDetails(divisionId) {
           ...(sessionToken ? { "X-App-Session": sessionToken } : {})
         }
       },
-      `outages:detail:${id}`
+      `outages:${requestKind}:detail:${id}`
     );
 
     if (response.status === 401) {
@@ -7251,6 +7455,10 @@ async function loadOutageDivisionDetails(divisionId) {
       throw new Error("Детализация подразделения не получена");
     }
 
+    if (selectedOutageKind !== requestKind) {
+      return;
+    }
+
     outageDivisionsState = outageDivisionsState.map((division) =>
       String(division?.id || "") === id
         ? {
@@ -7267,6 +7475,10 @@ async function loadOutageDivisionDetails(divisionId) {
     }
   } catch (error) {
     console.error("Outage detail load failed:", error);
+
+    if (selectedOutageKind !== requestKind) {
+      return;
+    }
 
     outageDivisionsState = outageDivisionsState.map((division) =>
       String(division?.id || "") === id
@@ -7290,10 +7502,15 @@ async function loadOutageDivisionDetails(divisionId) {
 }
 
 async function loadAllDivisions() {
+  if (!selectedOutageKind) {
+    return loadOutageTypeOverview();
+  }
+
   const version = ++loadVersion;
+  const meta = outageKindMeta();
 
   dashboardStatus.textContent =
-    "Обновление сводки СК-11 OMS";
+    `Обновление: ${meta.label}`;
 
   const initData = getMaxInitData();
 
@@ -7312,7 +7529,7 @@ async function loadAllDivisions() {
       payload,
       notModified
     } = await fetchJsonWithEtag(
-      API_OUTAGES,
+      `${API_OUTAGES}?${new URLSearchParams({ kind: selectedOutageKind }).toString()}`,
       {
         method: "GET",
         credentials: "include",
@@ -7321,7 +7538,7 @@ async function loadAllDivisions() {
           ...(sessionToken ? { "X-App-Session": sessionToken } : {})
         }
       },
-      "outages:summary"
+      `outages:${selectedOutageKind}:summary`
     );
 
     if (response.status === 401) {
@@ -7416,7 +7633,7 @@ async function loadAllDivisions() {
     renderOutageLoadError(
       error instanceof Error
         ? error.message
-        : "Ошибка загрузки аварийных отключений"
+        : `Ошибка загрузки: ${meta.label.toLowerCase()}`
     );
   }
 }
@@ -7427,7 +7644,11 @@ function startAutoRefresh() {
   refreshTimer = setInterval(
     () => {
       if (currentView === "monitoring" && isAppVisible()) {
-        loadAllDivisions();
+        if (selectedOutageKind) {
+          loadAllDivisions();
+        } else {
+          loadOutageTypeOverview();
+        }
       }
     },
     REFRESH_INTERVAL_MS
@@ -7449,7 +7670,11 @@ document.addEventListener("visibilitychange", () => {
   sendHeartbeat();
 
   if (currentView === "monitoring") {
-    loadAllDivisions();
+    if (selectedOutageKind) {
+      loadAllDivisions();
+    } else {
+      loadOutageTypeOverview();
+    }
   } else if (currentView === "dispatcher") {
     loadDispatcherDashboard({ quiet: true });
   } else if (currentView === "executive") {

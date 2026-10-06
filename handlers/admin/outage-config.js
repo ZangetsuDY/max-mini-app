@@ -18,8 +18,12 @@ import {
 } from "../../lib/outage-config.js";
 
 import {
-  getLatestOutageSnapshot
+  getLatestOutageSnapshot as getLatestEmergencyOutageSnapshot
 } from "../../lib/outage-data.js";
+
+import {
+  getLatestOutageSnapshot as getLatestPlannedOutageSnapshot
+} from "../../lib/planned-outage-data.js";
 
 function json(data, status = 200) {
   return new Response(
@@ -83,29 +87,48 @@ export default {
 
     if (request.method === "GET") {
       try {
-        const [divisions, sourceState] = await Promise.all([
+        const [divisions, emergencyState, plannedState] = await Promise.all([
           getOutageDivisions(),
-          getLatestOutageSnapshot()
+          getLatestEmergencyOutageSnapshot(),
+          getLatestPlannedOutageSnapshot()
         ]);
+
+        const availableSourceLabels = [
+          ...(Array.isArray(emergencyState.snapshot?.rowList)
+            ? emergencyState.snapshot.rowList.map((row) => row.label)
+            : []),
+          ...(Array.isArray(plannedState.snapshot?.rowList)
+            ? plannedState.snapshot.rowList.map((row) => row.label)
+            : [])
+        ].filter(Boolean);
 
         return json({
           storageConfigured: isRuntimeStoreConfigured(),
           divisions,
-          availableSourceLabels:
-            Array.isArray(sourceState.snapshot?.rowList)
-              ? sourceState.snapshot.rowList.map((row) => row.label)
-              : [],
+          availableSourceLabels: [...new Set(availableSourceLabels)],
           sourceData: {
-            configured: Boolean(sourceState.configured),
-            status: sourceState.status,
-            message: sourceState.message || "",
+            configured: Boolean(emergencyState.configured),
+            status: emergencyState.status,
+            message: emergencyState.message || "",
             sourceUpdatedAt:
-              sourceState.snapshot?.sourceUpdatedAt || "",
+              emergencyState.snapshot?.sourceUpdatedAt || "",
             rowCount:
-              sourceState.snapshot?.rowCount || 0,
+              emergencyState.snapshot?.rowCount || 0,
             emergencyTotal:
-              sourceState.snapshot?.reportedTotal ??
-              sourceState.snapshot?.emergencyTotal ??
+              emergencyState.snapshot?.reportedTotal ??
+              emergencyState.snapshot?.emergencyTotal ??
+              null,
+            plannedConfigured: Boolean(plannedState.configured),
+            plannedStatus: plannedState.status,
+            plannedMessage: plannedState.message || "",
+            plannedSourceUpdatedAt:
+              plannedState.snapshot?.sourceUpdatedAt || "",
+            plannedRowCount:
+              plannedState.snapshot?.rowCount || 0,
+            plannedTotal:
+              plannedState.snapshot?.reportedTotal ??
+              plannedState.snapshot?.plannedTotal ??
+              plannedState.snapshot?.emergencyTotal ??
               null
           }
         });
@@ -115,7 +138,7 @@ export default {
             error:
               error instanceof Error
                 ? error.message
-                : "Не удалось загрузить настройки аварийных отключений"
+                : "Не удалось загрузить настройки активных отключений"
           },
           500
         );
@@ -176,7 +199,7 @@ export default {
           error:
             error instanceof Error
               ? error.message
-              : "Не удалось изменить настройки аварийных отключений"
+              : "Не удалось изменить настройки активных отключений"
         },
         400
       );

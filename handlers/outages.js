@@ -17,9 +17,14 @@ import {
 } from "../lib/outage-config.js";
 
 import {
-  getLatestOutageSnapshot,
-  aggregateOutageSources
+  getLatestOutageSnapshot as getLatestEmergencyOutageSnapshot,
+  aggregateOutageSources as aggregateEmergencyOutageSources
 } from "../lib/outage-data.js";
+
+import {
+  getLatestOutageSnapshot as getLatestPlannedOutageSnapshot,
+  aggregateOutageSources as aggregatePlannedOutageSources
+} from "../lib/planned-outage-data.js";
 
 function json(data, status = 200) {
   return new Response(
@@ -85,7 +90,7 @@ export default {
       return json(
         {
           error:
-            "У вашей роли нет доступа к аварийному мониторингу"
+            "У вашей роли нет доступа к панели активных отключений"
         },
         403
       );
@@ -137,16 +142,54 @@ export default {
 
     try {
       const url = new URL(request.url);
+      const kind = String(
+        url.searchParams.get("kind") || "emergency"
+      ).trim().toLowerCase() === "planned"
+        ? "planned"
+        : "emergency";
+      const overviewOnly = url.searchParams.get("overview") === "1";
       const requestedDivisionId = String(
         url.searchParams.get("division") || ""
       ).trim();
       const includeDetails =
         url.searchParams.get("details") === "1" ||
         Boolean(requestedDivisionId);
+      const getSnapshot = kind === "planned"
+        ? getLatestPlannedOutageSnapshot
+        : getLatestEmergencyOutageSnapshot;
+      const aggregateSources = kind === "planned"
+        ? aggregatePlannedOutageSources
+        : aggregateEmergencyOutageSources;
+
+      if (overviewOnly) {
+        const sourceState = await getSnapshot();
+        const snapshot = sourceState.snapshot;
+        const total = snapshot
+          ? Number(
+              snapshot.reportedTotal ??
+              snapshot.plannedTotal ??
+              snapshot.emergencyTotal ??
+              0
+            )
+          : null;
+
+        return json({
+          kind,
+          configured: Boolean(sourceState.configured),
+          status: sourceState.status,
+          message: sourceState.message || "",
+          stale: Boolean(sourceState.stale),
+          cached: Boolean(sourceState.cached),
+          total,
+          totalAppeals: snapshot?.totalAppeals ?? 0,
+          sourceUpdatedAt: snapshot?.sourceUpdatedAt || "",
+          updatedAt: new Date().toISOString()
+        });
+      }
 
       const [divisions, sourceState] = await Promise.all([
         getOutageDivisions(),
-        getLatestOutageSnapshot()
+        getSnapshot()
       ]);
 
       const snapshot = sourceState.snapshot;
@@ -158,13 +201,13 @@ export default {
 
       if (requestedDivisionId && !selectedDivisions.length) {
         return json(
-          { error: "Подразделение аварийного мониторинга не найдено" },
+          { error: "Подразделение активных отключений не найдено" },
           404
         );
       }
 
       const resultDivisions = selectedDivisions.map((division) => {
-        const aggregate = aggregateOutageSources(
+        const aggregate = aggregateSources(
           snapshot,
           division.sources
         );
@@ -193,12 +236,14 @@ export default {
       const total = snapshot
         ? Number(
             snapshot.reportedTotal ??
+            snapshot.plannedTotal ??
             snapshot.emergencyTotal ??
             0
           )
         : null;
 
       return json({
+        kind,
         configured: Boolean(sourceState.configured),
         status: sourceState.status,
         message: sourceState.message || "",
@@ -228,7 +273,7 @@ export default {
           error:
             error instanceof Error
               ? error.message
-              : "Не удалось получить аварийные отключения"
+              : "Не удалось получить данные активных отключений"
         },
         502
       );

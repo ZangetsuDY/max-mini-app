@@ -218,15 +218,15 @@
 
           <div class="module-copy">
             <span>МОНИТОРИНГ СЕТИ</span>
-            <h3>Аварийный мониторинг</h3>
+            <h3>Активные отключения</h3>
             <p>
-              Активные аварийные отключения, состояние подразделений
+              Аварийные и плановые отключения, состояние подразделений
               и оперативные записи.
             </p>
           </div>
 
           <div class="module-footer">
-            <span>Открыть мониторинг</span>
+            <span>Открыть отключения</span>
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M5 12h14M13 6l6 6-6 6"></path>
             </svg>
@@ -327,55 +327,121 @@
       </div>
     </section>
 
-    <!-- MONITORING -->
+    <!-- ACTIVE OUTAGES -->
     <section id="monitoringView" class="app-view">
       <div class="view-toolbar">
         <button id="backToMenuButton" class="back-button" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M19 12H5M11 18l-6-6 6-6"></path>
           </svg>
-          <span>Главное меню</span>
+          <span id="monitoringBackLabel">Главное меню</span>
         </button>
 
         <div class="toolbar-status">
           <span class="system-pulse"></span>
-          <span id="dashboardStatus">Подготовка данных</span>
+          <span id="dashboardStatus">Выберите тип отключений</span>
         </div>
       </div>
 
-      <div class="monitoring-hero">
-        <div>
-          <span class="micro-label">АВАРИЙНЫЙ МОНИТОРИНГ</span>
-          <h1>Оперативная сводка</h1>
-          <p>
-            Сводные счётчики из последнего сообщения «СК-11 OMS • Аварийные отключения».
-          </p>
+      <div id="activeOutagesSelector" class="active-outages-selector">
+        <div class="active-outages-hero glass-panel">
+          <div>
+            <span class="micro-label">АКТИВНЫЕ ОТКЛЮЧЕНИЯ</span>
+            <h1>Состояние отключений</h1>
+            <p>
+              Выберите тип отключений. Аварийные и плановые сводки загружаются
+              из отдельных чатов MAX и используют одинаковую структуру подразделений.
+            </p>
+          </div>
+          <div class="active-outages-hero-badge">
+            <span class="system-pulse"></span>
+            <strong>СК-11 OMS</strong>
+          </div>
         </div>
 
-        <div class="summary-tile">
-          <span>Активных отключений</span>
-          <strong id="totalOutages">—</strong>
-          <small>по последней сводке СК-11 OMS</small>
+        <div class="active-outage-type-grid">
+          <button id="emergencyOutagesChoice" class="active-outage-type-card is-emergency" type="button">
+            <div class="active-outage-type-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M13 2 4 14h7l-1 8 10-13h-7z"></path>
+              </svg>
+            </div>
+            <div class="active-outage-type-copy">
+              <span class="micro-label">АВАРИЙНЫЕ</span>
+              <h2>Аварийные отключения</h2>
+              <p>Активные аварийные отключения по последней сводке OMS.</p>
+              <small id="emergencyOutagesChoiceStatus">Получение сводки…</small>
+            </div>
+            <div class="active-outage-type-count">
+              <span>Активных</span>
+              <strong id="emergencyOutagesChoiceCount">—</strong>
+              <small>отключений</small>
+            </div>
+            <div class="active-outage-type-action">
+              <span>Открыть</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+            </div>
+          </button>
+
+          <button id="plannedOutagesChoice" class="active-outage-type-card is-planned" type="button">
+            <div class="active-outage-type-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3v18M5 10h14M7 5h10v14H7z"></path>
+              </svg>
+            </div>
+            <div class="active-outage-type-copy">
+              <span class="micro-label">ПЛАНОВЫЕ</span>
+              <h2>Плановые отключения</h2>
+              <p>Активные плановые отключения из отдельного чата MAX.</p>
+              <small id="plannedOutagesChoiceStatus">Получение сводки…</small>
+            </div>
+            <div class="active-outage-type-count">
+              <span>Активных</span>
+              <strong id="plannedOutagesChoiceCount">—</strong>
+              <small>отключений</small>
+            </div>
+            <div class="active-outage-type-action">
+              <span>Открыть</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+            </div>
+          </button>
         </div>
       </div>
 
-      <div class="monitoring-heading">
-        <div>
-          <span class="micro-label">ПОДРАЗДЕЛЕНИЯ</span>
-          <h2>Состояние сети</h2>
+      <div id="outageDetailsView" class="outage-details-view" hidden>
+        <div class="monitoring-hero">
+          <div>
+            <span id="monitoringDetailEyebrow" class="micro-label">АВАРИЙНЫЕ ОТКЛЮЧЕНИЯ</span>
+            <h1 id="monitoringDetailTitle">Оперативная сводка</h1>
+            <p id="monitoringDetailCopy">
+              Сводные счётчики из последнего сообщения «СК-11 OMS • Аварийные отключения».
+            </p>
+          </div>
+
+          <div class="summary-tile">
+            <span id="totalOutagesLabel">Активных отключений</span>
+            <strong id="totalOutages">—</strong>
+            <small id="totalOutagesHint">по последней сводке СК-11 OMS</small>
+          </div>
         </div>
-        <span id="divisionCountCaption" class="section-caption">Подразделения</span>
+
+        <div class="monitoring-heading">
+          <div>
+            <span id="monitoringHeadingLabel" class="micro-label">ПОДРАЗДЕЛЕНИЯ</span>
+            <h2 id="monitoringHeadingTitle">Состояние сети</h2>
+          </div>
+          <span id="divisionCountCaption" class="section-caption">Подразделения</span>
+        </div>
+
+        <div id="divisionGrid" class="division-grid"></div>
+
+        <footer class="footer">
+          <span>ПАО «Россети Ленэнерго»</span>
+          <span>•</span>
+          <span id="updatedAt">Обновлено —</span>
+        </footer>
       </div>
-
-      <div id="divisionGrid" class="division-grid"></div>
-
-      <footer class="footer">
-        <span>ПАО «Россети Ленэнерго»</span>
-        <span>•</span>
-        <span id="updatedAt">Обновлено —</span>
-      </footer>
     </section>
-
 
     <!-- EXECUTIVE MONITORING -->
     <section id="executiveView" class="app-view">
@@ -1110,11 +1176,11 @@
         <div class="admin-panel-heading access-heading">
           <div>
             <span class="micro-label">АВАРИЙНЫЕ ОТКЛЮЧЕНИЯ · СК-11 OMS</span>
-            <h2>Настройка подразделений аварийного мониторинга</h2>
+            <h2>Настройка подразделений активных отключений</h2>
             <p class="access-heading-copy">
-              Для каждого подразделения укажите одну или несколько строк из общего сообщения
-              «СК-11 OMS • Аварийные отключения». Значения выбранных строк суммируются.
-              Здесь же можно создавать и удалять подразделения аварийного мониторинга.
+              Для каждого подразделения укажите одну или несколько строк/ролей из сводок СК-11 OMS.
+              Одна структура используется одновременно для аварийных и плановых отключений,
+              которые приходят из разных чатов MAX.
             </p>
           </div>
 
