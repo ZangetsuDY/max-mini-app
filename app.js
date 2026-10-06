@@ -152,10 +152,6 @@ const totalOutages = document.getElementById("totalOutages");
 const updatedAt = document.getElementById("updatedAt");
 const dashboardStatus = document.getElementById("dashboardStatus");
 const divisionCountCaption = document.getElementById("divisionCountCaption");
-const monitoringTelemetryOutages = document.getElementById("monitoringTelemetryOutages");
-const monitoringTelemetryDivisions = document.getElementById("monitoringTelemetryDivisions");
-const monitoringTelemetryAppeals = document.getElementById("monitoringTelemetryAppeals");
-const monitoringTelemetryUpdated = document.getElementById("monitoringTelemetryUpdated");
 
 const dispatcherAssignedDivision = document.getElementById("dispatcherAssignedDivision");
 const dispatcherAssignedHint = document.getElementById("dispatcherAssignedHint");
@@ -205,10 +201,6 @@ const dispatcherEmergencyOutagesTableBody = document.getElementById("dispatcherE
 const dispatcherPlannedOutagesTableBody = document.getElementById("dispatcherPlannedOutagesTableBody");
 const dispatcherEmergencyOutagesDetails = document.getElementById("dispatcherEmergencyOutagesDetails");
 const dispatcherPlannedOutagesDetails = document.getElementById("dispatcherPlannedOutagesDetails");
-const dispatcherTelemetryEmergency = document.getElementById("dispatcherTelemetryEmergency");
-const dispatcherTelemetryPlanned = document.getElementById("dispatcherTelemetryPlanned");
-const dispatcherTelemetryRequests = document.getElementById("dispatcherTelemetryRequests");
-const dispatcherTelemetryWorkorders = document.getElementById("dispatcherTelemetryWorkorders");
 
 const outageManagementPanel = document.getElementById("outageManagementPanel");
 const outageCreateDivisionButton = document.getElementById("outageCreateDivisionButton");
@@ -1065,10 +1057,6 @@ function openOutageKind(kind) {
   dashboardStatus.textContent = "Получение последней сводки СК-11 OMS";
   totalOutages.textContent = "—";
   updatedAt.textContent = "Обновлено: —";
-  if (monitoringTelemetryOutages) monitoringTelemetryOutages.textContent = "—";
-  if (monitoringTelemetryDivisions) monitoringTelemetryDivisions.textContent = "—";
-  if (monitoringTelemetryAppeals) monitoringTelemetryAppeals.textContent = "—";
-  if (monitoringTelemetryUpdated) monitoringTelemetryUpdated.textContent = "—";
   divisionGrid.innerHTML = `
     <div class="monitoring-loading-card">
       Получение последней сводки СК-11 OMS…
@@ -2712,13 +2700,6 @@ function renderDispatcherOutages(payload) {
   dispatcherPlannedAppealsCount.textContent =
     Number(planned?.appeals || 0);
 
-  if (dispatcherTelemetryEmergency) {
-    dispatcherTelemetryEmergency.textContent = Number(emergency?.count || 0);
-  }
-  if (dispatcherTelemetryPlanned) {
-    dispatcherTelemetryPlanned.textContent = Number(planned?.count || 0);
-  }
-
   dispatcherOutagesSourcesText.textContent = "";
   dispatcherOutagesSourcesText.hidden = true;
 
@@ -2910,13 +2891,6 @@ function renderDispatcherDashboard(payload) {
   setDispatcherRequestCounts(
     payload?.requests
   );
-
-  if (dispatcherTelemetryRequests) {
-    dispatcherTelemetryRequests.textContent = Number(payload?.requests?.counts?.total || 0);
-  }
-  if (dispatcherTelemetryWorkorders) {
-    dispatcherTelemetryWorkorders.textContent = Number(payload?.workorders?.counts?.total || 0);
-  }
 
   const configuredSources =
     Array.isArray(
@@ -8276,18 +8250,6 @@ async function loadAllDivisions() {
         ? "—"
         : Number(payload.total || 0);
 
-    const telemetryDivisionCount = divisions.length;
-    const telemetryAppeals = divisions.reduce((sum, division) => sum + Number(division?.appeals || 0), 0);
-    if (monitoringTelemetryOutages) {
-      monitoringTelemetryOutages.textContent = totalOutages.textContent;
-    }
-    if (monitoringTelemetryDivisions) {
-      monitoringTelemetryDivisions.textContent = telemetryDivisionCount;
-    }
-    if (monitoringTelemetryAppeals) {
-      monitoringTelemetryAppeals.textContent = telemetryAppeals;
-    }
-
     if (payload?.status === "ok") {
       dashboardStatus.textContent =
         "Все подразделения обновлены";
@@ -8303,10 +8265,6 @@ async function loadAllDivisions() {
     updatedAt.textContent = formatSourceUpdate(
       payload?.sourceUpdatedAt || formatDateTime(new Date().toISOString())
     );
-
-    if (monitoringTelemetryUpdated) {
-      monitoringTelemetryUpdated.textContent = formatDateTime(payload?.sourceUpdatedAt || new Date().toISOString());
-    }
 
     const expandedToRefresh = outageDivisionsState
       .filter((division) =>
