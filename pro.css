@@ -178,3 +178,55 @@ html body .management-card,html body .modal-card{border-radius:10px!important;ba
 }
 @media (max-width:380px){html body .app-shell{zoom:.82}}
 @media (prefers-reduced-motion:reduce){.sld .flow,.grid-ribbon .rb-live::before{animation:none}}
+
+
+/* Fix donut readability for pro theme */
+html body .dispatcher-workorders-donut,
+html body .dispatcher-requests-donut,
+html body .executive-donut{
+  -webkit-mask:none !important;
+  mask:none !important;
+  filter:drop-shadow(0 0 14px rgba(60,195,232,.18));
+}
+
+html body .dispatcher-workorders-donut::after,
+html body .dispatcher-requests-donut::after,
+html body .executive-donut::after{
+  display:block !important;
+}
+
+html body .dispatcher-workorders-donut-center,
+html body .dispatcher-requests-donut-center{
+  z-index:4 !important;
+  color:#ffffff !important;
+}
+
+html body .dispatcher-workorders-donut-center strong,
+html body .dispatcher-requests-donut-center strong{
+  color:#ffffff !important;
+  text-shadow:0 0 16px rgba(255,255,255,.08);
+}
+
+html body .dispatcher-workorders-donut-center span,
+html body .dispatcher-requests-donut-center span{
+  color:#dbe8f4 !important;
+}
+
+html body .dispatcher-donut-marker{
+  color:#ffffff !important;
+  background:linear-gradient(180deg, rgba(9,16,27,.96), rgba(5,11,20,.96)) !important;
+  border:1px solid rgba(255,255,255,.16) !important;
+  box-shadow:0 0 0 2px #0a1018, 0 8px 20px rgba(0,0,0,.34) !important;
+}
+
+html body .dispatcher-donut-marker span{
+  color:#ffffff !important;
+}
+
+html body .dispatcher-donut-marker::before{
+  opacity:.95;
+}
+
+html body .dispatcher-donut-marker::after{
+  box-shadow:0 0 0 2px #08111b, 0 0 10px color-mix(in srgb, var(--marker-color, #45c8f4) 55%, transparent 45%) !important;
+}
