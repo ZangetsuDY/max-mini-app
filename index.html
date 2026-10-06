@@ -1,1560 +1,1264 @@
 <!DOCTYPE html>
+
 <html lang="ru">
 <head>
-  <meta charset="UTF-8" />
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
-  />
-  <meta name="theme-color" content="#03182b" />
-  <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<meta content="#03182b" name="theme-color"/>
+<title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
+<link href="style.css" rel="stylesheet"/>
 </head>
-
 <body class="auth-pending">
-  <div class="scene" aria-hidden="true">
-    <div class="scene-grid"></div>
-    <div class="scene-orb scene-orb-a"></div>
-    <div class="scene-orb scene-orb-b"></div>
-    <div class="scene-orb scene-orb-c"></div>
-    <div class="scene-beam scene-beam-a"></div>
-    <div class="scene-beam scene-beam-b"></div>
-    <div class="scene-noise"></div>
-  </div>
-
-  <!-- AUTH -->
-  <section id="authScreen" class="auth-screen">
-    <div class="auth-panel">
-      <div class="auth-logo-row">
-        <div class="logo-surface logo-surface-large">
-          <img
-            data-logo-src="https://spbinvestment.ru/content/pages/dd/ddeaa42bbbda60ff4f9ccecc048b49dd.jpg"
-            class="company-logo"
-            alt="Россети Ленэнерго"
-            referrerpolicy="no-referrer"
-            decoding="async"
-          />
-          <div class="logo-fallback">
-            <span>РОССЕТИ</span>
-            <small>ЛЕНЭНЕРГО</small>
-          </div>
-        </div>
-      </div>
-
-      <div class="auth-copy">
-        <span class="micro-label">КОРПОРАТИВНЫЙ ДОСТУП</span>
-        <h1>Авторизуйтесь</h1>
-        <p>
+<div aria-hidden="true" class="scene">
+<div class="scene-grid"></div>
+<div class="scene-orb scene-orb-a"></div>
+<div class="scene-orb scene-orb-b"></div>
+<div class="scene-orb scene-orb-c"></div>
+<div class="scene-beam scene-beam-a"></div>
+<div class="scene-beam scene-beam-b"></div>
+<div class="scene-noise"></div>
+</div>
+<!-- AUTH -->
+<section class="auth-screen" id="authScreen">
+<div class="auth-panel">
+<div class="auth-logo-row">
+<div class="logo-surface logo-surface-large">
+<img alt="Россети Ленэнерго" class="company-logo" data-logo-src="https://spbinvestment.ru/content/pages/dd/ddeaa42bbbda60ff4f9ccecc048b49dd.jpg" decoding="async" referrerpolicy="no-referrer"/>
+<div class="logo-fallback">
+<span>РОССЕТИ</span>
+<small>ЛЕНЭНЕРГО</small>
+</div>
+</div>
+</div>
+<div class="auth-copy">
+<span class="micro-label">КОРПОРАТИВНЫЙ ДОСТУП</span>
+<h1>Авторизуйтесь</h1>
+<p>
           Вход в оперативный портал ПАО «Россети Ленэнерго».
           Используйте выданные учётные данные.
         </p>
-      </div>
-
-      <form id="loginForm" class="login-form" autocomplete="on">
-        <label class="form-field">
-          <span>Логин</span>
-          <div class="input-shell">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7 8a7 7 0 0 0-14 0"></path>
-            </svg>
-            <input
-              id="usernameInput"
-              name="username"
-              type="text"
-              autocomplete="username"
-              maxlength="80"
-              placeholder="Введите логин"
-              required
-            />
-          </div>
-        </label>
-
-        <label class="form-field">
-          <span>Пароль</span>
-          <div class="input-shell">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M7 10V8a5 5 0 0 1 10 0v2M6 10h12v10H6z"></path>
-            </svg>
-            <input
-              id="passwordInput"
-              name="password"
-              type="password"
-              autocomplete="current-password"
-              maxlength="200"
-              placeholder="Введите пароль"
-              required
-            />
-            <button
-              id="togglePassword"
-              class="icon-button input-action"
-              type="button"
-              aria-label="Показать пароль"
-            >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
-                <circle cx="12" cy="12" r="2.5"></circle>
-              </svg>
-            </button>
-          </div>
-        </label>
-
-        <div
-          id="loginError"
-          class="login-error"
-          role="alert"
-          hidden
-        ></div>
-
-        <button id="loginButton" class="primary-action" type="submit">
-          <span>Войти в систему</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 12h14M13 6l6 6-6 6"></path>
-          </svg>
-        </button>
-      </form>
-
-      <div class="secure-note">
-        <span class="secure-dot"></span>
-        <span>Защищённая корпоративная сессия</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- APP -->
-  <main id="appShell" class="app-shell">
-    <header class="topbar">
-      <button id="brandHomeButton" class="brand-home" type="button">
-        <div class="logo-surface logo-surface-header">
-          <img
-            data-logo-src="https://spbinvestment.ru/content/pages/dd/ddeaa42bbbda60ff4f9ccecc048b49dd.jpg"
-            class="company-logo"
-            alt="Россети Ленэнерго"
-            referrerpolicy="no-referrer"
-            decoding="async"
-          />
-          <div class="logo-fallback">
-            <span>РОССЕТИ</span>
-            <small>ЛЕНЭНЕРГО</small>
-          </div>
-        </div>
-      </button>
-
-      <div class="brand-context" aria-hidden="true">
-        <span>Оперативный центр</span>
-        <small>Санкт-Петербург · Ленинградская область</small>
-      </div>
-
-      <div class="topbar-user">
-        <div class="topbar-user-meta">
-          <div class="identity">
-            <span>Добрый день,</span>
-            <strong id="userFullName">Пользователь</strong>
-          </div>
-
-          <span id="userRoleBadge" class="role-badge">Пользователь</span>
-        </div>
-
-        <button
-          id="logoutButton"
-          class="icon-button logout-button"
-          type="button"
-          title="Выйти"
-        >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10"></path>
-          </svg>
-        </button>
-      </div>
-    </header>
-
-    <div class="command-bus" aria-hidden="true">
-      <div class="command-bus-brand">
-        <span class="command-bus-mark"></span>
-        <strong>GRID CONTROL / OPS CONSOLE</strong>
-      </div>
-      <div class="command-bus-lines">
-        <span><i></i> OMS</span>
-        <span><i></i> СК-11</span>
-        <span><i></i> MAX</span>
-        <span><i></i> ДИСПЕТЧЕРСКИЙ КОНТУР</span>
-      </div>
-      <div class="command-bus-voltage">
-        <span>ENERGY BUS</span>
-        <b>6–110 kV</b>
-      </div>
-    </div>
-
-    <!-- HOME MENU -->
-    <section id="homeView" class="app-view is-active">
-      <div class="home-hero">
-        <div class="home-hero-copy">
-          <span class="micro-label">ПАО «РОССЕТИ ЛЕНЭНЕРГО» · ОПЕРАТИВНЫЙ КОНТУР</span>
-          <h1>Центр оперативного управления</h1>
-          <p>
+</div>
+<form autocomplete="on" class="login-form" id="loginForm">
+<label class="form-field">
+<span>Логин</span>
+<div class="input-shell">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm7 8a7 7 0 0 0-14 0"></path>
+</svg>
+<input autocomplete="username" id="usernameInput" maxlength="80" name="username" placeholder="Введите логин" required="" type="text"/>
+</div>
+</label>
+<label class="form-field">
+<span>Пароль</span>
+<div class="input-shell">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M7 10V8a5 5 0 0 1 10 0v2M6 10h12v10H6z"></path>
+</svg>
+<input autocomplete="current-password" id="passwordInput" maxlength="200" name="password" placeholder="Введите пароль" required="" type="password"/>
+<button aria-label="Показать пароль" class="icon-button input-action" id="togglePassword" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"></path>
+<circle cx="12" cy="12" r="2.5"></circle>
+</svg>
+</button>
+</div>
+</label>
+<div class="login-error" hidden="" id="loginError" role="alert"></div>
+<button class="primary-action" id="loginButton" type="submit">
+<span>Войти в систему</span>
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M5 12h14M13 6l6 6-6 6"></path>
+</svg>
+</button>
+</form>
+<div class="secure-note">
+<span class="secure-dot"></span>
+<span>Защищённая корпоративная сессия</span>
+</div>
+</div>
+</section>
+<!-- APP -->
+<main class="app-shell" id="appShell">
+<header class="topbar">
+<button class="brand-home" id="brandHomeButton" type="button">
+<div class="logo-surface logo-surface-header">
+<img alt="Россети Ленэнерго" class="company-logo" data-logo-src="https://spbinvestment.ru/content/pages/dd/ddeaa42bbbda60ff4f9ccecc048b49dd.jpg" decoding="async" referrerpolicy="no-referrer"/>
+<div class="logo-fallback">
+<span>РОССЕТИ</span>
+<small>ЛЕНЭНЕРГО</small>
+</div>
+</div>
+</button>
+<div aria-hidden="true" class="brand-context">
+<span>Оперативный центр</span>
+<small>Санкт-Петербург · Ленинградская область</small>
+</div>
+<div class="topbar-user">
+<div class="topbar-user-meta">
+<div class="identity">
+<span>Добрый день,</span>
+<strong id="userFullName">Пользователь</strong>
+</div>
+<span class="role-badge" id="userRoleBadge">Пользователь</span>
+</div>
+<button class="icon-button logout-button" id="logoutButton" title="Выйти" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M10 5H5v14h5M14 8l4 4-4 4M8 12h10"></path>
+</svg>
+</button>
+</div>
+</header>
+<div aria-hidden="true" class="command-bus">
+<div class="command-bus-brand">
+<span class="command-bus-mark"></span>
+<strong>GRID CONTROL / OPS CONSOLE</strong>
+</div>
+<div class="command-bus-lines">
+<span><i></i> OMS</span>
+<span><i></i> СК-11</span>
+<span><i></i> MAX</span>
+<span><i></i> ДИСПЕТЧЕРСКИЙ КОНТУР</span>
+</div>
+<div class="command-bus-voltage">
+<span>ENERGY BUS</span>
+<b>6–110 kV</b>
+</div>
+</div>
+<!-- HOME MENU -->
+<section class="app-view is-active" id="homeView">
+<div class="home-hero">
+<div class="home-hero-copy">
+<span class="micro-label">ПАО «РОССЕТИ ЛЕНЭНЕРГО» · ОПЕРАТИВНЫЙ КОНТУР</span>
+<h1>Центр оперативного управления</h1>
+<p>
             Единая рабочая среда для контроля аварийных событий, диспетчерских показателей и оперативных процессов Санкт-Петербурга и Ленинградской области.
           </p>
-
-          <div id="systemLine" class="system-line">
-            <span id="systemPulse" class="system-pulse"></span>
-            <span id="systemStatusText">Проверка состояния системы…</span>
-          </div>
-        </div>
-
-        <div class="hero-visual" aria-hidden="true">
-          <div class="radar-ring radar-ring-1"></div>
-          <div class="radar-ring radar-ring-2"></div>
-          <div class="radar-ring radar-ring-3"></div>
-          <div class="radar-core">
-            <svg viewBox="0 0 24 24">
-              <path d="M13.1 2 5.4 13h5.4L9.9 22l8.7-12.2h-5.7L13.1 2Z"></path>
-            </svg>
-          </div>
-        </div>
-      </div>
-
-      <div class="ops-ribbon home-ops-ribbon glass-panel">
-        <div class="ops-ribbon-copy">
-          <span class="micro-label">ЕНЕРГЕТИЧЕСКИЙ КОНТУР</span>
-          <strong>Единая оперативная среда управления</strong>
-          <small>Аварийные и плановые отключения · диспетчерское рабочее место · руководящий мониторинг · центр управления системой</small>
-        </div>
-        <div class="ops-ribbon-grid">
-          <div class="ops-ribbon-chip">
-            <span>Покрытие</span>
-            <strong>СПб · ЛО</strong>
-          </div>
-          <div class="ops-ribbon-chip">
-            <span>Профиль</span>
-            <strong>Энергосистема</strong>
-          </div>
-          <div class="ops-ribbon-chip">
-            <span>Среда</span>
-            <strong>MAX Mini App</strong>
-          </div>
-        </div>
-      </div>
-
-      <div class="section-intro">
-        <div>
-          <span class="micro-label">РАЗДЕЛЫ СИСТЕМЫ</span>
-          <h2>Выберите интерфейс</h2>
-        </div>
-        <span id="moduleCount" class="section-caption">2 модуля</span>
-      </div>
-
-      <div class="module-grid">
-        <button id="openMonitoringButton" class="module-card module-card-active" type="button">
-          <div class="module-topline">
-            <div class="module-icon">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4 18V9m5 9V5m5 13v-7m5 7V3"></path>
-              </svg>
-            </div>
-            <span class="module-status module-status-live">
-              <i></i> ДОСТУПЕН
+<div class="system-line" id="systemLine">
+<span class="system-pulse" id="systemPulse"></span>
+<span id="systemStatusText">Проверка состояния системы…</span>
+</div>
+</div>
+<div aria-hidden="true" class="hero-visual">
+<div class="radar-ring radar-ring-1"></div>
+<div class="radar-ring radar-ring-2"></div>
+<div class="radar-ring radar-ring-3"></div>
+<div class="radar-core">
+<svg viewbox="0 0 24 24">
+<path d="M13.1 2 5.4 13h5.4L9.9 22l8.7-12.2h-5.7L13.1 2Z"></path>
+</svg>
+</div>
+</div>
+</div>
+<div class="ops-ribbon home-ops-ribbon glass-panel">
+<div class="ops-ribbon-copy">
+<span class="micro-label">ЕНЕРГЕТИЧЕСКИЙ КОНТУР</span>
+<strong>Единая оперативная среда управления</strong>
+<small>Аварийные и плановые отключения · диспетчерское рабочее место · руководящий мониторинг · центр управления системой</small>
+</div>
+<div class="ops-ribbon-grid">
+<div class="ops-ribbon-chip">
+<span>Покрытие</span>
+<strong>СПб · ЛО</strong>
+</div>
+<div class="ops-ribbon-chip">
+<span>Профиль</span>
+<strong>Энергосистема</strong>
+</div>
+<div class="ops-ribbon-chip">
+<span>Среда</span>
+<strong>MAX Mini App</strong>
+</div>
+</div>
+</div>
+<div class="section-intro">
+<div>
+<span class="micro-label">РАЗДЕЛЫ СИСТЕМЫ</span>
+<h2>Выберите интерфейс</h2>
+</div>
+<span class="section-caption" id="moduleCount">2 модуля</span>
+</div>
+<div class="module-grid">
+<button class="module-card module-card-active" id="openMonitoringButton" type="button">
+<div class="module-topline">
+<div class="module-icon">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M4 18V9m5 9V5m5 13v-7m5 7V3"></path>
+</svg>
+</div>
+<span class="module-status module-status-live">
+<i></i> ДОСТУПЕН
             </span>
-          </div>
-
-          <div class="module-copy">
-            <span>МОНИТОРИНГ СЕТИ</span>
-            <h3>Активные отключения</h3>
-            <p>
+</div>
+<div class="module-copy">
+<span>МОНИТОРИНГ СЕТИ</span>
+<h3>Активные отключения</h3>
+<p>
               Аварийные и плановые отключения, состояние подразделений
               и оперативные записи.
             </p>
-          </div>
-
-          <div class="module-footer">
-            <span>Открыть отключения</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5 12h14M13 6l6 6-6 6"></path>
-            </svg>
-          </div>
-        </button>
-
-        <button id="openDispatcherButton" class="module-card module-card-dispatcher" type="button">
-          <div class="module-topline">
-            <div class="module-icon">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4 17v-5a8 8 0 0 1 16 0v5"></path>
-                <path d="M4 14H2v4h4v-4H4Zm16 0h2v4h-4v-4h2Z"></path>
-                <path d="M18 19c-1.1 1.3-2.9 2-5 2h-1"></path>
-              </svg>
-            </div>
-            <span id="dispatcherCardStatus" class="module-status">
+</div>
+<div class="module-footer">
+<span>Открыть отключения</span>
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M5 12h14M13 6l6 6-6 6"></path>
+</svg>
+</div>
+</button>
+<button class="module-card module-card-dispatcher" id="openDispatcherButton" type="button">
+<div class="module-topline">
+<div class="module-icon">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M4 17v-5a8 8 0 0 1 16 0v5"></path>
+<path d="M4 14H2v4h4v-4H4Zm16 0h2v4h-4v-4h2Z"></path>
+<path d="M18 19c-1.1 1.3-2.9 2-5 2h-1"></path>
+</svg>
+</div>
+<span class="module-status" id="dispatcherCardStatus">
               ДОСТУП ПО РОЛИ
             </span>
-          </div>
-
-          <div class="module-copy">
-            <span>РАБОЧЕЕ МЕСТО</span>
-            <h3>Интерфейс Диспетчера</h3>
-            <p>
+</div>
+<div class="module-copy">
+<span>РАБОЧЕЕ МЕСТО</span>
+<h3>Интерфейс Диспетчера</h3>
+<p>
               Специализированный раздел для оперативно-диспетчерского
               персонала.
             </p>
-          </div>
-
-          <div class="module-footer">
-            <span>Перейти в интерфейс</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5 12h14M13 6l6 6-6 6"></path>
-            </svg>
-          </div>
-        </button>
-
-
-        <button id="openExecutiveButton" class="module-card module-card-executive" type="button">
-          <div class="module-topline">
-            <div class="module-icon">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4 17h4v-7H4v7Zm6 0h4V7h-4v10Zm6 0h4V4h-4v13Z"></path>
-              </svg>
-            </div>
-            <span id="executiveCardStatus" class="module-status">ДОСТУП ПО РОЛИ</span>
-          </div>
-
-          <div class="module-copy">
-            <span>СВОДНАЯ ИНФОГРАФИКА</span>
-            <h3>Диспетчерский мониторинг</h3>
-            <p>
+</div>
+<div class="module-footer">
+<span>Перейти в интерфейс</span>
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M5 12h14M13 6l6 6-6 6"></path>
+</svg>
+</div>
+</button>
+<button class="module-card module-card-executive" id="openExecutiveButton" type="button">
+<div class="module-topline">
+<div class="module-icon">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M4 17h4v-7H4v7Zm6 0h4V7h-4v10Zm6 0h4V4h-4v13Z"></path>
+</svg>
+</div>
+<span class="module-status" id="executiveCardStatus">ДОСТУП ПО РОЛИ</span>
+</div>
+<div class="module-copy">
+<span>СВОДНАЯ ИНФОГРАФИКА</span>
+<h3>Диспетчерский мониторинг</h3>
+<p>
               Единая панель для руководителей: аварийные отключения, заявки и НДР в одном профессиональном интерфейсе.
             </p>
-          </div>
-
-          <div class="module-footer">
-            <span>Открыть сводную панель</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5 12h14M13 6l6 6-6 6"></path>
-            </svg>
-          </div>
-        </button>
-
-        <button
-          id="openAdminButton"
-          class="module-card module-card-admin"
-          type="button"
-          hidden
-        >
-          <div class="module-topline">
-            <div class="module-icon">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M4 7h16M7 4v6M4 17h16M16 14v6"></path>
-              </svg>
-            </div>
-            <span class="module-status module-status-developer">
+</div>
+<div class="module-footer">
+<span>Открыть сводную панель</span>
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M5 12h14M13 6l6 6-6 6"></path>
+</svg>
+</div>
+</button>
+<button class="module-card module-card-admin" hidden="" id="openAdminButton" type="button">
+<div class="module-topline">
+<div class="module-icon">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M4 7h16M7 4v6M4 17h16M16 14v6"></path>
+</svg>
+</div>
+<span class="module-status module-status-developer">
               РОЛЬ: РАЗРАБОТЧИК
             </span>
-          </div>
-
-          <div class="module-copy">
-            <span>ЭКСПЛУАТАЦИЯ И КОНТРОЛЬ</span>
-            <h3>Центр управления системой</h3>
-            <p>
+</div>
+<div class="module-copy">
+<span>ЭКСПЛУАТАЦИЯ И КОНТРОЛЬ</span>
+<h3>Центр управления системой</h3>
+<p>
               Режим работы Mini App, состояние сервиса,
               активные пользователи и история последних сеансов.
             </p>
-          </div>
-
-          <div class="module-footer">
-            <span>Открыть центр управления</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M5 12h14M13 6l6 6-6 6"></path>
-            </svg>
-          </div>
-        </button>
-      </div>
-    </section>
-
-    <!-- ACTIVE OUTAGES -->
-    <section id="monitoringView" class="app-view">
-      <div class="view-toolbar">
-        <button id="backToMenuButton" class="back-button" type="button">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M19 12H5M11 18l-6-6 6-6"></path>
-          </svg>
-          <span id="monitoringBackLabel">Главное меню</span>
-        </button>
-
-        <div class="toolbar-status">
-          <span class="system-pulse"></span>
-          <span id="dashboardStatus">Выберите тип отключений</span>
-        </div>
-      </div>
-
-      <div id="activeOutagesSelector" class="active-outages-selector">
-        <div class="active-outages-hero glass-panel">
-          <div>
-            <span class="micro-label">АКТИВНЫЕ ОТКЛЮЧЕНИЯ</span>
-            <h1>Состояние отключений</h1>
-            <p>
+</div>
+<div class="module-footer">
+<span>Открыть центр управления</span>
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M5 12h14M13 6l6 6-6 6"></path>
+</svg>
+</div>
+</button>
+</div>
+</section>
+<!-- ACTIVE OUTAGES -->
+<section class="app-view" id="monitoringView">
+<div class="view-toolbar">
+<button class="back-button" id="backToMenuButton" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M19 12H5M11 18l-6-6 6-6"></path>
+</svg>
+<span id="monitoringBackLabel">Главное меню</span>
+</button>
+<div class="toolbar-status">
+<span class="system-pulse"></span>
+<span id="dashboardStatus">Выберите тип отключений</span>
+</div>
+</div>
+<div class="active-outages-selector" id="activeOutagesSelector">
+<div class="active-outages-hero glass-panel">
+<div>
+<span class="micro-label">АКТИВНЫЕ ОТКЛЮЧЕНИЯ</span>
+<h1>Состояние отключений</h1>
+<p>
               Выберите тип отключений. Аварийные и плановые сводки загружаются
               из отдельных чатов MAX и используют одинаковую структуру подразделений.
             </p>
-          </div>
-          <div class="active-outages-hero-badge">
-            <span class="system-pulse"></span>
-            <strong>СК-11 OMS</strong>
-          </div>
-        </div>
-
-        <div class="active-outage-type-grid">
-          <button id="emergencyOutagesChoice" class="active-outage-type-card is-emergency" type="button">
-            <div class="active-outage-type-icon">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M13 2 4 14h7l-1 8 10-13h-7z"></path>
-              </svg>
-            </div>
-            <div class="active-outage-type-copy">
-              <span class="micro-label">АВАРИЙНЫЕ</span>
-              <h2>Аварийные отключения</h2>
-              <p>Активные аварийные отключения по последней сводке OMS.</p>
-              <small id="emergencyOutagesChoiceStatus">Получение сводки…</small>
-            </div>
-            <div class="active-outage-type-count">
-              <span>Активных</span>
-              <strong id="emergencyOutagesChoiceCount">—</strong>
-              <small>отключений</small>
-            </div>
-            <div class="active-outage-type-action">
-              <span>Открыть</span>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
-            </div>
-          </button>
-
-          <button id="plannedOutagesChoice" class="active-outage-type-card is-planned" type="button">
-            <div class="active-outage-type-icon">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 3v18M5 10h14M7 5h10v14H7z"></path>
-              </svg>
-            </div>
-            <div class="active-outage-type-copy">
-              <span class="micro-label">ПЛАНОВЫЕ</span>
-              <h2>Плановые отключения</h2>
-              <p>Активные плановые отключения из отдельного чата MAX.</p>
-              <small id="plannedOutagesChoiceStatus">Получение сводки…</small>
-            </div>
-            <div class="active-outage-type-count">
-              <span>Активных</span>
-              <strong id="plannedOutagesChoiceCount">—</strong>
-              <small>отключений</small>
-            </div>
-            <div class="active-outage-type-action">
-              <span>Открыть</span>
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      <div id="outageDetailsView" class="outage-details-view" hidden>
-        <div class="monitoring-hero">
-          <div>
-            <span id="monitoringDetailEyebrow" class="micro-label">АВАРИЙНЫЕ ОТКЛЮЧЕНИЯ</span>
-            <h1 id="monitoringDetailTitle">Оперативная сводка</h1>
-            <p id="monitoringDetailCopy">
+</div>
+<div class="active-outages-hero-badge">
+<span class="system-pulse"></span>
+<strong>СК-11 OMS</strong>
+</div>
+</div>
+<div class="active-outage-type-grid">
+<button class="active-outage-type-card is-emergency" id="emergencyOutagesChoice" type="button">
+<div class="active-outage-type-icon">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M13 2 4 14h7l-1 8 10-13h-7z"></path>
+</svg>
+</div>
+<div class="active-outage-type-copy">
+<span class="micro-label">АВАРИЙНЫЕ</span>
+<h2>Аварийные отключения</h2>
+<p>Активные аварийные отключения по последней сводке OMS.</p>
+<small id="emergencyOutagesChoiceStatus">Получение сводки…</small>
+</div>
+<div class="active-outage-type-count">
+<span>Активных</span>
+<strong id="emergencyOutagesChoiceCount">—</strong>
+<small>отключений</small>
+</div>
+<div class="active-outage-type-action">
+<span>Открыть</span>
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+</div>
+</button>
+<button class="active-outage-type-card is-planned" id="plannedOutagesChoice" type="button">
+<div class="active-outage-type-icon">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M12 3v18M5 10h14M7 5h10v14H7z"></path>
+</svg>
+</div>
+<div class="active-outage-type-copy">
+<span class="micro-label">ПЛАНОВЫЕ</span>
+<h2>Плановые отключения</h2>
+<p>Активные плановые отключения из отдельного чата MAX.</p>
+<small id="plannedOutagesChoiceStatus">Получение сводки…</small>
+</div>
+<div class="active-outage-type-count">
+<span>Активных</span>
+<strong id="plannedOutagesChoiceCount">—</strong>
+<small>отключений</small>
+</div>
+<div class="active-outage-type-action">
+<span>Открыть</span>
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+</div>
+</button>
+</div>
+</div>
+<div class="outage-details-view" hidden="" id="outageDetailsView">
+<div class="monitoring-hero">
+<div>
+<span class="micro-label" id="monitoringDetailEyebrow">АВАРИЙНЫЕ ОТКЛЮЧЕНИЯ</span>
+<h1 id="monitoringDetailTitle">Оперативная сводка</h1>
+<p id="monitoringDetailCopy">
               Сводные счётчики из последнего сообщения «СК-11 OMS • Аварийные отключения».
             </p>
-          </div>
-
-          <div class="summary-tile">
-            <span id="totalOutagesLabel">Активных отключений</span>
-            <strong id="totalOutages">—</strong>
-            <small id="totalOutagesHint">по последней сводке СК-11 OMS</small>
-          </div>
-        </div>
-
-        <div class="telemetry-strip monitoring-telemetry">
-          <article class="telemetry-card is-outages">
-            <span>Активных отключений</span>
-            <strong id="monitoringTelemetryOutages">—</strong>
-            <small>текущий объём</small>
-          </article>
-          <article class="telemetry-card is-divisions">
-            <span>Подразделений</span>
-            <strong id="monitoringTelemetryDivisions">—</strong>
-            <small>в актуальной сводке</small>
-          </article>
-          <article class="telemetry-card is-appeals">
-            <span>Обращений</span>
-            <strong id="monitoringTelemetryAppeals">—</strong>
-            <small>по всем подразделениям</small>
-          </article>
-          <article class="telemetry-card is-update">
-            <span>Последнее обновление</span>
-            <strong id="monitoringTelemetryUpdated">—</strong>
-            <small>время синхронизации</small>
-          </article>
-        </div>
-
-        <div class="monitoring-heading">
-          <div>
-            <span id="monitoringHeadingLabel" class="micro-label">ПОДРАЗДЕЛЕНИЯ</span>
-            <h2 id="monitoringHeadingTitle">Состояние сети</h2>
-          </div>
-          <span id="divisionCountCaption" class="section-caption">Подразделения</span>
-        </div>
-
-        <div id="divisionGrid" class="division-grid"></div>
-
-        <footer class="footer">
-          <span>ПАО «Россети Ленэнерго»</span>
-          <span>•</span>
-          <span id="updatedAt">Обновлено: —</span>
-        </footer>
-      </div>
-    </section>
-
-    <!-- EXECUTIVE MONITORING -->
-    <section id="executiveView" class="app-view">
-      <div class="view-toolbar">
-        <button id="backFromExecutiveButton" class="back-button" type="button">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M19 12H5M11 18l-6-6 6-6"></path>
-          </svg>
-          <span>Главное меню</span>
-        </button>
-
-        <div class="toolbar-status">
-          <span class="system-pulse"></span>
-          <span id="executiveUpdatedAt">Обновлено: —</span>
-        </div>
-      </div>
-
-      <div class="executive-shell">
-        <div class="executive-hero glass-panel">
-          <div class="executive-hero-copy">
-            <span class="micro-label">РУКОВОДЯЩИЙ КОНТУР</span>
-            <h1>Диспетчерский мониторинг</h1>
-            <p>
+</div>
+<div class="summary-tile">
+<span id="totalOutagesLabel">Активных отключений</span>
+<strong id="totalOutages">—</strong>
+<small id="totalOutagesHint">по последней сводке СК-11 OMS</small>
+</div>
+</div>
+<div class="telemetry-strip monitoring-telemetry">
+<article class="telemetry-card is-outages">
+<span>Активных отключений</span>
+<strong id="monitoringTelemetryOutages">—</strong>
+<small>текущий объём</small>
+</article>
+<article class="telemetry-card is-divisions">
+<span>Подразделений</span>
+<strong id="monitoringTelemetryDivisions">—</strong>
+<small>в актуальной сводке</small>
+</article>
+<article class="telemetry-card is-appeals">
+<span>Обращений</span>
+<strong id="monitoringTelemetryAppeals">—</strong>
+<small>по всем подразделениям</small>
+</article>
+<article class="telemetry-card is-update">
+<span>Последнее обновление</span>
+<strong id="monitoringTelemetryUpdated">—</strong>
+<small>время синхронизации</small>
+</article>
+</div>
+<div class="monitoring-heading">
+<div>
+<span class="micro-label" id="monitoringHeadingLabel">ПОДРАЗДЕЛЕНИЯ</span>
+<h2 id="monitoringHeadingTitle">Состояние сети</h2>
+</div>
+<span class="section-caption" id="divisionCountCaption">Подразделения</span>
+</div>
+<div class="division-grid" id="divisionGrid"></div>
+<footer class="footer">
+<span>ПАО «Россети Ленэнерго»</span>
+<span>•</span>
+<span id="updatedAt">Обновлено: —</span>
+</footer>
+</div>
+</section>
+<!-- EXECUTIVE MONITORING -->
+<section class="app-view" id="executiveView">
+<div class="view-toolbar">
+<button class="back-button" id="backFromExecutiveButton" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M19 12H5M11 18l-6-6 6-6"></path>
+</svg>
+<span>Главное меню</span>
+</button>
+<div class="toolbar-status">
+<span class="system-pulse"></span>
+<span id="executiveUpdatedAt">Обновлено: —</span>
+</div>
+</div>
+<div class="executive-shell">
+<div class="executive-hero glass-panel">
+<div class="executive-hero-copy">
+<span class="micro-label">РУКОВОДЯЩИЙ КОНТУР</span>
+<h1>Диспетчерский мониторинг</h1>
+<p>
               Единая управленческая панель по аварийным отключениям, обращениям, заявкам и наряд-допускам / распоряжениям.
               Сводная инфографика помогает быстро увидеть общую картину и переключиться на нужное подразделение или РЭС.
             </p>
-          </div>
-
-          <div class="executive-hero-stats">
-            <div class="executive-kpi-tile executive-kpi-outages">
-              <span>Аварийные отключения</span>
-              <strong id="executiveHeroOutages">0</strong>
-              <div class="executive-kpi-foot">
-                <small>текущий актив</small>
-                <span id="executiveDeltaOutages" class="executive-delta is-neutral">—</span>
-              </div>
-            </div>
-            <div class="executive-kpi-tile executive-kpi-appeals">
-              <span>Обращения</span>
-              <strong id="executiveHeroAppeals">0</strong>
-              <div class="executive-kpi-foot">
-                <small>по активным аварийным отключениям</small>
-                <span id="executiveDeltaAppeals" class="executive-delta is-neutral">—</span>
-              </div>
-            </div>
-            <div class="executive-kpi-tile executive-kpi-requests">
-              <span>Заявки</span>
-              <strong id="executiveHeroRequests">0</strong>
-              <div class="executive-kpi-foot">
-                <small>суммарно по выборке</small>
-                <span id="executiveDeltaRequests" class="executive-delta is-neutral">—</span>
-              </div>
-            </div>
-            <div class="executive-kpi-tile executive-kpi-workorders">
-              <span>НДР</span>
-              <strong id="executiveHeroWorkorders">0</strong>
-              <div class="executive-kpi-foot">
-                <small>наряды / распоряжения / допуски</small>
-                <span id="executiveDeltaWorkorders" class="executive-delta is-neutral">—</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="executive-filter-panel glass-panel">
-          <div>
-            <span class="micro-label">ФИЛЬТРЫ НАБЛЮДЕНИЯ</span>
-            <h2>Подразделение и РЭС / район</h2>
-          </div>
-
-          <div class="executive-filter-controls">
-            <label class="dispatcher-select-label">
-              <span>Подразделение</span>
-              <select id="executiveGroupSelect" class="dispatcher-select"></select>
-            </label>
-
-            <label class="dispatcher-select-label">
-              <span>РЭС / район</span>
-              <select id="executiveUnitSelect" class="dispatcher-select"></select>
-            </label>
-          </div>
-        </div>
-
-        <div class="executive-grid">
-          <article class="glass-panel executive-panel executive-overview-panel">
-            <div class="executive-panel-head">
-              <div>
-                <span class="micro-label">ОБЩАЯ СИТУАЦИЯ</span>
-                <h2 id="executiveScopeTitle">Все подразделения</h2>
-              </div>
-              <div class="dispatcher-live-badge"><i></i> LIVE</div>
-            </div>
-
-            <div id="executiveOverviewMeta" class="executive-meta-line">Ожидание данных…</div>
-
-            <div class="executive-highlight-grid">
-              <div class="executive-highlight-card">
-                <span>Лидер по отключениям</span>
-                <strong id="executiveHighlightOutage">—</strong>
-                <small id="executiveHighlightOutageCount">0</small>
-              </div>
-              <div class="executive-highlight-card">
-                <span>Лидер по обращениям</span>
-                <strong id="executiveHighlightAppeal">—</strong>
-                <small id="executiveHighlightAppealCount">0</small>
-              </div>
-              <div class="executive-highlight-card">
-                <span>Лидер по заявкам</span>
-                <strong id="executiveHighlightRequest">—</strong>
-                <small id="executiveHighlightRequestCount">0</small>
-              </div>
-              <div class="executive-highlight-card">
-                <span>Лидер по НДР</span>
-                <strong id="executiveHighlightWorkorder">—</strong>
-                <small id="executiveHighlightWorkorderCount">0</small>
-              </div>
-            </div>
-          </article>
-
-          <article class="glass-panel executive-panel executive-outages-panel">
-            <div class="executive-panel-head">
-              <div>
-                <span class="micro-label">OMS · АВАРИЙНЫЕ ОТКЛЮЧЕНИЯ</span>
-                <h2>Оперативный фон</h2>
-              </div>
-              <div class="summary-tile executive-total-tile">
-                <span id="executiveOutagesScope">Все подразделения</span>
-                <strong id="executiveOutagesTotal">0</strong>
-                <small>активных отключений</small>
-                <div class="executive-total-secondary"><span>Обращения</span><b id="executiveOutagesAppeals">0</b></div>
-              </div>
-            </div>
-            <div id="executiveOutageMeta" class="executive-meta-line">Обновлено: —</div>
-            <div id="executiveOutageRanking" class="executive-ranking-list"></div>
-          </article>
-
-          <article class="glass-panel executive-panel executive-chart-panel">
-            <div class="executive-panel-head">
-              <div>
-                <span class="micro-label">ЗАЯВКИ</span>
-                <h2>Статус по Заявкам</h2>
-              </div>
-            </div>
-            <div class="dispatcher-workorders-chart-layout executive-chart-layout">
-              <div id="executiveRequestsChart" class="dispatcher-workorders-donut executive-donut" role="img" aria-label="Распределение заявок по статусам">
-                <div class="dispatcher-workorders-donut-center">
-                  <strong id="executiveRequestsTotal">0</strong>
-                  <span>Всего</span>
-                </div>
-              </div>
-              <div class="dispatcher-workorders-legend executive-legend">
-                <div class="dispatcher-workorders-legend-item is-review"><i></i><span>В рассмотрении</span><strong id="executiveReqReview">0</strong></div>
-                <div class="dispatcher-workorders-legend-item is-approved"><i></i><span>Разрешена</span><strong id="executiveReqApproved">0</strong></div>
-                <div class="dispatcher-workorders-legend-item is-open-status"><i></i><span>Открыта</span><strong id="executiveReqOpen">0</strong></div>
-                <div class="dispatcher-workorders-legend-item is-closed"><i></i><span>Закрыта</span><strong id="executiveReqClosed">0</strong></div>
-                <div class="dispatcher-workorders-legend-item is-acknowledged"><i></i><span>Принята к сведению</span><strong id="executiveReqAcknowledged">0</strong></div>
-                <div class="dispatcher-workorders-legend-item is-ending"><i></i><span>Заканчиваются</span><strong id="executiveReqEnding">0</strong></div>
-              </div>
-            </div>
-            <div id="executiveRequestsMeta" class="executive-meta-line">Обновлено: —</div>
-          </article>
-
-          <article class="glass-panel executive-panel executive-chart-panel">
-            <div class="executive-panel-head">
-              <div>
-                <span class="micro-label">НДР</span>
-                <h2>Наряд - Допуск/Распоряжения</h2>
-              </div>
-            </div>
-            <div class="dispatcher-workorders-chart-layout executive-chart-layout">
-              <div id="executiveWorkordersChart" class="dispatcher-workorders-donut executive-donut" role="img" aria-label="Распределение НДР по статусам">
-                <div class="dispatcher-workorders-donut-center">
-                  <strong id="executiveWorkordersTotal">0</strong>
-                  <span>Всего</span>
-                </div>
-              </div>
-              <div class="dispatcher-workorders-legend executive-legend">
-                <div class="dispatcher-workorders-legend-item is-registered"><i></i><span>Зарегистрирован</span><strong id="executiveWorkordersRegistered">0</strong></div>
-                <div class="dispatcher-workorders-legend-item is-created"><i></i><span>Создано</span><strong id="executiveWorkordersCreated">0</strong></div>
-                <div class="dispatcher-workorders-legend-item is-admission"><i></i><span>Допуск</span><strong id="executiveWorkordersAdmission">0</strong></div>
-                <div class="dispatcher-workorders-legend-item is-preparation"><i></i><span>Подготовка р.м.</span><strong id="executiveWorkordersPreparation">0</strong></div>
-                <div class="dispatcher-workorders-legend-item is-break"><i></i><span>Перерыв</span><strong id="executiveWorkordersBreak">0</strong></div>
-              </div>
-            </div>
-            <div id="executiveWorkordersMeta" class="executive-meta-line">Обновлено: —</div>
-          </article>
-
-          <article class="glass-panel executive-panel executive-ranking-panel">
-            <div class="executive-panel-head">
-              <div>
-                <span class="micro-label">РЕЙТИНГ</span>
-                <h2>Общая сводка</h2>
-              </div>
-            </div>
-            <div class="executive-ranking-columns">
-              <div>
-                <h3>Топ по заявкам</h3>
-                <div id="executiveRequestRanking" class="executive-ranking-list is-compact"></div>
-              </div>
-              <div>
-                <h3>Топ по НДР</h3>
-                <div id="executiveWorkorderRanking" class="executive-ranking-list is-compact"></div>
-              </div>
-              <div>
-                <h3>Топ по обращениям</h3>
-                <div id="executiveAppealRanking" class="executive-ranking-list is-compact"></div>
-              </div>
-            </div>
-          </article>
-
-          <article class="glass-panel executive-panel executive-trend-panel">
-            <div class="executive-panel-head">
-              <div>
-                <span class="micro-label">ДИНАМИКА</span>
-                <h2>Тренд по последним сводкам</h2>
-              </div>
-              <span id="executiveHistoryHint" class="executive-history-hint">История накапливается автоматически</span>
-            </div>
-
-            <div class="executive-trend-grid">
-              <div class="executive-trend-card executive-trend-outages">
-                <div class="executive-trend-head">
-                  <div>
-                    <span>Аварийные отключения</span>
-                    <strong id="executiveTrendOutagesCurrent">0</strong>
-                  </div>
-                  <span id="executiveTrendOutagesDelta" class="executive-delta is-neutral">—</span>
-                </div>
-                <div id="executiveTrendOutagesChart" class="executive-sparkline" aria-label="Динамика аварийных отключений"></div>
-              </div>
-              <div class="executive-trend-card executive-trend-appeals">
-                <div class="executive-trend-head">
-                  <div>
-                    <span>Обращения</span>
-                    <strong id="executiveTrendAppealsCurrent">0</strong>
-                  </div>
-                  <span id="executiveTrendAppealsDelta" class="executive-delta is-neutral">—</span>
-                </div>
-                <div id="executiveTrendAppealsChart" class="executive-sparkline" aria-label="Динамика обращений по аварийным отключениям"></div>
-              </div>
-
-              <div class="executive-trend-card executive-trend-requests">
-                <div class="executive-trend-head">
-                  <div>
-                    <span>Заявки</span>
-                    <strong id="executiveTrendRequestsCurrent">0</strong>
-                  </div>
-                  <span id="executiveTrendRequestsDelta" class="executive-delta is-neutral">—</span>
-                </div>
-                <div id="executiveTrendRequestsChart" class="executive-sparkline" aria-label="Динамика заявок"></div>
-              </div>
-
-              <div class="executive-trend-card executive-trend-workorders">
-                <div class="executive-trend-head">
-                  <div>
-                    <span>НДР</span>
-                    <strong id="executiveTrendWorkordersCurrent">0</strong>
-                  </div>
-                  <span id="executiveTrendWorkordersDelta" class="executive-delta is-neutral">—</span>
-                </div>
-                <div id="executiveTrendWorkordersChart" class="executive-sparkline" aria-label="Динамика НДР"></div>
-              </div>
-            </div>
-          </article>
-
-          <article class="glass-panel executive-panel executive-table-panel">
-            <div class="executive-panel-head">
-              <div>
-                <span class="micro-label">СВОДНЫЙ СТАТУС</span>
-                <h2>Подразделения в одном контуре</h2>
-              </div>
-              <span class="executive-table-caption">Аварии · Обращения · Заявки · НДР</span>
-            </div>
-
-            <div class="executive-table-wrap">
-              <table class="executive-table">
-                <thead>
-                  <tr>
-                    <th>Подразделение</th>
-                    <th>Состояние</th>
-                    <th>Отключения</th>
-                    <th>Обращения</th>
-                    <th>Заявки</th>
-                    <th>НДР</th>
-                    <th>РЭС / районы</th>
-                  </tr>
-                </thead>
-                <tbody id="executiveDivisionTableBody">
-                  <tr><td colspan="7">Ожидание данных…</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- DISPATCHER -->
-    <section id="dispatcherView" class="app-view">
-      <div class="view-toolbar">
-        <button id="backFromDispatcherButton" class="back-button" type="button">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M19 12H5M11 18l-6-6 6-6"></path>
-          </svg>
-          <span>Главное меню</span>
-        </button>
-
-        <div class="dispatcher-toolbar-actions">
-          <div class="toolbar-status toolbar-status-dispatcher">
-            <span class="system-pulse"></span>
-            <span id="dispatcherUpdatedAt">Обновлено: —</span>
-          </div>
-          <button id="dispatcherRefreshButton" class="icon-button admin-refresh-button" type="button" title="Обновить данные">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M20 6v5h-5M4 18v-5h5"></path>
-              <path d="M18.5 9A7 7 0 0 0 6 6.5L4 11M5.5 15A7 7 0 0 0 18 17.5l2-4.5"></path>
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      <div class="dispatcher-shell">
-        <div class="dispatcher-hero">
-          <div>
-            <span class="micro-label">ИНТЕРФЕЙС ДИСПЕТЧЕРА</span>
-            <h1>Оперативная панель диспетчера</h1>
-            <p>
+</div>
+<div class="executive-hero-stats">
+<div class="executive-kpi-tile executive-kpi-outages">
+<span>Аварийные отключения</span>
+<strong id="executiveHeroOutages">0</strong>
+<div class="executive-kpi-foot">
+<small>текущий актив</small>
+<span class="executive-delta is-neutral" id="executiveDeltaOutages">—</span>
+</div>
+</div>
+<div class="executive-kpi-tile executive-kpi-appeals">
+<span>Обращения</span>
+<strong id="executiveHeroAppeals">0</strong>
+<div class="executive-kpi-foot">
+<small>по активным аварийным отключениям</small>
+<span class="executive-delta is-neutral" id="executiveDeltaAppeals">—</span>
+</div>
+</div>
+<div class="executive-kpi-tile executive-kpi-requests">
+<span>Заявки</span>
+<strong id="executiveHeroRequests">0</strong>
+<div class="executive-kpi-foot">
+<small>суммарно по выборке</small>
+<span class="executive-delta is-neutral" id="executiveDeltaRequests">—</span>
+</div>
+</div>
+<div class="executive-kpi-tile executive-kpi-workorders">
+<span>НДР</span>
+<strong id="executiveHeroWorkorders">0</strong>
+<div class="executive-kpi-foot">
+<small>наряды / распоряжения / допуски</small>
+<span class="executive-delta is-neutral" id="executiveDeltaWorkorders">—</span>
+</div>
+</div>
+</div>
+</div>
+<div class="executive-filter-panel glass-panel">
+<div>
+<span class="micro-label">ФИЛЬТРЫ НАБЛЮДЕНИЯ</span>
+<h2>Подразделение и РЭС / район</h2>
+</div>
+<div class="executive-filter-controls">
+<label class="dispatcher-select-label">
+<span>Подразделение</span>
+<select class="dispatcher-select" id="executiveGroupSelect"></select>
+</label>
+<label class="dispatcher-select-label">
+<span>РЭС / район</span>
+<select class="dispatcher-select" id="executiveUnitSelect"></select>
+</label>
+</div>
+</div>
+<div class="executive-grid">
+<article class="glass-panel executive-panel executive-overview-panel">
+<div class="executive-panel-head">
+<div>
+<span class="micro-label">ОБЩАЯ СИТУАЦИЯ</span>
+<h2 id="executiveScopeTitle">Все подразделения</h2>
+</div>
+<div class="dispatcher-live-badge"><i></i> LIVE</div>
+</div>
+<div class="executive-meta-line" id="executiveOverviewMeta">Ожидание данных…</div>
+<div class="executive-highlight-grid">
+<div class="executive-highlight-card">
+<span>Лидер по отключениям</span>
+<strong id="executiveHighlightOutage">—</strong>
+<small id="executiveHighlightOutageCount">0</small>
+</div>
+<div class="executive-highlight-card">
+<span>Лидер по обращениям</span>
+<strong id="executiveHighlightAppeal">—</strong>
+<small id="executiveHighlightAppealCount">0</small>
+</div>
+<div class="executive-highlight-card">
+<span>Лидер по заявкам</span>
+<strong id="executiveHighlightRequest">—</strong>
+<small id="executiveHighlightRequestCount">0</small>
+</div>
+<div class="executive-highlight-card">
+<span>Лидер по НДР</span>
+<strong id="executiveHighlightWorkorder">—</strong>
+<small id="executiveHighlightWorkorderCount">0</small>
+</div>
+</div>
+</article>
+<article class="glass-panel executive-panel executive-outages-panel">
+<div class="executive-panel-head">
+<div>
+<span class="micro-label">OMS · АВАРИЙНЫЕ ОТКЛЮЧЕНИЯ</span>
+<h2>Оперативный фон</h2>
+</div>
+<div class="summary-tile executive-total-tile">
+<span id="executiveOutagesScope">Все подразделения</span>
+<strong id="executiveOutagesTotal">0</strong>
+<small>активных отключений</small>
+<div class="executive-total-secondary"><span>Обращения</span><b id="executiveOutagesAppeals">0</b></div>
+</div>
+</div>
+<div class="executive-meta-line" id="executiveOutageMeta">Обновлено: —</div>
+<div class="executive-ranking-list" id="executiveOutageRanking"></div>
+</article>
+<article class="glass-panel executive-panel executive-chart-panel">
+<div class="executive-panel-head">
+<div>
+<span class="micro-label">ЗАЯВКИ</span>
+<h2>Статус по Заявкам</h2>
+</div>
+</div>
+<div class="dispatcher-workorders-chart-layout executive-chart-layout">
+<div aria-label="Распределение заявок по статусам" class="dispatcher-workorders-donut executive-donut" id="executiveRequestsChart" role="img">
+<div class="dispatcher-workorders-donut-center">
+<strong id="executiveRequestsTotal">0</strong>
+<span>Всего</span>
+</div>
+</div>
+<div class="dispatcher-workorders-legend executive-legend">
+<div class="dispatcher-workorders-legend-item is-review"><i></i><span>В рассмотрении</span><strong id="executiveReqReview">0</strong></div>
+<div class="dispatcher-workorders-legend-item is-approved"><i></i><span>Разрешена</span><strong id="executiveReqApproved">0</strong></div>
+<div class="dispatcher-workorders-legend-item is-open-status"><i></i><span>Открыта</span><strong id="executiveReqOpen">0</strong></div>
+<div class="dispatcher-workorders-legend-item is-closed"><i></i><span>Закрыта</span><strong id="executiveReqClosed">0</strong></div>
+<div class="dispatcher-workorders-legend-item is-acknowledged"><i></i><span>Принята к сведению</span><strong id="executiveReqAcknowledged">0</strong></div>
+<div class="dispatcher-workorders-legend-item is-ending"><i></i><span>Заканчиваются</span><strong id="executiveReqEnding">0</strong></div>
+</div>
+</div>
+<div class="executive-meta-line" id="executiveRequestsMeta">Обновлено: —</div>
+</article>
+<article class="glass-panel executive-panel executive-chart-panel">
+<div class="executive-panel-head">
+<div>
+<span class="micro-label">НДР</span>
+<h2>Наряд - Допуск/Распоряжения</h2>
+</div>
+</div>
+<div class="dispatcher-workorders-chart-layout executive-chart-layout">
+<div aria-label="Распределение НДР по статусам" class="dispatcher-workorders-donut executive-donut" id="executiveWorkordersChart" role="img">
+<div class="dispatcher-workorders-donut-center">
+<strong id="executiveWorkordersTotal">0</strong>
+<span>Всего</span>
+</div>
+</div>
+<div class="dispatcher-workorders-legend executive-legend">
+<div class="dispatcher-workorders-legend-item is-registered"><i></i><span>Зарегистрирован</span><strong id="executiveWorkordersRegistered">0</strong></div>
+<div class="dispatcher-workorders-legend-item is-created"><i></i><span>Создано</span><strong id="executiveWorkordersCreated">0</strong></div>
+<div class="dispatcher-workorders-legend-item is-admission"><i></i><span>Допуск</span><strong id="executiveWorkordersAdmission">0</strong></div>
+<div class="dispatcher-workorders-legend-item is-preparation"><i></i><span>Подготовка р.м.</span><strong id="executiveWorkordersPreparation">0</strong></div>
+<div class="dispatcher-workorders-legend-item is-break"><i></i><span>Перерыв</span><strong id="executiveWorkordersBreak">0</strong></div>
+</div>
+</div>
+<div class="executive-meta-line" id="executiveWorkordersMeta">Обновлено: —</div>
+</article>
+<article class="glass-panel executive-panel executive-ranking-panel">
+<div class="executive-panel-head">
+<div>
+<span class="micro-label">РЕЙТИНГ</span>
+<h2>Общая сводка</h2>
+</div>
+</div>
+<div class="executive-ranking-columns">
+<div>
+<h3>Топ по заявкам</h3>
+<div class="executive-ranking-list is-compact" id="executiveRequestRanking"></div>
+</div>
+<div>
+<h3>Топ по НДР</h3>
+<div class="executive-ranking-list is-compact" id="executiveWorkorderRanking"></div>
+</div>
+<div>
+<h3>Топ по обращениям</h3>
+<div class="executive-ranking-list is-compact" id="executiveAppealRanking"></div>
+</div>
+</div>
+</article>
+<article class="glass-panel executive-panel executive-trend-panel">
+<div class="executive-panel-head">
+<div>
+<span class="micro-label">ДИНАМИКА</span>
+<h2>Тренд по последним сводкам</h2>
+</div>
+<span class="executive-history-hint" id="executiveHistoryHint">История накапливается автоматически</span>
+</div>
+<div class="executive-trend-grid">
+<div class="executive-trend-card executive-trend-outages">
+<div class="executive-trend-head">
+<div>
+<span>Аварийные отключения</span>
+<strong id="executiveTrendOutagesCurrent">0</strong>
+</div>
+<span class="executive-delta is-neutral" id="executiveTrendOutagesDelta">—</span>
+</div>
+<div aria-label="Динамика аварийных отключений" class="executive-sparkline" id="executiveTrendOutagesChart"></div>
+</div>
+<div class="executive-trend-card executive-trend-appeals">
+<div class="executive-trend-head">
+<div>
+<span>Обращения</span>
+<strong id="executiveTrendAppealsCurrent">0</strong>
+</div>
+<span class="executive-delta is-neutral" id="executiveTrendAppealsDelta">—</span>
+</div>
+<div aria-label="Динамика обращений по аварийным отключениям" class="executive-sparkline" id="executiveTrendAppealsChart"></div>
+</div>
+<div class="executive-trend-card executive-trend-requests">
+<div class="executive-trend-head">
+<div>
+<span>Заявки</span>
+<strong id="executiveTrendRequestsCurrent">0</strong>
+</div>
+<span class="executive-delta is-neutral" id="executiveTrendRequestsDelta">—</span>
+</div>
+<div aria-label="Динамика заявок" class="executive-sparkline" id="executiveTrendRequestsChart"></div>
+</div>
+<div class="executive-trend-card executive-trend-workorders">
+<div class="executive-trend-head">
+<div>
+<span>НДР</span>
+<strong id="executiveTrendWorkordersCurrent">0</strong>
+</div>
+<span class="executive-delta is-neutral" id="executiveTrendWorkordersDelta">—</span>
+</div>
+<div aria-label="Динамика НДР" class="executive-sparkline" id="executiveTrendWorkordersChart"></div>
+</div>
+</div>
+</article>
+<article class="glass-panel executive-panel executive-table-panel">
+<div class="executive-panel-head">
+<div>
+<span class="micro-label">СВОДНЫЙ СТАТУС</span>
+<h2>Подразделения в одном контуре</h2>
+</div>
+<span class="executive-table-caption">Аварии · Обращения · Заявки · НДР</span>
+</div>
+<div class="executive-table-wrap">
+<table class="executive-table">
+<thead>
+<tr>
+<th>Подразделение</th>
+<th>Состояние</th>
+<th>Отключения</th>
+<th>Обращения</th>
+<th>Заявки</th>
+<th>НДР</th>
+<th>РЭС / районы</th>
+</tr>
+</thead>
+<tbody id="executiveDivisionTableBody">
+<tr><td colspan="7">Ожидание данных…</td></tr>
+</tbody>
+</table>
+</div>
+</article>
+</div>
+</div>
+</section>
+<!-- DISPATCHER -->
+<section class="app-view" id="dispatcherView">
+<div class="view-toolbar">
+<button class="back-button" id="backFromDispatcherButton" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M19 12H5M11 18l-6-6 6-6"></path>
+</svg>
+<span>Главное меню</span>
+</button>
+<div class="dispatcher-toolbar-actions">
+<div class="toolbar-status toolbar-status-dispatcher">
+<span class="system-pulse"></span>
+<span id="dispatcherUpdatedAt">Обновлено: —</span>
+</div>
+<button class="icon-button admin-refresh-button" id="dispatcherRefreshButton" title="Обновить данные" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M20 6v5h-5M4 18v-5h5"></path>
+<path d="M18.5 9A7 7 0 0 0 6 6.5L4 11M5.5 15A7 7 0 0 0 18 17.5l2-4.5"></path>
+</svg>
+</button>
+</div>
+</div>
+<div class="dispatcher-shell">
+<div class="dispatcher-hero">
+<div>
+<span class="micro-label">ИНТЕРФЕЙС ДИСПЕТЧЕРА</span>
+<h1>Оперативная панель диспетчера</h1>
+<p>
               Заявки, НДР, аварийные и плановые отключения автоматически
               собираются из подключённых чатов MAX для выбранного РЭС / района.
             </p>
-          </div>
-
-          <div class="dispatcher-assigned-tile">
-            <span>Контур доступа по роли</span>
-            <strong id="dispatcherAssignedDivision">—</strong>
-            <small id="dispatcherAssignedHint">Определяется назначенной ролью</small>
-          </div>
-        </div>
-
-        <div class="dispatcher-select-wrap glass-panel">
-          <div>
-            <span class="micro-label">ОБЛАСТЬ НАБЛЮДЕНИЯ</span>
-            <h2>Выбор РЭС / района</h2>
-          </div>
-
-          <div class="dispatcher-select-stack">
-            <label id="dispatcherGroupSelectWrap" class="dispatcher-select-label" hidden>
-              <span>Подразделение</span>
-              <select id="dispatcherGroupSelect" class="dispatcher-select"></select>
-            </label>
-
-            <label class="dispatcher-select-label">
-              <span>РЭС / район</span>
-              <select id="dispatcherUnitSelect" class="dispatcher-select"></select>
-            </label>
-          </div>
-        </div>
-
-        <div id="dispatcherDataNotice" class="dispatcher-data-notice" hidden></div>
-
-        <div class="telemetry-strip dispatcher-telemetry">
-          <article class="telemetry-card is-emergency">
-            <span>Аварийные отключения</span>
-            <strong id="dispatcherTelemetryEmergency">0</strong>
-            <small>активных событий</small>
-          </article>
-          <article class="telemetry-card is-planned">
-            <span>Плановые отключения</span>
-            <strong id="dispatcherTelemetryPlanned">0</strong>
-            <small>в контуре РЭС / района</small>
-          </article>
-          <article class="telemetry-card is-requests">
-            <span>Заявки СК-11</span>
-            <strong id="dispatcherTelemetryRequests">0</strong>
-            <small>по подключённым строкам</small>
-          </article>
-          <article class="telemetry-card is-workorders">
-            <span>НДР</span>
-            <strong id="dispatcherTelemetryWorkorders">0</strong>
-            <small>наряды / распоряжения / допуски</small>
-          </article>
-        </div>
-
-        <article class="dispatcher-panel glass-panel dispatcher-outages-panel">
-          <div class="dispatcher-panel-head">
-            <div>
-              <span class="micro-label">АКТИВНЫЕ ОТКЛЮЧЕНИЯ</span>
-              <h2>Сводка по выбранному РЭС / району</h2>
-            </div>
-            <div id="dispatcherOutagesLiveBadge" class="dispatcher-live-badge">
-              <i></i>
+</div>
+<div class="dispatcher-assigned-tile">
+<span>Контур доступа по роли</span>
+<strong id="dispatcherAssignedDivision">—</strong>
+<small id="dispatcherAssignedHint">Определяется назначенной ролью</small>
+</div>
+</div>
+<div class="dispatcher-select-wrap glass-panel">
+<div>
+<span class="micro-label">ОБЛАСТЬ НАБЛЮДЕНИЯ</span>
+<h2>Выбор РЭС / района</h2>
+</div>
+<div class="dispatcher-select-stack">
+<label class="dispatcher-select-label" hidden="" id="dispatcherGroupSelectWrap">
+<span>Подразделение</span>
+<select class="dispatcher-select" id="dispatcherGroupSelect"></select>
+</label>
+<label class="dispatcher-select-label">
+<span>РЭС / район</span>
+<select class="dispatcher-select" id="dispatcherUnitSelect"></select>
+</label>
+</div>
+</div>
+<div class="dispatcher-data-notice" hidden="" id="dispatcherDataNotice"></div>
+<div class="telemetry-strip dispatcher-telemetry">
+<article class="telemetry-card is-emergency">
+<span>Аварийные отключения</span>
+<strong id="dispatcherTelemetryEmergency">0</strong>
+<small>активных событий</small>
+</article>
+<article class="telemetry-card is-planned">
+<span>Плановые отключения</span>
+<strong id="dispatcherTelemetryPlanned">0</strong>
+<small>в контуре РЭС / района</small>
+</article>
+<article class="telemetry-card is-requests">
+<span>Заявки СК-11</span>
+<strong id="dispatcherTelemetryRequests">0</strong>
+<small>по подключённым строкам</small>
+</article>
+<article class="telemetry-card is-workorders">
+<span>НДР</span>
+<strong id="dispatcherTelemetryWorkorders">0</strong>
+<small>наряды / распоряжения / допуски</small>
+</article>
+</div>
+<div class="dispatcher-board"><div class="dispatcher-board-column dispatcher-board-primary"><article class="dispatcher-panel glass-panel dispatcher-outages-panel">
+<div class="dispatcher-panel-head">
+<div>
+<span class="micro-label">АКТИВНЫЕ ОТКЛЮЧЕНИЯ</span>
+<h2>Сводка по выбранному РЭС / району</h2>
+</div>
+<div class="dispatcher-live-badge" id="dispatcherOutagesLiveBadge">
+<i></i>
               LIVE
             </div>
-          </div>
-
-          <div class="dispatcher-source-meta dispatcher-outages-meta">
-            <span id="dispatcherOutagesMeta">Обновлено: —</span>
-            <span id="dispatcherOutagesSourcesText" hidden></span>
-          </div>
-
-          <div id="dispatcherOutagesNotice" class="dispatcher-data-notice dispatcher-outages-notice" hidden></div>
-
-          <div class="dispatcher-outage-kpis">
-            <div class="dispatcher-outage-kpi is-emergency">
-              <span>Аварийные отключения</span>
-              <strong id="dispatcherEmergencyOutagesCount">0</strong>
-              <small><b id="dispatcherEmergencyAppealsCount">0</b> обращений</small>
-            </div>
-
-            <div class="dispatcher-outage-kpi is-planned">
-              <span>Плановые отключения</span>
-              <strong id="dispatcherPlannedOutagesCount">0</strong>
-              <small><b id="dispatcherPlannedAppealsCount">0</b> обращений</small>
-            </div>
-          </div>
-
-          <div class="dispatcher-outage-tables">
-            <section class="dispatcher-outage-table-card is-emergency">
-              <div class="dispatcher-outage-table-head">
-                <div>
-                  <span class="micro-label">АВАРИЙНЫЕ</span>
-                  <h3>Подразделения и обращения</h3>
-                </div>
-              </div>
-              <div class="dispatcher-table-scroll">
-                <table class="dispatcher-outage-table">
-                  <thead>
-                    <tr>
-                      <th>Подразделение</th>
-                      <th>Отключений</th>
-                      <th>Обращений</th>
-                    </tr>
-                  </thead>
-                  <tbody id="dispatcherEmergencyOutagesTableBody">
-                    <tr><td colspan="3">Ожидание данных…</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <details class="dispatcher-outage-details">
-                <summary>
-                  <span>Подробно об аварийных отключениях</span>
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"></path></svg>
-                </summary>
-                <div id="dispatcherEmergencyOutagesDetails" class="dispatcher-outage-details-body">
-                  <div class="dispatcher-outage-detail-empty">Ожидание данных…</div>
-                </div>
-              </details>
-            </section>
-
-            <section class="dispatcher-outage-table-card is-planned">
-              <div class="dispatcher-outage-table-head">
-                <div>
-                  <span class="micro-label">ПЛАНОВЫЕ</span>
-                  <h3>Подразделения и обращения</h3>
-                </div>
-              </div>
-              <div class="dispatcher-table-scroll">
-                <table class="dispatcher-outage-table">
-                  <thead>
-                    <tr>
-                      <th>Подразделение</th>
-                      <th>Отключений</th>
-                      <th>Обращений</th>
-                    </tr>
-                  </thead>
-                  <tbody id="dispatcherPlannedOutagesTableBody">
-                    <tr><td colspan="3">Ожидание данных…</td></tr>
-                  </tbody>
-                </table>
-              </div>
-              <details class="dispatcher-outage-details">
-                <summary>
-                  <span>Подробно о плановых отключениях</span>
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"></path></svg>
-                </summary>
-                <div id="dispatcherPlannedOutagesDetails" class="dispatcher-outage-details-body">
-                  <div class="dispatcher-outage-detail-empty">Ожидание данных…</div>
-                </div>
-              </details>
-            </section>
-          </div>
-        </article>
-
-        <div class="dispatcher-grid">
-          <article class="dispatcher-panel glass-panel">
-            <div class="dispatcher-panel-head">
-              <div>
-                <span class="micro-label">ЗАЯВКИ</span>
-                <h2 id="dispatcherUnitTitle">Оперативный счётчик</h2>
-              </div>
-              <div id="dispatcherLiveBadge" class="dispatcher-live-badge">
-                <i></i>
-                LIVE
-              </div>
-            </div>
-
-            <div class="dispatcher-source-meta">
-              <span id="dispatcherSourceMeta">Обновлено: —</span>
-              <span id="dispatcherSourcesText" hidden></span>
-            </div>
-
-            <div
-              id="dispatcherSourceBreakdown"
-              class="dispatcher-source-breakdown"
-              hidden
-            ></div>
-
-            <div class="dispatcher-requests-chart-layout">
-              <div
-                id="dispatcherRequestsChart"
-                class="dispatcher-workorders-donut dispatcher-requests-donut"
-                role="img"
-                aria-label="Распределение заявок по статусам"
-              >
-                <div class="dispatcher-workorders-donut-center dispatcher-requests-donut-center">
-                  <strong id="dispatcherReqTotal">0</strong>
-                  <span>Всего</span>
-                </div>
-              </div>
-
-              <div class="dispatcher-requests-side">
-                <div class="dispatcher-workorders-legend dispatcher-requests-legend">
-                  <div class="dispatcher-workorders-legend-item is-review">
-                    <i></i>
-                    <span>В рассмотрении</span>
-                    <strong id="dispatcherReqReview">0</strong>
-                  </div>
-                  <div class="dispatcher-workorders-legend-item is-approved">
-                    <i></i>
-                    <span>Разрешена</span>
-                    <strong id="dispatcherReqApproved">0</strong>
-                  </div>
-                  <div class="dispatcher-workorders-legend-item is-open-status">
-                    <i></i>
-                    <span>Открыта</span>
-                    <strong id="dispatcherReqOpen">0</strong>
-                  </div>
-                  <div class="dispatcher-workorders-legend-item is-closed">
-                    <i></i>
-                    <span>Закрыта</span>
-                    <strong id="dispatcherReqClosed">0</strong>
-                  </div>
-                  <div class="dispatcher-workorders-legend-item is-acknowledged">
-                    <i></i>
-                    <span>Принята к сведению</span>
-                    <strong id="dispatcherReqAcknowledged">0</strong>
-                  </div>
-                </div>
-
-                <p id="dispatcherReqTotalCaption" class="dispatcher-requests-caption">
-                  Сумма по подключённым строкам СК-11
-                </p>
-
-                <div class="dispatcher-ending-live-card">
-                  <div class="dispatcher-ending-live-copy">
-                    <i></i>
-                    <div>
-                      <span>Заканчиваются</span>
-                      <small>в текущую смену</small>
-                    </div>
-                  </div>
-                  <strong id="dispatcherReqEnding">0</strong>
-                </div>
-              </div>
-            </div>
-          </article>
-
-          <div class="dispatcher-side-stack">
-            <article class="dispatcher-panel glass-panel">
-              <div class="dispatcher-panel-head">
-                <div>
-                  <span class="micro-label">ДЕФЕКТЫ</span>
-                  <h2>Контур дефектов</h2>
-                </div>
-                <div class="dispatcher-dev-badge">МОДУЛЬ</div>
-              </div>
-
-              <div class="dispatcher-defects-lockup">
-                <div class="dispatcher-defects-blur"></div>
-                <div class="dispatcher-defects-copy">
-                  <div class="dispatcher-defects-icon">!</div>
-                  <strong>В разработке</strong>
-                  <span>
+</div>
+<div class="dispatcher-source-meta dispatcher-outages-meta">
+<span id="dispatcherOutagesMeta">Обновлено: —</span>
+<span hidden="" id="dispatcherOutagesSourcesText"></span>
+</div>
+<div class="dispatcher-data-notice dispatcher-outages-notice" hidden="" id="dispatcherOutagesNotice"></div>
+<div class="dispatcher-outage-kpis">
+<div class="dispatcher-outage-kpi is-emergency">
+<span>Аварийные отключения</span>
+<strong id="dispatcherEmergencyOutagesCount">0</strong>
+<small><b id="dispatcherEmergencyAppealsCount">0</b> обращений</small>
+</div>
+<div class="dispatcher-outage-kpi is-planned">
+<span>Плановые отключения</span>
+<strong id="dispatcherPlannedOutagesCount">0</strong>
+<small><b id="dispatcherPlannedAppealsCount">0</b> обращений</small>
+</div>
+</div>
+<div class="dispatcher-outage-tables">
+<section class="dispatcher-outage-table-card is-emergency">
+<div class="dispatcher-outage-table-head">
+<div>
+<span class="micro-label">АВАРИЙНЫЕ</span>
+<h3>Подразделения и обращения</h3>
+</div>
+</div>
+<div class="dispatcher-table-scroll">
+<table class="dispatcher-outage-table">
+<thead>
+<tr>
+<th>Подразделение</th>
+<th>Отключений</th>
+<th>Обращений</th>
+</tr>
+</thead>
+<tbody id="dispatcherEmergencyOutagesTableBody">
+<tr><td colspan="3">Ожидание данных…</td></tr>
+</tbody>
+</table>
+</div>
+<details class="dispatcher-outage-details">
+<summary>
+<span>Подробно об аварийных отключениях</span>
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="m7 10 5 5 5-5"></path></svg>
+</summary>
+<div class="dispatcher-outage-details-body" id="dispatcherEmergencyOutagesDetails">
+<div class="dispatcher-outage-detail-empty">Ожидание данных…</div>
+</div>
+</details>
+</section>
+<section class="dispatcher-outage-table-card is-planned">
+<div class="dispatcher-outage-table-head">
+<div>
+<span class="micro-label">ПЛАНОВЫЕ</span>
+<h3>Подразделения и обращения</h3>
+</div>
+</div>
+<div class="dispatcher-table-scroll">
+<table class="dispatcher-outage-table">
+<thead>
+<tr>
+<th>Подразделение</th>
+<th>Отключений</th>
+<th>Обращений</th>
+</tr>
+</thead>
+<tbody id="dispatcherPlannedOutagesTableBody">
+<tr><td colspan="3">Ожидание данных…</td></tr>
+</tbody>
+</table>
+</div>
+<details class="dispatcher-outage-details">
+<summary>
+<span>Подробно о плановых отключениях</span>
+<svg aria-hidden="true" viewbox="0 0 24 24"><path d="m7 10 5 5 5-5"></path></svg>
+</summary>
+<div class="dispatcher-outage-details-body" id="dispatcherPlannedOutagesDetails">
+<div class="dispatcher-outage-detail-empty">Ожидание данных…</div>
+</div>
+</details>
+</section>
+</div>
+</article><article class="dispatcher-panel glass-panel">
+<div class="dispatcher-panel-head">
+<div>
+<span class="micro-label">ДЕФЕКТЫ</span>
+<h2>Контур дефектов</h2>
+</div>
+<div class="dispatcher-dev-badge">МОДУЛЬ</div>
+</div>
+<div class="dispatcher-defects-lockup">
+<div class="dispatcher-defects-blur"></div>
+<div class="dispatcher-defects-copy">
+<div class="dispatcher-defects-icon">!</div>
+<strong>В разработке</strong>
+<span>
                     Раздел дефектов будет подключён в следующих версиях
                     диспетчерского интерфейса.
                   </span>
-                </div>
+</div>
+</div>
+</article></div><div class="dispatcher-board-column dispatcher-board-secondary"><article class="dispatcher-panel glass-panel">
+<div class="dispatcher-panel-head">
+<div>
+<span class="micro-label">ЗАЯВКИ</span>
+<h2 id="dispatcherUnitTitle">Оперативный счётчик</h2>
+</div>
+<div class="dispatcher-live-badge" id="dispatcherLiveBadge">
+<i></i>
+                LIVE
               </div>
-            </article>
-
-            <article class="dispatcher-panel glass-panel dispatcher-workorders-panel">
-              <div class="dispatcher-panel-head">
-                <div>
-                  <span class="micro-label">СК-11 · НДР</span>
-                  <h2>Наряд - Допуск/Распоряжения</h2>
-                </div>
-                <div id="dispatcherWorkordersLiveBadge" class="dispatcher-live-badge">
-                  <i></i>
+</div>
+<div class="dispatcher-source-meta">
+<span id="dispatcherSourceMeta">Обновлено: —</span>
+<span hidden="" id="dispatcherSourcesText"></span>
+</div>
+<div class="dispatcher-source-breakdown" hidden="" id="dispatcherSourceBreakdown"></div>
+<div class="dispatcher-requests-chart-layout">
+<div aria-label="Распределение заявок по статусам" class="dispatcher-workorders-donut dispatcher-requests-donut" id="dispatcherRequestsChart" role="img">
+<div class="dispatcher-workorders-donut-center dispatcher-requests-donut-center">
+<strong id="dispatcherReqTotal">0</strong>
+<span>Всего</span>
+</div>
+</div>
+<div class="dispatcher-requests-side">
+<div class="dispatcher-workorders-legend dispatcher-requests-legend">
+<div class="dispatcher-workorders-legend-item is-review">
+<i></i>
+<span>В рассмотрении</span>
+<strong id="dispatcherReqReview">0</strong>
+</div>
+<div class="dispatcher-workorders-legend-item is-approved">
+<i></i>
+<span>Разрешена</span>
+<strong id="dispatcherReqApproved">0</strong>
+</div>
+<div class="dispatcher-workorders-legend-item is-open-status">
+<i></i>
+<span>Открыта</span>
+<strong id="dispatcherReqOpen">0</strong>
+</div>
+<div class="dispatcher-workorders-legend-item is-closed">
+<i></i>
+<span>Закрыта</span>
+<strong id="dispatcherReqClosed">0</strong>
+</div>
+<div class="dispatcher-workorders-legend-item is-acknowledged">
+<i></i>
+<span>Принята к сведению</span>
+<strong id="dispatcherReqAcknowledged">0</strong>
+</div>
+</div>
+<p class="dispatcher-requests-caption" id="dispatcherReqTotalCaption">
+                  Сумма по подключённым строкам СК-11
+                </p>
+<div class="dispatcher-ending-live-card">
+<div class="dispatcher-ending-live-copy">
+<i></i>
+<div>
+<span>Заканчиваются</span>
+<small>в текущую смену</small>
+</div>
+</div>
+<strong id="dispatcherReqEnding">0</strong>
+</div>
+</div>
+</div>
+</article><article class="dispatcher-panel glass-panel dispatcher-workorders-panel">
+<div class="dispatcher-panel-head">
+<div>
+<span class="micro-label">СК-11 · НДР</span>
+<h2>Наряд - Допуск/Распоряжения</h2>
+</div>
+<div class="dispatcher-live-badge" id="dispatcherWorkordersLiveBadge">
+<i></i>
                   LIVE
                 </div>
-              </div>
+</div>
+<div class="dispatcher-source-meta dispatcher-workorders-meta">
+<span id="dispatcherWorkordersMeta">Обновлено: —</span>
+<span hidden="" id="dispatcherWorkordersSourcesText"></span>
+</div>
+<div class="dispatcher-data-notice dispatcher-workorders-notice" hidden="" id="dispatcherWorkordersNotice"></div>
+<div class="dispatcher-source-breakdown dispatcher-workorders-breakdown" hidden="" id="dispatcherWorkordersBreakdown"></div>
+<div class="dispatcher-workorders-chart-layout">
+<div aria-label="Распределение нарядов, распоряжений и допусков по статусам" class="dispatcher-workorders-donut" id="dispatcherWorkordersChart" role="img">
+<div class="dispatcher-workorders-donut-center">
+<strong id="dispatcherWorkordersTotal">0</strong>
+<span>Всего</span>
+</div>
+</div>
+<div class="dispatcher-workorders-legend">
+<div class="dispatcher-workorders-legend-item is-registered">
+<i></i>
+<span>Зарегистрирован</span>
+<strong id="dispatcherWorkordersRegistered">0</strong>
+</div>
+<div class="dispatcher-workorders-legend-item is-created">
+<i></i>
+<span>Создано</span>
+<strong id="dispatcherWorkordersCreated">0</strong>
+</div>
+<div class="dispatcher-workorders-legend-item is-admission">
+<i></i>
+<span>Допуск</span>
+<strong id="dispatcherWorkordersAdmission">0</strong>
+</div>
+<div class="dispatcher-workorders-legend-item is-preparation">
+<i></i>
+<span>Подготовка р.м.</span>
+<strong id="dispatcherWorkordersPreparation">0</strong>
+</div>
+<div class="dispatcher-workorders-legend-item is-break">
+<i></i>
+<span>Перерыв</span>
+<strong id="dispatcherWorkordersBreak">0</strong>
+</div>
+</div>
+</div>
+</article></div></div>
 
-              <div class="dispatcher-source-meta dispatcher-workorders-meta">
-                <span id="dispatcherWorkordersMeta">Обновлено: —</span>
-                <span id="dispatcherWorkordersSourcesText" hidden></span>
-              </div>
-
-              <div
-                id="dispatcherWorkordersNotice"
-                class="dispatcher-data-notice dispatcher-workorders-notice"
-                hidden
-              ></div>
-
-              <div
-                id="dispatcherWorkordersBreakdown"
-                class="dispatcher-source-breakdown dispatcher-workorders-breakdown"
-                hidden
-              ></div>
-
-              <div class="dispatcher-workorders-chart-layout">
-                <div
-                  id="dispatcherWorkordersChart"
-                  class="dispatcher-workorders-donut"
-                  role="img"
-                  aria-label="Распределение нарядов, распоряжений и допусков по статусам"
-                >
-                  <div class="dispatcher-workorders-donut-center">
-                    <strong id="dispatcherWorkordersTotal">0</strong>
-                    <span>Всего</span>
-                  </div>
-                </div>
-
-                <div class="dispatcher-workorders-legend">
-                  <div class="dispatcher-workorders-legend-item is-registered">
-                    <i></i>
-                    <span>Зарегистрирован</span>
-                    <strong id="dispatcherWorkordersRegistered">0</strong>
-                  </div>
-                  <div class="dispatcher-workorders-legend-item is-created">
-                    <i></i>
-                    <span>Создано</span>
-                    <strong id="dispatcherWorkordersCreated">0</strong>
-                  </div>
-                  <div class="dispatcher-workorders-legend-item is-admission">
-                    <i></i>
-                    <span>Допуск</span>
-                    <strong id="dispatcherWorkordersAdmission">0</strong>
-                  </div>
-                  <div class="dispatcher-workorders-legend-item is-preparation">
-                    <i></i>
-                    <span>Подготовка р.м.</span>
-                    <strong id="dispatcherWorkordersPreparation">0</strong>
-                  </div>
-                  <div class="dispatcher-workorders-legend-item is-break">
-                    <i></i>
-                    <span>Перерыв</span>
-                    <strong id="dispatcherWorkordersBreak">0</strong>
-                  </div>
-                </div>
-              </div>
-            </article>
-          </div>
-        </div>
-
-
-      </div>
-    </section>
-
-    <!-- DEVELOPER CONTROL CENTER -->
-    <section id="adminView" class="app-view">
-      <div class="view-toolbar">
-        <button id="backFromAdminButton" class="back-button" type="button">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M19 12H5M11 18l-6-6 6-6"></path>
-          </svg>
-          <span>Главное меню</span>
-        </button>
-
-        <div class="toolbar-status">
-          <span class="system-pulse"></span>
-          <span id="adminUpdatedAt">Данные центра управления</span>
-        </div>
-      </div>
-
-      <div class="admin-hero">
-        <div>
-          <span class="micro-label">ДОСТУП РАЗРАБОТЧИКА</span>
-          <h1>Центр управления системой</h1>
-          <p>
+</div>
+</section>
+<!-- DEVELOPER CONTROL CENTER -->
+<section class="app-view" id="adminView">
+<div class="view-toolbar">
+<button class="back-button" id="backFromAdminButton" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M19 12H5M11 18l-6-6 6-6"></path>
+</svg>
+<span>Главное меню</span>
+</button>
+<div class="toolbar-status">
+<span class="system-pulse"></span>
+<span id="adminUpdatedAt">Данные центра управления</span>
+</div>
+</div>
+<div class="admin-hero">
+<div>
+<span class="micro-label">ДОСТУП РАЗРАБОТЧИКА</span>
+<h1>Центр управления системой</h1>
+<p>
             Управление эксплуатационным режимом Mini App
             и контроль пользовательских сессий.
           </p>
-        </div>
-
-        <div id="adminSystemBadge" class="admin-system-badge">
-          <span></span>
-          <strong>Штатный режим</strong>
-        </div>
-      </div>
-
-      <div id="storageWarning" class="storage-warning" hidden>
-        <div>
-          <strong>Хранилище состояния не подключено</strong>
-          <p>
+</div>
+<div class="admin-system-badge" id="adminSystemBadge">
+<span></span>
+<strong>Штатный режим</strong>
+</div>
+</div>
+<div class="storage-warning" hidden="" id="storageWarning">
+<div>
+<strong>Хранилище состояния не подключено</strong>
+<p>
             Для режимов системы и статистики сеансов необходимо
             подключить Upstash Redis и добавить переменные окружения.
           </p>
-        </div>
-      </div>
-
-      <div class="admin-stats">
-        <article class="admin-stat-card">
-          <span>Сейчас в Mini App</span>
-          <strong id="adminOnlineCount">—</strong>
-          <small>активность за последние 2 минуты</small>
-        </article>
-
-        <article class="admin-stat-card">
-          <span>Учётных записей</span>
-          <strong id="adminTotalUsers">—</strong>
-          <small>из APP_USERS_JSON</small>
-        </article>
-
-        <article class="admin-stat-card">
-          <span>Диспетчеров</span>
-          <strong id="adminDispatcherCount">—</strong>
-          <small>пользователи с ролью диспетчера</small>
-        </article>
-
-        <article class="admin-stat-card">
-          <span>Разработчиков</span>
-          <strong id="adminDeveloperCount">—</strong>
-          <small>доступ к центру управления</small>
-        </article>
-      </div>
-
-      <div class="admin-layout">
-        <article class="admin-panel system-control-panel">
-          <div class="admin-panel-heading">
-            <div>
-              <span class="micro-label">ЭКСПЛУАТАЦИОННЫЙ РЕЖИМ</span>
-              <h2>Состояние системы</h2>
-            </div>
-          </div>
-
-          <div class="mode-selector" id="modeSelector">
-            <button class="mode-option is-selected" data-mode="normal" type="button">
-              <span class="mode-light mode-light-green"></span>
-              <strong>Штатный режим</strong>
-              <small>Все функции доступны</small>
-            </button>
-
-            <button class="mode-option" data-mode="maintenance" type="button">
-              <span class="mode-light mode-light-amber"></span>
-              <strong>Технические работы</strong>
-              <small>Доступ пользователей ограничен</small>
-            </button>
-
-            <button class="mode-option" data-mode="stopped" type="button">
-              <span class="mode-light mode-light-red"></span>
-              <strong>Система остановлена</strong>
-              <small>Оперативный доступ временно закрыт</small>
-            </button>
-          </div>
-
-          <label class="admin-message-field">
-            <span>Сообщение пользователям</span>
-            <textarea
-              id="systemMessageInput"
-              maxlength="500"
-              rows="4"
-              placeholder="Например: Выполняются плановые технические работы до 14:00."
-            ></textarea>
-          </label>
-
-          <div class="system-control-footer">
-            <div id="systemChangedInfo" class="system-changed-info">
+</div>
+</div>
+<div class="admin-stats">
+<article class="admin-stat-card">
+<span>Сейчас в Mini App</span>
+<strong id="adminOnlineCount">—</strong>
+<small>активность за последние 2 минуты</small>
+</article>
+<article class="admin-stat-card">
+<span>Учётных записей</span>
+<strong id="adminTotalUsers">—</strong>
+<small>из APP_USERS_JSON</small>
+</article>
+<article class="admin-stat-card">
+<span>Диспетчеров</span>
+<strong id="adminDispatcherCount">—</strong>
+<small>пользователи с ролью диспетчера</small>
+</article>
+<article class="admin-stat-card">
+<span>Разработчиков</span>
+<strong id="adminDeveloperCount">—</strong>
+<small>доступ к центру управления</small>
+</article>
+</div>
+<div class="admin-layout">
+<article class="admin-panel system-control-panel">
+<div class="admin-panel-heading">
+<div>
+<span class="micro-label">ЭКСПЛУАТАЦИОННЫЙ РЕЖИМ</span>
+<h2>Состояние системы</h2>
+</div>
+</div>
+<div class="mode-selector" id="modeSelector">
+<button class="mode-option is-selected" data-mode="normal" type="button">
+<span class="mode-light mode-light-green"></span>
+<strong>Штатный режим</strong>
+<small>Все функции доступны</small>
+</button>
+<button class="mode-option" data-mode="maintenance" type="button">
+<span class="mode-light mode-light-amber"></span>
+<strong>Технические работы</strong>
+<small>Доступ пользователей ограничен</small>
+</button>
+<button class="mode-option" data-mode="stopped" type="button">
+<span class="mode-light mode-light-red"></span>
+<strong>Система остановлена</strong>
+<small>Оперативный доступ временно закрыт</small>
+</button>
+</div>
+<label class="admin-message-field">
+<span>Сообщение пользователям</span>
+<textarea id="systemMessageInput" maxlength="500" placeholder="Например: Выполняются плановые технические работы до 14:00." rows="4"></textarea>
+</label>
+<div class="system-control-footer">
+<div class="system-changed-info" id="systemChangedInfo">
               Изменения ещё не выполнялись
             </div>
-
-            <button id="saveSystemStateButton" class="primary-action admin-save-button" type="button">
-              <span>Применить режим</span>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M5 12h14M13 6l6 6-6 6"></path>
-              </svg>
-            </button>
-          </div>
-        </article>
-
-        <article class="admin-panel sessions-panel">
-          <div class="admin-panel-heading sessions-heading">
-            <div>
-              <span class="micro-label">ПОЛЬЗОВАТЕЛЬСКИЕ СЕССИИ</span>
-              <h2>Активность пользователей</h2>
-            </div>
-
-            <div class="session-heading-actions">
-              <button
-                id="createUserButton"
-                class="secondary-action create-user-button"
-                type="button"
-                hidden
-              >
+<button class="primary-action admin-save-button" id="saveSystemStateButton" type="button">
+<span>Применить режим</span>
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M5 12h14M13 6l6 6-6 6"></path>
+</svg>
+</button>
+</div>
+</article>
+<article class="admin-panel sessions-panel">
+<div class="admin-panel-heading sessions-heading">
+<div>
+<span class="micro-label">ПОЛЬЗОВАТЕЛЬСКИЕ СЕССИИ</span>
+<h2>Активность пользователей</h2>
+</div>
+<div class="session-heading-actions">
+<button class="secondary-action create-user-button" hidden="" id="createUserButton" type="button">
                 + Создать пользователя
               </button>
-
-              <button id="refreshAdminButton" class="icon-button admin-refresh-button" type="button" title="Обновить">
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M20 6v5h-5M4 18v-5h5"></path>
-                  <path d="M18.5 9A7 7 0 0 0 6 6.5L4 11M5.5 15A7 7 0 0 0 18 17.5l2-4.5"></path>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <div id="sessionList" class="session-list">
-            <div class="session-loading">
+<button class="icon-button admin-refresh-button" id="refreshAdminButton" title="Обновить" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M20 6v5h-5M4 18v-5h5"></path>
+<path d="M18.5 9A7 7 0 0 0 6 6.5L4 11M5.5 15A7 7 0 0 0 18 17.5l2-4.5"></path>
+</svg>
+</button>
+</div>
+</div>
+<div class="session-list" id="sessionList">
+<div class="session-loading">
               Загрузка пользовательских сессий…
             </div>
-          </div>
-        </article>
-      </div>
-
-      <article
-        id="accessManagementPanel"
-        class="admin-panel access-management-panel"
-        hidden
-      >
-        <div class="admin-panel-heading access-heading">
-          <div>
-            <span class="micro-label">УПРАВЛЕНИЕ ДОСТУПОМ</span>
-            <h2>Роли и права пользователей</h2>
-            <p class="access-heading-copy">
+</div>
+</article>
+</div>
+<article class="admin-panel access-management-panel" hidden="" id="accessManagementPanel">
+<div class="admin-panel-heading access-heading">
+<div>
+<span class="micro-label">УПРАВЛЕНИЕ ДОСТУПОМ</span>
+<h2>Роли и права пользователей</h2>
+<p class="access-heading-copy">
               Системные роли защищены. Пользовательские роли можно
               создавать с любым набором зарегистрированных панелей.
             </p>
-          </div>
-
-          <button
-            id="createRoleButton"
-            class="secondary-action create-role-button"
-            type="button"
-          >
+</div>
+<button class="secondary-action create-role-button" id="createRoleButton" type="button">
             + Создать роль
           </button>
-        </div>
-
-        <div id="roleList" class="role-list"></div>
-      </article>
-
-
-      <article
-        id="outageManagementPanel"
-        class="admin-panel outage-source-management"
-        hidden
-      >
-        <div class="admin-panel-heading access-heading">
-          <div>
-            <span class="micro-label">АВАРИЙНЫЕ ОТКЛЮЧЕНИЯ · СК-11 OMS</span>
-            <h2>Настройка подразделений активных отключений</h2>
-            <p class="access-heading-copy">
+</div>
+<div class="role-list" id="roleList"></div>
+</article>
+<article class="admin-panel outage-source-management" hidden="" id="outageManagementPanel">
+<div class="admin-panel-heading access-heading">
+<div>
+<span class="micro-label">АВАРИЙНЫЕ ОТКЛЮЧЕНИЯ · СК-11 OMS</span>
+<h2>Настройка подразделений активных отключений</h2>
+<p class="access-heading-copy">
               Для каждого подразделения укажите одну или несколько строк/ролей из сводок СК-11 OMS.
               Одна структура используется одновременно для аварийных и плановых отключений,
               которые приходят из разных чатов MAX.
             </p>
-          </div>
-
-          <button
-            id="outageCreateDivisionButton"
-            class="secondary-action dispatcher-structure-action"
-            type="button"
-          >
+</div>
+<button class="secondary-action dispatcher-structure-action" id="outageCreateDivisionButton" type="button">
             + Подразделение
           </button>
-        </div>
-
-        <div id="outageConfigStatus" class="dispatcher-config-status"></div>
-        <div id="outageConfigList" class="dispatcher-config-list outage-config-list"></div>
-      </article>
-
-      <article
-        id="dispatcherSourceManagementPanel"
-        class="admin-panel dispatcher-source-management"
-        hidden
-      >
-        <div class="admin-panel-heading access-heading">
-          <div>
-            <span class="micro-label">ДИСПЕТЧЕРСКИЙ МОНИТОРИНГ</span>
-            <h2>Настройка РЭС / районов и источников</h2>
-            <p class="access-heading-copy">
+</div>
+<div class="dispatcher-config-status" id="outageConfigStatus"></div>
+<div class="dispatcher-config-list outage-config-list" id="outageConfigList"></div>
+</article>
+<article class="admin-panel dispatcher-source-management" hidden="" id="dispatcherSourceManagementPanel">
+<div class="admin-panel-heading access-heading">
+<div>
+<span class="micro-label">ДИСПЕТЧЕРСКИЙ МОНИТОРИНГ</span>
+<h2>Настройка РЭС / районов и источников</h2>
+<p class="access-heading-copy">
               Управляйте структурой подразделений и РЭС / районов, строками заявок СК-11
               и привязкой подразделений и ролей активных отключений.
             </p>
-          </div>
-
-          <div class="dispatcher-config-toolbar">
-            <button
-              id="dispatcherCreateGroupButton"
-              class="secondary-action dispatcher-structure-action"
-              type="button"
-            >
+</div>
+<div class="dispatcher-config-toolbar">
+<button class="secondary-action dispatcher-structure-action" id="dispatcherCreateGroupButton" type="button">
               + Подразделение
             </button>
-
-            <button
-              id="dispatcherCreateUnitButton"
-              class="secondary-action dispatcher-structure-action"
-              type="button"
-            >
+<button class="secondary-action dispatcher-structure-action" id="dispatcherCreateUnitButton" type="button">
               + РЭС / район
             </button>
-
-            <label class="dispatcher-config-filter">
-              <span>Подразделение</span>
-              <select id="dispatcherConfigGroupSelect" class="dispatcher-select"></select>
-            </label>
-
-            <button
-              id="dispatcherEditGroupButton"
-              class="role-action dispatcher-edit-group"
-              type="button"
-            >
+<label class="dispatcher-config-filter">
+<span>Подразделение</span>
+<select class="dispatcher-select" id="dispatcherConfigGroupSelect"></select>
+</label>
+<button class="role-action dispatcher-edit-group" id="dispatcherEditGroupButton" type="button">
               Редактировать подразделение
             </button>
-
-            <button
-              id="dispatcherDeleteGroupButton"
-              class="role-action is-danger dispatcher-delete-group"
-              type="button"
-            >
+<button class="role-action is-danger dispatcher-delete-group" id="dispatcherDeleteGroupButton" type="button">
               Удалить подразделение
             </button>
-          </div>
-        </div>
-
-        <div id="dispatcherConfigStatus" class="dispatcher-config-status"></div>
-        <div id="dispatcherConfigList" class="dispatcher-config-list"></div>
-      </article>
-
-      <article
-        id="dispatcherWorkordersManagementPanel"
-        class="admin-panel dispatcher-source-management"
-        hidden
-      >
-        <div class="admin-panel-heading access-heading">
-          <div>
-            <span class="micro-label">ИСТОЧНИКИ НАРЯДОВ / ДОПУСКОВ</span>
-            <h2>Настройка НДР для РЭС / районов</h2>
-            <p class="access-heading-copy">
+</div>
+</div>
+<div class="dispatcher-config-status" id="dispatcherConfigStatus"></div>
+<div class="dispatcher-config-list" id="dispatcherConfigList"></div>
+</article>
+<article class="admin-panel dispatcher-source-management" hidden="" id="dispatcherWorkordersManagementPanel">
+<div class="admin-panel-heading access-heading">
+<div>
+<span class="micro-label">ИСТОЧНИКИ НАРЯДОВ / ДОПУСКОВ</span>
+<h2>Настройка НДР для РЭС / районов</h2>
+<p class="access-heading-copy">
               Для каждого РЭС / района укажите строки из сообщения
               «СК-11 • Наряды / допуски». Если строк несколько, в панели
               диспетчера сначала показывается их общая сумма, а затем можно
               открыть каждую запись отдельно.
             </p>
-          </div>
-
-          <div class="dispatcher-config-toolbar dispatcher-workorders-config-toolbar">
-            <label class="dispatcher-config-filter">
-              <span>Подразделение</span>
-              <select id="dispatcherWorkordersConfigGroupSelect" class="dispatcher-select"></select>
-            </label>
-          </div>
-        </div>
-
-        <div id="dispatcherWorkordersConfigStatus" class="dispatcher-config-status"></div>
-        <div id="dispatcherWorkordersConfigList" class="dispatcher-config-list"></div>
-      </article>
-    </section>
-  </main>
-
-  <!-- ROLE / USER ACCESS EDITOR -->
-  <div
-    id="managementModal"
-    class="management-backdrop"
-    aria-hidden="true"
-  >
-    <div
-      class="management-card"
-      role="dialog"
-      aria-modal="true"
-    >
-      <button
-        id="closeManagementModal"
-        class="icon-button modal-close"
-        type="button"
-        aria-label="Закрыть"
-      >
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M6 6l12 12M18 6 6 18"></path>
-        </svg>
-      </button>
-
-      <span id="managementEyebrow" class="micro-label">
+</div>
+<div class="dispatcher-config-toolbar dispatcher-workorders-config-toolbar">
+<label class="dispatcher-config-filter">
+<span>Подразделение</span>
+<select class="dispatcher-select" id="dispatcherWorkordersConfigGroupSelect"></select>
+</label>
+</div>
+</div>
+<div class="dispatcher-config-status" id="dispatcherWorkordersConfigStatus"></div>
+<div class="dispatcher-config-list" id="dispatcherWorkordersConfigList"></div>
+</article>
+</section>
+</main>
+<!-- ROLE / USER ACCESS EDITOR -->
+<div aria-hidden="true" class="management-backdrop" id="managementModal">
+<div aria-modal="true" class="management-card" role="dialog">
+<button aria-label="Закрыть" class="icon-button modal-close" id="closeManagementModal" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M6 6l12 12M18 6 6 18"></path>
+</svg>
+</button>
+<span class="micro-label" id="managementEyebrow">
         УПРАВЛЕНИЕ ДОСТУПОМ
       </span>
-
-      <h2 id="managementTitle">Настройка доступа</h2>
-
-      <div
-        id="managementBody"
-        class="management-body"
-      ></div>
-
-      <div class="management-actions">
-        <button
-          id="managementCancelButton"
-          class="secondary-action"
-          type="button"
-        >
+<h2 id="managementTitle">Настройка доступа</h2>
+<div class="management-body" id="managementBody"></div>
+<div class="management-actions">
+<button class="secondary-action" id="managementCancelButton" type="button">
           Отмена
         </button>
-
-        <button
-          id="managementSaveButton"
-          class="primary-action management-save"
-          type="button"
-        >
-          <span>Сохранить</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 12h14M13 6l6 6-6 6"></path>
-          </svg>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL -->
-  <div id="accessModal" class="modal-backdrop" aria-hidden="true">
-    <div class="modal-card" role="dialog" aria-modal="true">
-      <button id="closeModalButton" class="icon-button modal-close" type="button">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M6 6l12 12M18 6 6 18"></path>
-        </svg>
-      </button>
-
-      <div id="modalIcon" class="modal-icon">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M12 3v18M3 12h18"></path>
-        </svg>
-      </div>
-
-      <span id="modalEyebrow" class="micro-label">ИНТЕРФЕЙС ДИСПЕТЧЕРА</span>
-      <h2 id="modalTitle">Проверка доступа</h2>
-      <p id="modalMessage">Пожалуйста, подождите.</p>
-
-      <button id="modalActionButton" class="secondary-action" type="button">
+<button class="primary-action management-save" id="managementSaveButton" type="button">
+<span>Сохранить</span>
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M5 12h14M13 6l6 6-6 6"></path>
+</svg>
+</button>
+</div>
+</div>
+</div>
+<!-- MODAL -->
+<div aria-hidden="true" class="modal-backdrop" id="accessModal">
+<div aria-modal="true" class="modal-card" role="dialog">
+<button class="icon-button modal-close" id="closeModalButton" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M6 6l12 12M18 6 6 18"></path>
+</svg>
+</button>
+<div class="modal-icon" id="modalIcon">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M12 3v18M3 12h18"></path>
+</svg>
+</div>
+<span class="micro-label" id="modalEyebrow">ИНТЕРФЕЙС ДИСПЕТЧЕРА</span>
+<h2 id="modalTitle">Проверка доступа</h2>
+<p id="modalMessage">Пожалуйста, подождите.</p>
+<button class="secondary-action" id="modalActionButton" type="button">
         Понятно
       </button>
-    </div>
-  </div>
-
-  <script src="app.js"></script>
+</div>
+</div>
+<script src="app.js"></script>
 </body>
 </html>

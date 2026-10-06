@@ -9895,3 +9895,741 @@ h1, h2, h3,
   box-shadow: 0 4px 0 rgba(83, 220, 255, .15);
   pointer-events: none;
 }
+
+/* =========================================================
+   ORBITAL GRID CONTROL · COMPOSITION POLISH V3
+   Balanced desktop margins, independent dashboard columns,
+   readable compact mobile and guaranteed outage titles.
+   ========================================================= */
+
+/* Titles should wrap by phrases, never by random word fragments. */
+h1, h2, h3,
+.module-copy h3,
+.division-main h2,
+.dispatcher-panel-head h2,
+.executive-panel-head h2,
+.executive-highlight-card strong {
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  hyphens: none !important;
+  text-wrap: pretty;
+}
+
+@media (min-width: 761px) {
+  /* A small safe frame around the full-screen console. */
+  .app-shell {
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 auto !important;
+    padding-left: clamp(18px, 1.35vw, 30px) !important;
+    padding-right: clamp(18px, 1.35vw, 30px) !important;
+  }
+
+  .topbar,
+  .app-view,
+  .command-bus {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .topbar {
+    margin-top: 2px !important;
+    border-radius: 9px !important;
+  }
+
+  .command-bus {
+    margin-top: 7px !important;
+    margin-bottom: 9px !important;
+  }
+
+  /* Slightly softer geometry: still technical, less improvised. */
+  .glass-panel,
+  .admin-panel,
+  .admin-card,
+  .division-card,
+  .outage-counter-card,
+  .dispatcher-config-card,
+  .role-card,
+  .user-card,
+  .admin-stat-card,
+  .module-card {
+    border-radius: 9px !important;
+  }
+
+  /* ---------- ACTIVE OUTAGES ---------- */
+  .division-grid {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+    gap: 9px !important;
+  }
+
+  .outage-counter-card,
+  .outage-counter-card.outage-card-shift-unassigned {
+    grid-column: auto !important;
+    min-height: 0 !important;
+  }
+
+  .outage-counter-card.is-expanded {
+    grid-column: 1 / -1 !important;
+  }
+
+  .outage-counter-header,
+  .outage-counter-card .outage-counter-header,
+  .outage-counter-card.outage-card-shift-unassigned .outage-counter-header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 124px !important;
+    align-items: start !important;
+    min-height: 96px !important;
+    gap: 12px !important;
+    padding: 11px 12px !important;
+  }
+
+  .division-main,
+  .division-main > div:last-child,
+  .outage-counter-card.outage-card-shift-unassigned .division-main > div:last-child {
+    min-width: 0 !important;
+    max-width: none !important;
+  }
+
+  .outage-counter-card .division-main h2,
+  .outage-counter-card.has-long-title .outage-counter-header .division-main h2,
+  .outage-counter-card.outage-card-shift-unassigned .outage-counter-header .division-main h2 {
+    display: block !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 4px 0 3px !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    -webkit-line-clamp: unset !important;
+    -webkit-box-orient: initial !important;
+    font-size: 15px !important;
+    line-height: 1.16 !important;
+    letter-spacing: -0.015em !important;
+    text-wrap: balance !important;
+  }
+
+  .outage-counter-actions,
+  .outage-counter-card.outage-card-shift-unassigned .outage-counter-actions {
+    width: 124px !important;
+    min-width: 124px !important;
+    flex-basis: 124px !important;
+  }
+
+  /* ---------- DISPATCHER ---------- */
+  .dispatcher-shell {
+    grid-template-columns: repeat(24, minmax(0, 1fr)) !important;
+    gap: 9px !important;
+  }
+
+  .dispatcher-hero {
+    grid-column: span 16 !important;
+    min-height: 112px !important;
+    padding: 15px 18px !important;
+  }
+
+  .dispatcher-select-wrap {
+    grid-column: span 8 !important;
+    min-height: 112px !important;
+    padding: 12px 14px !important;
+  }
+
+  .dispatcher-data-notice,
+  .dispatcher-telemetry,
+  .dispatcher-board {
+    grid-column: 1 / -1 !important;
+  }
+
+  /* Independent masonry-like columns: no dead grid row below a tall card. */
+  .dispatcher-board {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1.58fr) minmax(390px, .82fr) !important;
+    gap: 9px !important;
+    align-items: start !important;
+  }
+
+  .dispatcher-board-column {
+    display: grid !important;
+    gap: 9px !important;
+    align-content: start !important;
+    min-width: 0;
+  }
+
+  .dispatcher-board .dispatcher-panel,
+  .dispatcher-board .dispatcher-outages-panel {
+    min-width: 0;
+    min-height: 0 !important;
+    height: auto !important;
+    align-self: start !important;
+  }
+
+  .dispatcher-outages-panel {
+    padding: 12px 13px !important;
+  }
+
+  .dispatcher-outage-tables {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .dispatcher-table-scroll {
+    max-height: 185px !important;
+  }
+
+  .dispatcher-board-secondary .dispatcher-panel {
+    padding: 12px !important;
+  }
+
+  .dispatcher-board-secondary .dispatcher-requests-chart-layout,
+  .dispatcher-board-secondary .dispatcher-workorders-chart-layout {
+    grid-template-columns: 112px minmax(0, 1fr) !important;
+    gap: 11px !important;
+  }
+
+  .dispatcher-board-secondary .dispatcher-workorders-donut,
+  .dispatcher-board-secondary .dispatcher-requests-donut {
+    width: 108px !important;
+    height: 108px !important;
+    min-width: 108px !important;
+    min-height: 108px !important;
+  }
+
+  .dispatcher-board-secondary .dispatcher-workorders-legend-item {
+    min-height: 31px !important;
+    padding: 6px 8px !important;
+    line-height: 1.22 !important;
+  }
+
+  .dispatcher-defects-lockup {
+    min-height: 142px !important;
+  }
+
+  .dispatcher-workorders-breakdown {
+    max-height: 230px;
+    overflow: auto;
+  }
+
+  /* ---------- EXECUTIVE ---------- */
+  .executive-shell {
+    grid-template-columns: repeat(24, minmax(0, 1fr)) !important;
+    gap: 9px !important;
+  }
+
+  .executive-hero {
+    grid-column: span 16 !important;
+    min-height: 144px !important;
+  }
+
+  .executive-filter-panel {
+    grid-column: span 8 !important;
+    min-height: 144px !important;
+  }
+
+  .executive-grid {
+    grid-column: 1 / -1 !important;
+    grid-template-columns: repeat(24, minmax(0, 1fr)) !important;
+    gap: 9px !important;
+    align-items: start !important;
+  }
+
+  .executive-panel {
+    min-width: 0;
+    min-height: 0 !important;
+    height: auto !important;
+    align-self: start !important;
+    padding: 12px !important;
+  }
+
+  .executive-overview-panel { grid-column: span 14 !important; }
+  .executive-outages-panel { grid-column: span 10 !important; }
+  .executive-chart-panel { grid-column: span 7 !important; }
+  .executive-ranking-panel { grid-column: span 10 !important; }
+  .executive-trend-panel,
+  .executive-table-panel { grid-column: 1 / -1 !important; }
+
+  /* Four leaders form a compact instrument strip instead of four giant tiles. */
+  .executive-highlight-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+    align-items: stretch !important;
+  }
+
+  .executive-highlight-card {
+    min-height: 92px !important;
+    padding: 9px 10px !important;
+    display: flex !important;
+    flex-direction: column;
+    justify-content: space-between;
+    border-radius: 6px !important;
+  }
+
+  .executive-highlight-card span {
+    font-size: 6px !important;
+    line-height: 1.25 !important;
+  }
+
+  .executive-highlight-card strong {
+    margin: 6px 0 5px !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    overflow-wrap: anywhere !important;
+    text-wrap: pretty !important;
+  }
+
+  .executive-highlight-card small {
+    margin-top: auto !important;
+    font-size: 7px !important;
+  }
+
+  .executive-outages-panel .executive-ranking-list,
+  .executive-ranking-columns .executive-ranking-list {
+    max-height: 255px !important;
+  }
+
+  .executive-ranking-row {
+    min-height: 37px !important;
+  }
+
+  .executive-ranking-name {
+    line-height: 1.25 !important;
+    overflow-wrap: anywhere !important;
+  }
+}
+
+/* Medium desktop / laptop: avoid narrow text columns. */
+@media (min-width: 761px) and (max-width: 1380px) {
+  .app-shell {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+
+  .dispatcher-hero { grid-column: span 15 !important; }
+  .dispatcher-select-wrap { grid-column: span 9 !important; }
+  .dispatcher-board { grid-template-columns: minmax(0, 1.35fr) minmax(360px, .95fr) !important; }
+
+  .executive-hero,
+  .executive-filter-panel { grid-column: 1 / -1 !important; min-height: 0 !important; }
+  .executive-filter-panel { grid-template-columns: auto minmax(0, 1fr) !important; }
+  .executive-filter-controls { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .executive-overview-panel,
+  .executive-outages-panel { grid-column: span 12 !important; }
+  .executive-chart-panel { grid-column: span 12 !important; }
+  .executive-ranking-panel { grid-column: 1 / -1 !important; }
+  .executive-highlight-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+
+/* =========================================================
+   MOBILE · readable dense console, no squeezed text columns
+   ========================================================= */
+@media (max-width: 760px) {
+  body {
+    font-size: 10px !important;
+  }
+
+  .app-shell {
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+  }
+
+  .topbar {
+    min-height: 48px !important;
+    padding: 5px 7px !important;
+  }
+
+  .command-bus {
+    min-height: 25px !important;
+    padding: 4px 7px !important;
+  }
+
+  .micro-label,
+  .division-kicker,
+  .module-copy > span,
+  .admin-panel-heading .micro-label,
+  .dispatcher-panel-head .micro-label,
+  .executive-panel-head .micro-label {
+    font-size: 6px !important;
+    line-height: 1.2 !important;
+  }
+
+  .back-button,
+  .toolbar-status {
+    font-size: 7px !important;
+  }
+
+  /* Home cards: two compact columns, but no body copy squeezing. */
+  .module-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+  }
+
+  .module-card {
+    min-height: 128px !important;
+    padding: 9px !important;
+  }
+
+  .module-copy h3 {
+    font-size: 15px !important;
+    line-height: 1.08 !important;
+  }
+
+  .module-copy p {
+    display: none !important;
+  }
+
+  .module-footer {
+    min-height: 25px !important;
+    font-size: 6px !important;
+  }
+
+  /* Active outage titles are never hidden or clamped. */
+  .division-grid {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+
+  .outage-counter-header,
+  .outage-counter-card .outage-counter-header,
+  .outage-counter-card.outage-card-shift-unassigned .outage-counter-header {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 94px !important;
+    min-height: 78px !important;
+    gap: 7px !important;
+    padding: 8px !important;
+  }
+
+  .division-main,
+  .division-main > div:last-child {
+    min-width: 0 !important;
+  }
+
+  .outage-counter-card .division-main h2,
+  .outage-counter-card.has-long-title .outage-counter-header .division-main h2,
+  .outage-counter-card.outage-card-shift-unassigned .outage-counter-header .division-main h2 {
+    display: block !important;
+    max-width: none !important;
+    max-height: none !important;
+    overflow: visible !important;
+    white-space: normal !important;
+    -webkit-line-clamp: unset !important;
+    font-size: 14px !important;
+    line-height: 1.14 !important;
+    text-wrap: pretty !important;
+  }
+
+  .division-main p {
+    display: none !important;
+  }
+
+  .outage-counter-actions,
+  .outage-counter-card.outage-card-shift-unassigned .outage-counter-actions {
+    width: 94px !important;
+    min-width: 94px !important;
+    flex-basis: 94px !important;
+  }
+
+  .outage-counter-metrics .outage-counter-value {
+    min-height: 34px !important;
+    padding: 4px !important;
+  }
+
+  .outage-counter-metrics .outage-counter-value span { font-size: 5px !important; }
+  .outage-counter-metrics .outage-counter-value strong { font-size: 15px !important; }
+  .outage-sources-toggle { min-height: 23px !important; font-size: 6px !important; }
+
+  .telemetry-card span,
+  .telemetry-card small {
+    font-size: 6px !important;
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
+
+  .telemetry-card strong {
+    font-size: 18px !important;
+  }
+
+  /* Dispatcher mobile: every textual control gets real width. */
+  .dispatcher-shell {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+
+  .dispatcher-hero,
+  .dispatcher-select-wrap,
+  .dispatcher-data-notice,
+  .dispatcher-telemetry,
+  .dispatcher-board {
+    grid-column: auto !important;
+  }
+
+  .dispatcher-hero {
+    grid-template-columns: 1fr !important;
+    min-height: 0 !important;
+    padding: 10px !important;
+    gap: 7px !important;
+  }
+
+  .dispatcher-hero h1 {
+    font-size: 20px !important;
+    line-height: 1.02 !important;
+  }
+
+  .dispatcher-assigned-tile {
+    min-height: 0 !important;
+    padding: 7px 8px !important;
+    display: grid !important;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 7px !important;
+  }
+
+  .dispatcher-assigned-tile span { font-size: 6px !important; }
+  .dispatcher-assigned-tile strong { margin: 0 !important; font-size: 10px !important; }
+  .dispatcher-assigned-tile small { display: none !important; }
+
+  .dispatcher-select-wrap {
+    min-height: 0 !important;
+    padding: 8px !important;
+  }
+
+  .dispatcher-select-wrap > div:first-child {
+    display: block !important;
+  }
+
+  .dispatcher-select-wrap h2 { font-size: 12px !important; }
+
+  .dispatcher-select-stack {
+    grid-template-columns: 1fr !important;
+    gap: 5px !important;
+  }
+
+  .dispatcher-select-label > span { font-size: 6px !important; }
+  .dispatcher-select { min-height: 31px !important; height: 31px !important; font-size: 8px !important; }
+
+  .monitoring-telemetry,
+  .dispatcher-telemetry {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+  }
+
+  .telemetry-card {
+    min-height: 52px !important;
+    padding: 7px 8px !important;
+  }
+
+  .dispatcher-board {
+    display: flex !important;
+    flex-direction: column;
+    gap: 6px !important;
+  }
+
+  .dispatcher-board-column {
+    display: contents !important;
+  }
+
+  .dispatcher-outages-panel { order: 1; }
+  .dispatcher-board-secondary > .dispatcher-panel:not(.dispatcher-workorders-panel) { order: 2; }
+  .dispatcher-workorders-panel { order: 3; }
+  .dispatcher-board-primary > .dispatcher-panel:not(.dispatcher-outages-panel) { order: 4; }
+
+  .dispatcher-panel,
+  .dispatcher-outages-panel {
+    min-height: 0 !important;
+    padding: 9px !important;
+  }
+
+  .dispatcher-panel-head h2 {
+    font-size: 14px !important;
+    line-height: 1.12 !important;
+  }
+
+  .dispatcher-source-meta {
+    font-size: 6px !important;
+    line-height: 1.35 !important;
+  }
+
+  .dispatcher-outage-tables {
+    grid-template-columns: 1fr !important;
+    gap: 5px !important;
+  }
+
+  .dispatcher-table-scroll {
+    max-height: 150px !important;
+  }
+
+  .dispatcher-outage-table th { font-size: 5px !important; }
+  .dispatcher-outage-table td { font-size: 7px !important; }
+  .dispatcher-outage-table td:first-child { font-size: 8px !important; }
+
+  .dispatcher-requests-chart-layout,
+  .dispatcher-workorders-chart-layout {
+    grid-template-columns: 82px minmax(0, 1fr) !important;
+    gap: 7px !important;
+  }
+
+  .dispatcher-workorders-donut,
+  .dispatcher-requests-donut {
+    width: 78px !important;
+    height: 78px !important;
+    min-width: 78px !important;
+    min-height: 78px !important;
+  }
+
+  /* One readable legend column instead of cramped two-column labels. */
+  .dispatcher-workorders-legend,
+  .dispatcher-requests-legend {
+    grid-template-columns: 1fr !important;
+    gap: 3px !important;
+  }
+
+  .dispatcher-workorders-legend-item {
+    min-height: 24px !important;
+    padding: 4px 6px !important;
+    font-size: 7px !important;
+    line-height: 1.18 !important;
+  }
+
+  .dispatcher-workorders-legend-item strong { font-size: 9px !important; }
+  .dispatcher-defects-lockup { min-height: 92px !important; }
+  .dispatcher-workorders-breakdown { max-height: 150px !important; overflow: auto; }
+
+  /* Executive mobile: leader entries become compact rows, not tall mini-cards. */
+  .executive-shell,
+  .executive-grid {
+    grid-template-columns: 1fr !important;
+    gap: 6px !important;
+  }
+
+  .executive-hero,
+  .executive-filter-panel,
+  .executive-grid,
+  .executive-overview-panel,
+  .executive-outages-panel,
+  .executive-chart-panel,
+  .executive-ranking-panel,
+  .executive-trend-panel,
+  .executive-table-panel {
+    grid-column: auto !important;
+  }
+
+  .executive-hero {
+    min-height: 0 !important;
+    padding: 10px !important;
+  }
+
+  .executive-hero-copy h1 { font-size: 21px !important; }
+  .executive-hero-stats { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 4px !important; }
+  .executive-kpi-tile { padding: 7px !important; }
+  .executive-kpi-tile > span { font-size: 6px !important; }
+  .executive-kpi-tile > strong { font-size: 18px !important; }
+
+  .executive-filter-panel {
+    min-height: 0 !important;
+    padding: 8px !important;
+  }
+
+  .executive-filter-panel > div:first-child { display: block !important; }
+  .executive-filter-panel h2 { font-size: 12px !important; }
+  .executive-filter-controls { grid-template-columns: 1fr !important; gap: 5px !important; }
+
+  .executive-panel { padding: 9px !important; }
+  .executive-panel-head h2 { font-size: 14px !important; }
+
+  .executive-highlight-grid {
+    grid-template-columns: 1fr !important;
+    gap: 4px !important;
+  }
+
+  .executive-highlight-card {
+    min-height: 42px !important;
+    padding: 6px 7px !important;
+    display: grid !important;
+    grid-template-columns: 84px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 7px !important;
+  }
+
+  .executive-highlight-card span {
+    font-size: 5px !important;
+    line-height: 1.2 !important;
+  }
+
+  .executive-highlight-card strong {
+    margin: 0 !important;
+    font-size: 9px !important;
+    line-height: 1.2 !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .executive-highlight-card small {
+    margin: 0 !important;
+    font-size: 6px !important;
+    white-space: nowrap;
+  }
+
+  .executive-chart-layout {
+    grid-template-columns: 80px minmax(0, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  .executive-donut {
+    width: 76px !important;
+    height: 76px !important;
+    min-width: 76px !important;
+    min-height: 76px !important;
+  }
+
+  .executive-ranking-columns,
+  .executive-trend-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Admin: no text cards squeezed into multiple columns. */
+  .admin-stats { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 5px !important; }
+  .admin-stat-card { min-height: 54px !important; padding: 7px !important; }
+  .admin-stat-card span, .admin-stat-card small { font-size: 6px !important; }
+  .admin-stat-card strong { font-size: 18px !important; }
+  .role-list,
+  .dispatcher-config-list,
+  .outage-config-list { grid-template-columns: 1fr !important; }
+  .access-heading-copy { font-size: 7px !important; line-height: 1.35 !important; }
+}
+
+@media (max-width: 410px) {
+  .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .module-copy h3 { font-size: 13px !important; }
+  .module-status { max-width: 74px !important; font-size: 5px !important; }
+  .dispatcher-requests-chart-layout,
+  .dispatcher-workorders-chart-layout { grid-template-columns: 72px minmax(0, 1fr) !important; }
+  .dispatcher-workorders-donut,
+  .dispatcher-requests-donut { width: 68px !important; height: 68px !important; min-width: 68px !important; min-height: 68px !important; }
+  .executive-highlight-card { grid-template-columns: 74px minmax(0, 1fr) auto; }
+}
+
+/* Outage unit names must remain visible in every summary surface. */
+.dispatcher-outage-table td:first-child,
+.dispatcher-outage-table td:first-child strong,
+.dispatcher-outage-detail-division-head h4,
+.dispatcher-outage-detail-division-head > div:first-child {
+  max-width: none !important;
+  overflow: visible !important;
+  white-space: normal !important;
+  text-overflow: clip !important;
+  word-break: normal !important;
+  overflow-wrap: break-word !important;
+}
+
+.dispatcher-outage-table td:first-child {
+  min-width: 150px;
+}
+
+.dispatcher-outage-detail-division-head h4 {
+  margin: 4px 0 3px;
+  color: #edf9ff;
+  font-size: 12px;
+  line-height: 1.25;
+  text-wrap: pretty;
+}
+
+@media (max-width: 760px) {
+  .dispatcher-outage-table td:first-child { min-width: 118px; }
+  .dispatcher-outage-detail-division-head h4 { font-size: 10px !important; }
+}
