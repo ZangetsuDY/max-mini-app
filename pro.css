@@ -504,3 +504,766 @@ html body .executive-division-link.is-static {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   FIGMA DESKTOP ALIGNMENT · 2026-10-07
+   Dispatcher + Executive screens follow the approved Figma composition.
+   This is a final PRO-layer override; mobile behavior below 1180px remains
+   on the existing compact layout.
+   ========================================================= */
+@media (min-width: 1181px) {
+  /* Figma canvas proportions: 1740 shell / 1680 working canvas on 1920px. */
+  html body .app-shell {
+    width: min(1740px, calc(100% - 48px));
+    margin-inline: auto;
+    padding-top: max(12px, env(safe-area-inset-top));
+  }
+
+  html body .app-view {
+    width: min(1680px, calc(100% - 60px));
+    margin-inline: auto;
+  }
+
+  html body .topbar {
+    width: 100%;
+    min-height: 78px;
+    margin-inline: auto;
+    padding: 10px 16px;
+  }
+
+  html body .grid-ribbon {
+    width: 100%;
+    min-height: 34px;
+    padding: 7px 14px;
+  }
+
+  html body .view-toolbar {
+    margin-top: 16px;
+    margin-bottom: 16px;
+  }
+
+  /* ------------------------- DISPATCHER ------------------------- */
+  #dispatcherView .dispatcher-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1.85fr) minmax(430px, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+
+  #dispatcherView .dispatcher-hero {
+    grid-column: 1;
+    min-height: 190px;
+    height: 190px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 220px;
+    gap: 0;
+    align-items: stretch;
+    border-radius: 8px !important;
+  }
+
+  #dispatcherView .dispatcher-hero > div:first-child {
+    min-width: 0;
+    padding: 28px 28px;
+    justify-content: center;
+  }
+
+  #dispatcherView .dispatcher-hero > div:first-child h1 {
+    margin: 10px 0 0;
+    font-size: clamp(27px, 2vw, 32px) !important;
+    line-height: 1.08;
+  }
+
+  #dispatcherView .dispatcher-hero > div:first-child p {
+    max-width: 690px;
+    margin: 16px 0 0;
+    font-size: 11px !important;
+    line-height: 1.55 !important;
+  }
+
+  #dispatcherView .dispatcher-assigned-tile {
+    align-self: center;
+    min-height: 104px;
+    height: auto;
+    margin: 24px 28px 24px 0;
+    padding: 17px 18px;
+    border-radius: 6px !important;
+    background: #0a1118 !important;
+    box-shadow: none !important;
+  }
+
+  #dispatcherView .dispatcher-assigned-tile span,
+  #dispatcherView .dispatcher-assigned-tile small {
+    font-size: 8.5px;
+    line-height: 1.35;
+  }
+
+  #dispatcherView .dispatcher-assigned-tile strong {
+    margin: 8px 0 6px;
+    font-size: 18px;
+    line-height: 1.12;
+    overflow-wrap: break-word;
+  }
+
+  #dispatcherView .dispatcher-select-wrap {
+    grid-column: 2;
+    min-height: 190px;
+    height: 190px;
+    padding: 24px 20px;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    gap: 18px;
+    align-content: start;
+    border-radius: 8px !important;
+  }
+
+  #dispatcherView .dispatcher-select-wrap h2 {
+    margin: 7px 0 0;
+    font-size: 19px;
+    line-height: 1.15;
+  }
+
+  #dispatcherView .dispatcher-select-stack {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    align-items: end;
+  }
+
+  #dispatcherView .dispatcher-select-label {
+    gap: 6px;
+  }
+
+  #dispatcherView .dispatcher-select-label span {
+    font-family: var(--mono);
+    color: var(--muted);
+    font-size: 8px;
+    letter-spacing: .06em;
+  }
+
+  #dispatcherView .dispatcher-select {
+    min-height: 34px;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 4px !important;
+    font-size: 9px;
+  }
+
+  #dispatcherView > .dispatcher-shell > .dispatcher-data-notice {
+    grid-column: 1 / -1;
+  }
+
+  /* Flatten old nested grids so the Figma two-column workbench can be used. */
+  #dispatcherView .dispatcher-grid,
+  #dispatcherView .dispatcher-side-stack {
+    display: contents;
+  }
+
+  #dispatcherView .dispatcher-outages-panel {
+    grid-column: 1;
+    grid-row: span 2;
+    align-self: stretch;
+    min-height: 545px;
+    height: 100%;
+    padding: 20px;
+    border-radius: 8px !important;
+  }
+
+  #dispatcherView .dispatcher-grid > .dispatcher-panel:first-child {
+    grid-column: 2;
+    min-height: 300px;
+    height: 300px;
+    padding: 18px;
+    border-radius: 8px !important;
+  }
+
+  #dispatcherView .dispatcher-side-stack > .dispatcher-panel:first-child {
+    display: none !important;
+  }
+
+  #dispatcherView .dispatcher-workorders-panel {
+    grid-column: 2;
+    min-height: 229px;
+    height: 229px;
+    padding: 16px 18px;
+    border-radius: 8px !important;
+  }
+
+  #dispatcherView .dispatcher-panel-head {
+    padding-bottom: 10px;
+    gap: 12px;
+  }
+
+  #dispatcherView .dispatcher-panel-head h2 {
+    margin-top: 6px;
+    font-size: 18px;
+    line-height: 1.15;
+  }
+
+  #dispatcherView .dispatcher-live-badge {
+    min-height: 28px;
+    padding: 0 10px;
+    font-size: 9px;
+  }
+
+  #dispatcherView .dispatcher-source-meta {
+    min-height: 0;
+    margin-top: 10px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: 8px;
+  }
+
+  #dispatcherView .dispatcher-outage-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  #dispatcherView .dispatcher-outage-kpi {
+    min-height: 90px;
+    padding: 14px 16px !important;
+  }
+
+  #dispatcherView .dispatcher-outage-kpi > span {
+    font-size: 8px;
+  }
+
+  #dispatcherView .dispatcher-outage-kpi > strong {
+    margin-top: 8px;
+    font-size: 28px;
+    line-height: 1;
+  }
+
+  #dispatcherView .dispatcher-outage-kpi small {
+    margin-top: 7px;
+    font-size: 8px;
+  }
+
+  #dispatcherView .dispatcher-outage-tables {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+
+  #dispatcherView .dispatcher-outage-table-card {
+    min-height: 300px;
+    padding: 14px;
+    border-radius: 6px !important;
+  }
+
+  #dispatcherView .dispatcher-outage-table-head h3 {
+    margin: 6px 0 0;
+    font-size: 14px;
+  }
+
+  #dispatcherView .dispatcher-outage-table th,
+  #dispatcherView .dispatcher-outage-table td {
+    padding: 8px 8px !important;
+    font-size: 9px !important;
+  }
+
+  #dispatcherView .dispatcher-outage-details summary {
+    min-height: 36px;
+    font-size: 8.5px;
+  }
+
+  #dispatcherView .dispatcher-requests-chart-layout {
+    margin-top: 14px;
+    display: grid;
+    grid-template-columns: 188px minmax(0, 1fr);
+    gap: 16px;
+    align-items: center;
+  }
+
+  #dispatcherView .dispatcher-requests-donut {
+    width: 142px !important;
+    height: 142px !important;
+    margin-inline: auto;
+  }
+
+  #dispatcherView .dispatcher-requests-side {
+    min-width: 0;
+  }
+
+  #dispatcherView .dispatcher-requests-legend,
+  #dispatcherView .dispatcher-workorders-legend {
+    gap: 6px !important;
+  }
+
+  #dispatcherView .dispatcher-workorders-legend-item {
+    min-height: 34px;
+    height: 34px;
+    padding: 6px 9px !important;
+    border-radius: 4px !important;
+  }
+
+  #dispatcherView .dispatcher-workorders-legend-item span {
+    font-size: 10px;
+    white-space: nowrap;
+  }
+
+  #dispatcherView .dispatcher-workorders-legend-item strong {
+    font-size: 13px;
+    color: #fff;
+  }
+
+  /* Not present in the approved Figma dispatch panel. */
+  #dispatcherView .dispatcher-requests-caption,
+  #dispatcherView .dispatcher-ending-live-card {
+    display: none !important;
+  }
+
+  #dispatcherView .dispatcher-workorders-meta,
+  #dispatcherView .dispatcher-workorders-notice,
+  #dispatcherView .dispatcher-workorders-breakdown {
+    margin-top: 8px;
+  }
+
+  #dispatcherView .dispatcher-workorders-chart-layout {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: 168px minmax(0, 1fr);
+    gap: 14px;
+    align-items: center;
+  }
+
+  #dispatcherView .dispatcher-workorders-donut {
+    width: 118px !important;
+    height: 118px !important;
+    margin-inline: auto;
+  }
+
+  #dispatcherView .dispatcher-workorders-donut-center strong {
+    font-size: 25px !important;
+  }
+
+  #dispatcherView .dispatcher-workorders-donut-center span {
+    font-size: 8px !important;
+  }
+
+  #dispatcherView .dispatcher-workorders-panel .dispatcher-workorders-legend-item {
+    min-height: 27px;
+    height: 27px;
+    padding: 4px 8px !important;
+  }
+
+  #dispatcherView .dispatcher-workorders-panel .dispatcher-workorders-legend-item span {
+    font-size: 8.5px;
+  }
+
+  #dispatcherView .dispatcher-workorders-panel .dispatcher-workorders-legend-item strong {
+    font-size: 11px;
+  }
+
+  /* ------------------------- EXECUTIVE ------------------------- */
+  #executiveView .executive-shell {
+    gap: 16px;
+  }
+
+  #executiveView .executive-hero {
+    min-height: 220px;
+    height: 220px;
+    padding: 32px 28px !important;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 790px;
+    gap: 24px;
+    align-items: center;
+    border-radius: 8px !important;
+  }
+
+  #executiveView .executive-hero-copy h1 {
+    margin: 10px 0 0;
+    max-width: none;
+    font-size: 31px !important;
+    line-height: 1.08;
+  }
+
+  #executiveView .executive-hero-copy p {
+    max-width: 790px;
+    margin-top: 16px;
+    font-size: 11px;
+    line-height: 1.55;
+  }
+
+  #executiveView .executive-hero-stats {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    align-items: stretch;
+  }
+
+  #executiveView .executive-kpi-tile {
+    min-height: 150px !important;
+    height: 150px;
+    padding: 16px 14px !important;
+    display: grid;
+    grid-template-rows: auto auto 1fr !important;
+    gap: 8px !important;
+    border-radius: 5px !important;
+  }
+
+  #executiveView .executive-kpi-tile > span {
+    min-height: 0 !important;
+    max-width: none !important;
+    font-size: 9px !important;
+    line-height: 1.25;
+    overflow-wrap: normal;
+  }
+
+  #executiveView .executive-kpi-tile > strong {
+    min-height: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+    font-size: 32px !important;
+    line-height: 1 !important;
+  }
+
+  #executiveView .executive-kpi-foot {
+    margin-top: auto;
+    align-self: end;
+    display: grid;
+    gap: 8px;
+  }
+
+  #executiveView .executive-kpi-foot small {
+    font-size: 8px !important;
+  }
+
+  #executiveView .executive-delta {
+    width: 46px;
+    min-height: 20px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 8px !important;
+  }
+
+  #executiveView .executive-filter-panel {
+    min-height: 84px;
+    padding: 14px 18px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 720px;
+    align-items: center;
+    gap: 24px;
+    border-radius: 8px !important;
+  }
+
+  #executiveView .executive-filter-panel h2 {
+    margin: 6px 0 0;
+    font-size: 18px;
+  }
+
+  #executiveView .executive-filter-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  #executiveView .dispatcher-select {
+    min-height: 38px;
+    height: 38px;
+    border-radius: 4px !important;
+    font-size: 9px;
+  }
+
+  #executiveView .executive-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+  }
+
+  #executiveView .executive-panel {
+    gap: 12px;
+    padding: 18px;
+    min-height: 0;
+    border-radius: 8px !important;
+  }
+
+  #executiveView .executive-panel-head {
+    gap: 12px;
+  }
+
+  #executiveView .executive-panel-head h2 {
+    margin-top: 5px;
+    font-size: 18px;
+    line-height: 1.15;
+  }
+
+  #executiveView .executive-overview-panel {
+    grid-column: span 7;
+    min-height: 250px;
+    height: 250px;
+  }
+
+  #executiveView .executive-outages-panel {
+    grid-column: span 5;
+    min-height: 250px;
+    height: 250px;
+  }
+
+  #executiveView .executive-chart-panel {
+    grid-column: span 6;
+    min-height: 285px;
+    height: 285px;
+  }
+
+  #executiveView .executive-overview-panel .executive-meta-line,
+  #executiveView .executive-outages-panel .executive-meta-line {
+    margin-top: -2px;
+    font-size: 8px;
+  }
+
+  #executiveView .executive-highlight-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+    margin-top: 8px;
+  }
+
+  #executiveView .executive-highlight-card {
+    min-height: 118px !important;
+    height: 118px;
+    padding: 12px !important;
+    gap: 8px;
+    border-radius: 6px !important;
+  }
+
+  #executiveView .executive-highlight-card > span {
+    font-family: var(--mono);
+    font-size: 8px;
+    line-height: 1.2;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+
+  #executiveView .executive-highlight-card > strong {
+    margin: auto 0 0;
+    display: block;
+    -webkit-line-clamp: 2;
+    font-size: 13px !important;
+    line-height: 1.18;
+    overflow-wrap: break-word;
+  }
+
+  #executiveView .executive-highlight-card > small {
+    margin-top: 6px;
+    font-family: var(--mono);
+    font-size: 9px;
+  }
+
+  /* The approved Figma panel shows ranking rows, not the large total tile. */
+  #executiveView .executive-total-tile {
+    display: none !important;
+  }
+
+  #executiveView .executive-outages-panel .executive-panel-head {
+    display: flex !important;
+    grid-template-columns: none !important;
+  }
+
+  #executiveView .executive-outages-panel .executive-ranking-list {
+    max-height: none !important;
+    overflow: visible !important;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    padding: 0 !important;
+  }
+
+  #executiveView .executive-outages-panel .executive-ranking-row {
+    min-height: 32px !important;
+    height: 32px;
+    padding: 5px 9px !important;
+    border-radius: 4px !important;
+  }
+
+  #executiveView .executive-outages-panel .executive-ranking-index {
+    width: 22px;
+    height: 16px;
+    border-radius: 8px !important;
+    font-size: 8px;
+  }
+
+  #executiveView .executive-outages-panel .executive-ranking-name {
+    font-size: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  #executiveView .executive-outages-panel .executive-ranking-row > strong {
+    font-size: 12px;
+  }
+
+  #executiveView .executive-chart-layout {
+    margin-top: 6px;
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 18px;
+    align-items: center;
+  }
+
+  #executiveView .executive-donut {
+    width: 150px !important;
+    height: 150px !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    margin-inline: auto;
+  }
+
+  #executiveView .dispatcher-workorders-donut-center strong {
+    font-size: 26px !important;
+  }
+
+  #executiveView .dispatcher-workorders-donut-center span {
+    font-size: 8px !important;
+  }
+
+  #executiveView .executive-legend {
+    gap: 6px !important;
+  }
+
+  #executiveView .executive-legend .dispatcher-workorders-legend-item {
+    min-height: 34px;
+    height: 34px;
+    padding: 6px 10px !important;
+    border-radius: 4px !important;
+  }
+
+  #executiveView .executive-legend .dispatcher-workorders-legend-item span {
+    font-size: 10px;
+  }
+
+  #executiveView .executive-legend .dispatcher-workorders-legend-item strong {
+    font-size: 13px;
+    color: #fff;
+  }
+
+  #executiveView .executive-legend .is-ending {
+    display: none !important;
+  }
+
+  #executiveView .executive-chart-panel .executive-meta-line {
+    display: none;
+  }
+
+  /* Figma places the summary table immediately after charts. Keep the
+     richer ranking/trend modules available on smaller screens but remove
+     them from the approved desktop operations layout. */
+  #executiveView .executive-ranking-panel,
+  #executiveView .executive-trend-panel {
+    display: none !important;
+  }
+
+  #executiveView .executive-table-panel {
+    grid-column: 1 / -1;
+    padding: 18px;
+    border-radius: 8px !important;
+  }
+
+  #executiveView .executive-table-wrap {
+    max-height: none;
+    overflow-x: auto;
+  }
+
+  #executiveView .executive-table th {
+    padding: 9px 10px !important;
+    font-size: 9px !important;
+  }
+
+  #executiveView .executive-table td {
+    padding: 9px 10px !important;
+    font-size: 11px !important;
+  }
+
+  /* Decorative live schematics remain subtle, exactly as intended. */
+  #dispatcherView .ambient-energy-schematic-dispatcher {
+    right: 250px;
+    width: 245px;
+    opacity: .08;
+  }
+
+  #executiveView .ambient-energy-schematic-executive {
+    left: 31%;
+    width: 340px;
+    opacity: .08;
+  }
+}
+
+/* Intermediate desktop/laptop: preserve the same visual hierarchy without
+   forcing tiny right columns. */
+@media (min-width: 1181px) and (max-width: 1480px) {
+  #dispatcherView .dispatcher-shell {
+    grid-template-columns: minmax(0, 1.6fr) minmax(390px, 1fr);
+  }
+
+  #executiveView .executive-hero {
+    grid-template-columns: minmax(0, 1fr) 650px;
+  }
+
+  #executiveView .executive-filter-panel {
+    grid-template-columns: minmax(0, 1fr) 600px;
+  }
+}
+
+/* Dispatcher hero child-order fix: the ambient schematic is the first DOM
+   child, while legacy rules treated first-child as the copy column. */
+@media (min-width: 1181px) {
+  #dispatcherView .dispatcher-hero > .ambient-energy-schematic {
+    position: absolute !important;
+    display: block !important;
+    padding: 0 !important;
+    z-index: 1 !important;
+    width: 245px !important;
+    height: auto !important;
+    right: 250px !important;
+    left: auto !important;
+    top: auto !important;
+    bottom: 4px !important;
+  }
+
+  #dispatcherView .dispatcher-hero > div:nth-child(2) {
+    grid-column: 1;
+    position: relative;
+    z-index: 2;
+    min-width: 0;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  #dispatcherView .dispatcher-hero > div:nth-child(2) h1 {
+    margin: 10px 0 0;
+    font-size: clamp(27px, 2vw, 32px) !important;
+    line-height: 1.08;
+  }
+
+  #dispatcherView .dispatcher-hero > div:nth-child(2) p {
+    max-width: 690px;
+    margin: 16px 0 0;
+    font-size: 11px !important;
+    line-height: 1.55 !important;
+  }
+
+  #dispatcherView .dispatcher-assigned-tile {
+    grid-column: 2;
+  }
+}
+
+@media (min-width: 1181px) {
+  #dispatcherView .dispatcher-outages-panel {
+    min-height: 560px;
+  }
+
+  #dispatcherView .dispatcher-grid > .dispatcher-panel:first-child {
+    min-height: 316px;
+    height: 316px;
+  }
+
+  #dispatcherView .dispatcher-workorders-panel {
+    min-height: 228px;
+    height: 228px;
+  }
+}
