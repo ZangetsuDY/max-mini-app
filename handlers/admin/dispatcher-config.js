@@ -45,6 +45,11 @@ import {
 } from "../../lib/executive-table-config.js";
 
 import {
+  getExecutiveMapZones,
+  updateExecutiveMapZone
+} from "../../lib/executive-map-config.js";
+
+import {
   getLatestDispatcherSnapshot
 } from "../../lib/dispatcher-data.js";
 
@@ -121,7 +126,8 @@ export default {
           emergencyOutageState,
           plannedOutageState,
           outageDivisions,
-          executiveTableRows
+          executiveTableRows,
+          executiveMapZones
         ] =
           await Promise.all([
             getDispatcherSourceConfig(),
@@ -132,7 +138,8 @@ export default {
             getLatestEmergencyOutageSnapshot(),
             getLatestPlannedOutageSnapshot(),
             getOutageDivisions(),
-            getExecutiveTableRows()
+            getExecutiveTableRows(),
+            getExecutiveMapZones()
           ]);
 
         return json({
@@ -142,6 +149,9 @@ export default {
             structure.groups,
           executiveTable: {
             rows: executiveTableRows
+          },
+          executiveMap: {
+            zones: executiveMapZones
           },
           units,
           availableSourceLabels:
@@ -259,6 +269,18 @@ export default {
         .toLowerCase();
 
     try {
+      if (action === "update_executive_map_zone") {
+        const zone = await updateExecutiveMapZone({
+          zoneId: body?.zoneId,
+          enabled: body?.enabled,
+          outageDivisionIds: body?.outageDivisionIds,
+          unitIds: body?.unitIds,
+          actor: auth.access
+        });
+
+        return json({ ok: true, zone });
+      }
+
       if (action === "create_executive_row") {
         const row = await createExecutiveTableRow({
           name: body?.name,

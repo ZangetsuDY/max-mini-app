@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261007-trendfix1" />
-  <link rel="stylesheet" href="pro.css?v=20261007-trendfix1" />
+  <link rel="stylesheet" href="style.css?v=20261007-regionalmap1" />
+  <link rel="stylesheet" href="pro.css?v=20261007-regionalmap1" />
 </head>
 
 <body class="auth-pending">
@@ -778,6 +778,29 @@
               </table>
             </div>
           </article>
+
+          <article class="glass-panel executive-panel executive-regional-map-panel">
+            <div class="executive-panel-head executive-map-panel-head">
+              <div>
+                <span class="micro-label">ГЕОГРАФИЯ · OMS</span>
+                <h2>Оперативная карта региона</h2>
+                <p class="executive-map-copy">
+                  Санкт-Петербург и Ленинградская область · подсветка по активным аварийным отключениям.
+                </p>
+              </div>
+              <div class="executive-map-legend" aria-label="Легенда карты">
+                <span><i class="is-clear"></i> без отключений</span>
+                <span><i class="is-alert"></i> есть отключения</span>
+              </div>
+            </div>
+
+            <div id="executiveRegionalMap" class="executive-regional-map" aria-label="Оперативная карта Санкт-Петербурга и Ленинградской области"></div>
+
+            <div class="executive-map-footer">
+              <span id="executiveRegionalMapMeta">Ожидание данных…</span>
+              <span>Границы схематически упрощены для оперативного интерфейса.</span>
+            </div>
+          </article>
         </div>
       </div>
     </section>
@@ -1457,6 +1480,27 @@
       </article>
 
       <article
+        id="executiveMapManagementPanel"
+        class="admin-panel dispatcher-source-management executive-map-management"
+        hidden
+      >
+        <div class="admin-panel-heading access-heading">
+          <div>
+            <span class="micro-label">РУКОВОДЯЩИЙ КОНТУР · ОПЕРАТИВНАЯ КАРТА</span>
+            <h2>Настройка регионов карты</h2>
+            <p class="access-heading-copy">
+              Для каждого географического района выберите, какие подразделения активных отключений
+              и какие конкретные РЭС / районы должны учитываться. Если выбрано целое подразделение,
+              его РЭС дополнительно не суммируются — это защищает от двойного счёта.
+            </p>
+          </div>
+        </div>
+
+        <div id="executiveMapConfigStatus" class="dispatcher-config-status"></div>
+        <div id="executiveMapConfigList" class="dispatcher-config-list executive-map-config-list"></div>
+      </article>
+
+      <article
         id="dispatcherWorkordersManagementPanel"
         class="admin-panel dispatcher-source-management"
         hidden
@@ -1568,6 +1612,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261007-trendfix1"></script>
+  <script src="app.js?v=20261007-regionalmap1"></script>
 </body>
 </html>

@@ -221,6 +221,12 @@ const executiveTableCreateButton = document.getElementById("executiveTableCreate
 const executiveTableConfigStatus = document.getElementById("executiveTableConfigStatus");
 const executiveTableConfigList = document.getElementById("executiveTableConfigList");
 
+const executiveRegionalMap = document.getElementById("executiveRegionalMap");
+const executiveRegionalMapMeta = document.getElementById("executiveRegionalMapMeta");
+const executiveMapManagementPanel = document.getElementById("executiveMapManagementPanel");
+const executiveMapConfigStatus = document.getElementById("executiveMapConfigStatus");
+const executiveMapConfigList = document.getElementById("executiveMapConfigList");
+
 const dispatcherWorkordersManagementPanel = document.getElementById("dispatcherWorkordersManagementPanel");
 const dispatcherWorkordersConfigGroupSelect = document.getElementById("dispatcherWorkordersConfigGroupSelect");
 const dispatcherWorkordersConfigStatus = document.getElementById("dispatcherWorkordersConfigStatus");
@@ -305,6 +311,37 @@ let executiveTableConfigCatalog = {
   outageDivisions: [],
   storageConfigured: false
 };
+
+
+let executiveMapConfigCatalog = {
+  zones: [],
+  groups: [],
+  units: [],
+  outageDivisions: [],
+  storageConfigured: false
+};
+
+const EXECUTIVE_MAP_GEOMETRY = Object.freeze([
+  { id: "vyborg", points: "88,58 132,25 226,18 258,82 236,166 190,214 118,202 66,146", x: 155, y: 112 },
+  { id: "priozersk", points: "226,18 332,24 382,80 368,140 332,181 270,167 236,118 258,82", x: 308, y: 91 },
+  { id: "vsevolozhsk", points: "332,181 368,140 429,143 492,196 472,267 418,303 356,276 326,228", x: 410, y: 225 },
+  { id: "spb", points: "250,247 292,220 362,216 414,245 402,302 349,326 288,316 252,286", x: 330, y: 272 },
+  { id: "lomonosov", points: "152,252 210,232 250,247 252,286 288,316 277,350 220,363 180,331 145,292", x: 218, y: 303 },
+  { id: "sosnovy-bor", points: "110,258 152,252 145,292 119,307 91,285", x: 120, y: 280 },
+  { id: "kingisepp", points: "45,304 110,258 119,307 180,331 171,402 119,425 60,390 35,347", x: 103, y: 350 },
+  { id: "slantsy", points: "35,347 60,390 119,425 130,470 93,520 36,505 13,450", x: 72, y: 454 },
+  { id: "volosovo", points: "171,402 220,363 277,350 315,385 302,455 244,478 190,455 130,470 119,425", x: 226, y: 416 },
+  { id: "gatchina", points: "277,350 349,326 397,344 432,389 410,454 351,470 302,455 315,385", x: 359, y: 397 },
+  { id: "luga", points: "190,455 244,478 302,455 351,470 416,510 389,592 292,607 222,548", x: 306, y: 536 },
+  { id: "tosno", points: "397,344 472,319 529,355 542,416 505,477 448,501 410,454 432,389", x: 474, y: 406 },
+  { id: "kirovsk", points: "472,267 529,228 586,259 584,326 542,359 529,355 472,319 450,292", x: 527, y: 293 },
+  { id: "volkhov", points: "586,177 654,182 712,229 704,303 660,352 584,326 586,259 548,220", x: 634, y: 264 },
+  { id: "kirishi", points: "584,326 660,352 704,392 675,479 605,493 542,416 542,359", x: 621, y: 407 },
+  { id: "lodeynoye", points: "654,82 744,51 815,105 800,198 754,248 704,303 712,229 654,182", x: 737, y: 159 },
+  { id: "podporozhye", points: "744,51 785,12 904,35 946,118 912,207 845,249 800,198 815,105", x: 853, y: 113 },
+  { id: "tikhvin", points: "704,303 754,248 845,249 884,318 854,424 789,461 704,392 660,352", x: 785, y: 349 },
+  { id: "boksitogorsk", points: "704,392 789,461 854,424 935,461 925,577 827,609 742,548 675,479", x: 824, y: 512 }
+]);
 
 let managementContext = null;
 
@@ -1495,6 +1532,122 @@ function renderExecutiveDivisionTable(rows, selectedGroupId = "") {
   });
 }
 
+function executiveMapMetricBadge(zone, geometry) {
+  const outages = Number(zone?.outages || 0);
+  const appeals = Number(zone?.appeals || 0);
+  const value = `${outages} / ${appeals}`;
+  const width = Math.max(54, value.length * 7 + 20);
+  const left = geometry.x - width / 2;
+  const top = geometry.y + 12;
+
+  return `
+    <g class="executive-map-metric" transform="translate(${left.toFixed(1)} ${top.toFixed(1)})">
+      <rect width="${width}" height="22" rx="4"></rect>
+      <text x="${width / 2}" y="15" text-anchor="middle">${outages} / ${appeals}</text>
+    </g>
+  `;
+}
+
+function renderExecutiveRegionalMap(mapPayload) {
+  if (!executiveRegionalMap) return;
+
+  const zones = Array.isArray(mapPayload?.zones) ? mapPayload.zones : [];
+  const zoneMap = new Map(zones.map((zone) => [String(zone?.id || ""), zone]));
+  const activeZones = zones.filter((zone) => zone?.enabled !== false && Number(zone?.outages || 0) > 0);
+  const totalOutages = activeZones.reduce((sum, zone) => sum + Number(zone?.outages || 0), 0);
+  const totalAppeals = zones.reduce((sum, zone) => sum + Number(zone?.appeals || 0), 0);
+  const maxOutages = Math.max(1, ...zones.map((zone) => Number(zone?.outages || 0)));
+
+  const regionMarkup = EXECUTIVE_MAP_GEOMETRY.map((geometry) => {
+    const zone = zoneMap.get(geometry.id) || {
+      id: geometry.id,
+      name: geometry.id,
+      shortName: geometry.id,
+      enabled: false,
+      outages: 0,
+      appeals: 0
+    };
+    const outages = Number(zone?.outages || 0);
+    const appeals = Number(zone?.appeals || 0);
+    const enabled = zone?.enabled !== false;
+    const intensity = enabled && outages > 0
+      ? Math.min(.46, .14 + (outages / maxOutages) * .32)
+      : 0;
+    const classes = [
+      "executive-map-zone",
+      enabled ? "is-enabled" : "is-disabled",
+      outages > 0 ? "has-outages" : "is-clear"
+    ].join(" ");
+    const label = escapeHtml(zone?.shortName || zone?.name || geometry.id);
+    const title = escapeHtml(
+      `${zone?.name || label}: ${outages} отключений · ${appeals} обращений${enabled ? "" : " · отключено в настройках"}`
+    );
+
+    return `
+      <g class="${classes}" data-map-zone="${escapeHtml(geometry.id)}" style="--zone-alert-alpha:${intensity.toFixed(3)}">
+        <title>${title}</title>
+        <polygon points="${geometry.points}"></polygon>
+        <text class="executive-map-zone-name" x="${geometry.x}" y="${geometry.y - 3}" text-anchor="middle">${label}</text>
+        ${enabled ? executiveMapMetricBadge(zone, geometry) : ""}
+        ${outages > 0 ? `<circle class="executive-map-pulse" cx="${geometry.x}" cy="${geometry.y + 23}" r="7"></circle>` : ""}
+      </g>
+    `;
+  }).join("");
+
+  executiveRegionalMap.innerHTML = `
+    <div class="executive-map-stage">
+      <svg class="executive-map-svg" viewBox="0 0 970 630" role="img" aria-label="Схематическая карта Санкт-Петербурга и муниципальных районов Ленинградской области">
+        <defs>
+          <linearGradient id="executiveMapWater" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#102535" stop-opacity=".82"></stop>
+            <stop offset="100%" stop-color="#07131d" stop-opacity=".42"></stop>
+          </linearGradient>
+          <filter id="executiveMapGlow" x="-60%" y="-60%" width="220%" height="220%">
+            <feGaussianBlur stdDeviation="4"></feGaussianBlur>
+          </filter>
+        </defs>
+
+        <path class="executive-map-water executive-map-gulf" d="M0 120 C55 128 76 160 95 214 C112 261 94 301 56 324 C29 341 12 350 0 356 Z"></path>
+        <path class="executive-map-water executive-map-ladoga" d="M375 0 H720 C709 54 683 108 646 141 C609 174 552 185 496 169 C455 157 415 118 396 75 C385 50 379 23 375 0 Z"></path>
+        <text class="executive-map-water-label" x="52" y="210" transform="rotate(-72 52 210)">ФИНСКИЙ ЗАЛИВ</text>
+        <text class="executive-map-water-label" x="518" y="82">ЛАДОЖСКОЕ ОЗЕРО</text>
+
+        <g class="executive-map-grid" aria-hidden="true">
+          <path d="M0 105H970M0 210H970M0 315H970M0 420H970M0 525H970"></path>
+          <path d="M160 0V630M320 0V630M480 0V630M640 0V630M800 0V630"></path>
+        </g>
+
+        ${regionMarkup}
+      </svg>
+    </div>
+    <div class="executive-map-side-summary">
+      <div class="executive-map-summary-kpi is-alert">
+        <span>Зон с отключениями</span>
+        <strong>${activeZones.length}</strong>
+      </div>
+      <div class="executive-map-summary-kpi">
+        <span>Отключений на карте</span>
+        <strong>${totalOutages}</strong>
+      </div>
+      <div class="executive-map-summary-kpi is-appeals">
+        <span>Обращений</span>
+        <strong>${totalAppeals}</strong>
+      </div>
+      <div class="executive-map-summary-note">
+        <span>МЕТРИКА</span>
+        <strong>Откл. / обращ.</strong>
+        <small>Цифры в каждой зоне показываются в этом порядке.</small>
+      </div>
+    </div>
+  `;
+
+  if (executiveRegionalMapMeta) {
+    executiveRegionalMapMeta.textContent = mapPayload?.updatedAt
+      ? formatSourceUpdate(mapPayload.updatedAt)
+      : "Оперативная география";
+  }
+}
+
 function applyExecutiveLeaderSizing() {
   [
     "executiveHighlightOutage",
@@ -1614,6 +1767,7 @@ function renderExecutiveDashboard(payload) {
     : "История появится после следующей новой сводки";
 
   renderExecutiveDivisionTable(payload?.divisionTable, selectedExecutiveGroupId);
+  renderExecutiveRegionalMap(payload?.map || {});
 
   const executiveLatestUpdate = latestSourceUpdate(
     payload?.outages?.sourceUpdatedAt,
@@ -3866,6 +4020,11 @@ function renderAdminDashboard(
       payload.canManageRoles
     );
 
+  if (executiveMapManagementPanel) {
+    executiveMapManagementPanel.hidden =
+      !Boolean(payload.canManageRoles);
+  }
+
   dispatcherWorkordersManagementPanel.hidden =
     !Boolean(
       payload.canManageRoles
@@ -5536,6 +5695,167 @@ function executiveSourceCheckboxes(items, selectedIds, inputName, emptyText) {
   `;
 }
 
+function executiveMapSourceName(id, type) {
+  const clean = String(id || "").trim();
+  if (!clean) return "—";
+
+  if (type === "outages") {
+    return executiveMapConfigCatalog.outageDivisions.find(
+      (item) => String(item?.id || "") === clean
+    )?.name || clean;
+  }
+
+  const unit = executiveMapConfigCatalog.units.find(
+    (item) => String(item?.id || "") === clean
+  );
+  if (!unit) return clean;
+  const group = executiveMapConfigCatalog.groups.find(
+    (item) => String(item?.id || "") === String(unit?.groupId || "")
+  );
+  return group?.name ? `${group.name} · ${unit.name}` : (unit.name || clean);
+}
+
+function renderExecutiveMapSourceTags(ids, type, emptyText) {
+  const list = Array.isArray(ids) ? ids : [];
+  if (!list.length) {
+    return `<span class="is-empty">${escapeHtml(emptyText)}</span>`;
+  }
+  return list.map((id) => `<span>${escapeHtml(executiveMapSourceName(id, type))}</span>`).join("");
+}
+
+function renderExecutiveMapConfigList() {
+  if (!executiveMapConfigList) return;
+  const zones = Array.isArray(executiveMapConfigCatalog.zones)
+    ? executiveMapConfigCatalog.zones
+    : [];
+
+  if (!zones.length) {
+    executiveMapConfigList.innerHTML = `
+      <div class="access-empty dispatcher-structure-empty">
+        <strong>Регионы карты не загружены</strong>
+        <span>Обновите страницу или проверьте конфигурацию сервера.</span>
+      </div>
+    `;
+    return;
+  }
+
+  executiveMapConfigList.innerHTML = zones.map((zone) => `
+    <article class="dispatcher-config-card executive-map-config-card ${zone?.enabled === false ? "is-disabled" : ""}">
+      <div class="dispatcher-config-card-head">
+        <div>
+          <span class="micro-label">ГЕОГРАФИЧЕСКИЙ РЕГИОН</span>
+          <h3>${escapeHtml(zone?.name || "—")}</h3>
+        </div>
+        <span class="executive-map-config-state ${zone?.enabled === false ? "is-off" : "is-on"}">
+          ${zone?.enabled === false ? "СКРЫТ" : "НА КАРТЕ"}
+        </span>
+      </div>
+
+      <div class="executive-config-source-grid executive-map-source-grid">
+        <section>
+          <strong>Подразделения отключений</strong>
+          <div class="executive-config-source-tags">
+            ${renderExecutiveMapSourceTags(zone?.outageDivisionIds, "outages", "Не выбраны")}
+          </div>
+        </section>
+        <section>
+          <strong>РЭС / районы / ВВР</strong>
+          <div class="executive-config-source-tags">
+            ${renderExecutiveMapSourceTags(zone?.unitIds, "units", "Не выбраны")}
+          </div>
+        </section>
+      </div>
+
+      <div class="dispatcher-config-card-actions">
+        <button class="role-action" type="button" data-executive-map-edit="${escapeHtml(zone?.id || "")}">
+          Настроить регион
+        </button>
+      </div>
+    </article>
+  `).join("");
+
+  executiveMapConfigList.querySelectorAll("[data-executive-map-edit]").forEach((button) => {
+    button.addEventListener("click", () => openExecutiveMapZoneEditor(button.dataset.executiveMapEdit || ""));
+  });
+}
+
+function executiveMapUnitCheckboxes(selectedIds = []) {
+  const selected = new Set((Array.isArray(selectedIds) ? selectedIds : []).map(String));
+  const groups = Array.isArray(executiveMapConfigCatalog.groups) ? executiveMapConfigCatalog.groups : [];
+  const units = Array.isArray(executiveMapConfigCatalog.units) ? executiveMapConfigCatalog.units : [];
+
+  if (!units.length) {
+    return `<div class="access-empty"><span>РЭС / районы пока не настроены.</span></div>`;
+  }
+
+  return `<div class="executive-map-unit-picker">${groups.map((group) => {
+    const groupUnits = units.filter((unit) => String(unit?.groupId || "") === String(group?.id || ""));
+    if (!groupUnits.length) return "";
+    return `
+      <section class="executive-map-unit-group">
+        <strong>${escapeHtml(group?.name || "Подразделение")}</strong>
+        <div class="permission-grid executive-source-picker">
+          ${groupUnits.map((unit) => `
+            <label class="permission-option">
+              <input
+                type="checkbox"
+                name="executiveMapUnit"
+                value="${escapeHtml(unit?.id || "")}"
+                ${selected.has(String(unit?.id || "")) ? "checked" : ""}
+              />
+              <span>${escapeHtml(unit?.name || unit?.id || "РЭС / район")}</span>
+            </label>
+          `).join("")}
+        </div>
+      </section>
+    `;
+  }).join("")}</div>`;
+}
+
+function openExecutiveMapZoneEditor(zoneId = "") {
+  if (!currentUser?.isDeveloper) return;
+  const id = String(zoneId || "").trim();
+  const zone = executiveMapConfigCatalog.zones.find((item) => String(item?.id || "") === id);
+  if (!zone) return;
+
+  openManagementModal({
+    eyebrow: "РУКОВОДЯЩИЙ КОНТУР · ОПЕРАТИВНАЯ КАРТА",
+    title: `Регион · ${zone.name || zone.id}`,
+    saveLabel: "Сохранить регион",
+    context: {
+      type: "executive-map-zone-edit",
+      zoneId: zone.id
+    },
+    bodyHtml: `
+      <label class="permission-option executive-map-enabled-option">
+        <input id="executiveMapZoneEnabled" type="checkbox" ${zone?.enabled === false ? "" : "checked"} />
+        <span>Показывать этот регион на оперативной карте</span>
+      </label>
+
+      <div class="executive-source-editor-section">
+        <div class="management-section-head">
+          <strong>Подразделения активных отключений</strong>
+          <small>Если выбрать подразделение целиком, карта берёт его полный счётчик отключений и обращений.</small>
+        </div>
+        ${executiveSourceCheckboxes(
+          executiveMapConfigCatalog.outageDivisions,
+          zone?.outageDivisionIds,
+          "executiveMapOutageDivision",
+          "Подразделения активных отключений пока не настроены."
+        )}
+      </div>
+
+      <div class="executive-source-editor-section">
+        <div class="management-section-head">
+          <strong>Конкретные РЭС / районы / ВВР</strong>
+          <small>Используйте для точной географической привязки. Например, ВВР из ОС можно собрать в регион «Санкт-Петербург». РЭС из подразделения, уже выбранного целиком выше, повторно не суммируются.</small>
+        </div>
+        ${executiveMapUnitCheckboxes(zone?.unitIds)}
+      </div>
+    `
+  });
+}
+
 function openExecutiveTableRowEditor(rowId = "") {
   if (!currentUser?.isDeveloper) return;
 
@@ -5740,6 +6060,27 @@ async function loadDispatcherConfigManagement() {
         Boolean(payload.storageConfigured)
     };
 
+    executiveMapConfigCatalog = {
+      zones:
+        Array.isArray(payload?.executiveMap?.zones)
+          ? payload.executiveMap.zones
+          : [],
+      groups:
+        Array.isArray(payload.groups)
+          ? payload.groups
+          : [],
+      units:
+        Array.isArray(payload.units)
+          ? payload.units
+          : [],
+      outageDivisions:
+        Array.isArray(payload?.outages?.divisions)
+          ? payload.outages.divisions
+          : [],
+      storageConfigured:
+        Boolean(payload.storageConfigured)
+    };
+
     dispatcherWorkordersConfigCatalog = {
       groups:
         Array.isArray(payload.groups)
@@ -5800,6 +6141,18 @@ async function loadDispatcherConfigManagement() {
       !executiveTableConfigCatalog.storageConfigured
     );
 
+    if (executiveMapConfigStatus) {
+      const enabledMapZones = executiveMapConfigCatalog.zones.filter((zone) => zone?.enabled !== false).length;
+      executiveMapConfigStatus.textContent =
+        executiveMapConfigCatalog.storageConfigured
+          ? `Оперативная карта: ${enabledMapZones} ${pluralizeRu(enabledMapZones, "регион включён", "региона включено", "регионов включено")}. Для СПб можно отдельно выбрать ВВР и другие РЭС / районы.`
+          : "Redis не подключён: используются базовые привязки карты, изменения сохранить нельзя.";
+      executiveMapConfigStatus.classList.toggle(
+        "is-warning",
+        !executiveMapConfigCatalog.storageConfigured
+      );
+    }
+
     const workordersInfo =
       dispatcherWorkordersConfigCatalog.sourceData;
 
@@ -5821,6 +6174,7 @@ async function loadDispatcherConfigManagement() {
 
     renderDispatcherConfigGroups();
     renderExecutiveTableConfigList();
+    renderExecutiveMapConfigList();
     renderDispatcherWorkordersConfigGroups();
   } catch (error) {
     dispatcherConfigStatus.textContent =
@@ -5840,6 +6194,13 @@ async function loadDispatcherConfigManagement() {
         : "Ошибка загрузки сводных подразделений";
     executiveTableConfigStatus.classList.add("is-warning");
     executiveTableConfigList.innerHTML = "";
+
+    if (executiveMapConfigStatus) {
+      executiveMapConfigStatus.textContent =
+        error instanceof Error ? error.message : "Ошибка загрузки настройки карты";
+      executiveMapConfigStatus.classList.add("is-warning");
+    }
+    if (executiveMapConfigList) executiveMapConfigList.innerHTML = "";
 
     dispatcherWorkordersConfigStatus.textContent =
       error instanceof Error
@@ -7231,6 +7592,18 @@ async function saveManagementEditor() {
       "Сохранение…";
 
   try {
+    if (
+      managementContext.type === "executive-map-zone-edit"
+    ) {
+      await postDispatcherStructureAction({
+        action: "update_executive_map_zone",
+        zoneId: managementContext.zoneId || "",
+        enabled: Boolean(document.getElementById("executiveMapZoneEnabled")?.checked),
+        outageDivisionIds: selectedExecutiveEditorIds("executiveMapOutageDivision"),
+        unitIds: selectedExecutiveEditorIds("executiveMapUnit")
+      });
+    }
+
     if (
       managementContext.type === "executive-table-row-create" ||
       managementContext.type === "executive-table-row-edit"

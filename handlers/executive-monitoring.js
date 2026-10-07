@@ -8,6 +8,7 @@ import { getLatestWorkordersSnapshot, aggregateWorkordersSources } from "../lib/
 import { getOutageDivisions } from "../lib/outage-config.js";
 import { getLatestOutageSnapshot, aggregateOutageSources } from "../lib/outage-data.js";
 import { getExecutiveTableRows } from "../lib/executive-table-config.js";
+import { getExecutiveMapZones } from "../lib/executive-map-config.js";
 import { recordExecutivePoint, selectExecutiveHistory } from "../lib/executive-history.js";
 
 function json(data, status = 200) {
@@ -66,8 +67,13 @@ function buildSourceLookup(unitSummary) {
   const defaultSources = Array.isArray(unit?.defaultSources)
     ? unit.defaultSources
     : [];
+  const outageSelectionSources = Array.isArray(unitSummary?.outageSelections)
+    ? unitSummary.outageSelections.flatMap((selection) =>
+        Array.isArray(selection?.sources) ? selection.sources : []
+      )
+    : [];
 
-  [unit.name, ...defaultSources, ...requestSources, ...workorderSources]
+  [unit.name, ...defaultSources, ...requestSources, ...workorderSources, ...outageSelectionSources]
     .map((value) => String(value || "").trim())
     .filter(Boolean)
     .forEach((value) => lookup.add(value.toLowerCase()));
@@ -304,13 +310,15 @@ export default {
       workordersSnapshotState,
       outageSnapshotState,
       outageDivisions,
-      executiveTableConfigRows
+      executiveTableConfigRows,
+      executiveMapZones
     ] = await Promise.all([
       getLatestDispatcherSnapshot(),
       getLatestWorkordersSnapshot(),
       getLatestOutageSnapshot(),
       getOutageDivisions(),
-      getExecutiveTableRows()
+      getExecutiveTableRows(),
+      getExecutiveMapZones()
     ]);
 
     const outageSnapshot = outageSnapshotState.snapshot;
@@ -364,7 +372,8 @@ export default {
         const outageMetrics = matchOutageUnitMetrics(relatedOutageDivision, {
           unit,
           requestSources: requestConfig?.sources || [],
-          workorderSources: workorderConfig?.sources || []
+          workorderSources: workorderConfig?.sources || [],
+          outageSelections: requestConfig?.outageSelections || []
         });
 
         return {
@@ -375,6 +384,7 @@ export default {
           unit,
           requestSources: requestConfig?.sources || [],
           workorderSources: workorderConfig?.sources || [],
+          outageSelections: requestConfig?.outageSelections || [],
           requests: {
             review: Number(requestAggregation.review || 0),
             approved: Number(requestAggregation.approved || 0),
@@ -399,6 +409,61 @@ export default {
         };
       })
     );
+
+    const unitSummaryMap = new Map(
+      unitSummaries.map((item) => [cleanId(item.id), item])
+    );
+
+    const mapZones = (Array.isArray(executiveMapZones) ? executiveMapZones : [])
+      .map((zone) => {
+        const configuredDivisionIds = (Array.isArray(zone?.outageDivisionIds)
+          ? zone.outageDivisionIds
+          : [])
+          .map(cleanId)
+          .filter(Boolean);
+
+        const divisionIds = hasAllGroups
+          ? configuredDivisionIds
+          : configuredDivisionIds.filter((id) => availableGroupIds.has(id));
+
+        const wholeGroupIds = new Set(divisionIds);
+        let outages = 0;
+        let appeals = 0;
+
+        for (const id of divisionIds) {
+          const division = outageDivisionMap.get(id);
+          outages += Number(division?.count || 0);
+          appeals += Number(division?.appeals || 0);
+        }
+
+        const unitIds = (Array.isArray(zone?.unitIds) ? zone.unitIds : [])
+          .map(cleanId)
+          .filter(Boolean);
+
+        for (const unitId of unitIds) {
+          const item = unitSummaryMap.get(unitId);
+          if (!item) continue;
+
+          // If the entire outage division is already selected for this zone,
+          // do not count its unit breakdown a second time.
+          if (wholeGroupIds.has(cleanId(item.groupId))) continue;
+
+          outages += Number(item?.outages?.total || 0);
+          appeals += Number(item?.outages?.appeals || 0);
+        }
+
+        return {
+          id: cleanId(zone?.id),
+          name: String(zone?.name || "Регион"),
+          shortName: String(zone?.shortName || zone?.name || "Регион"),
+          enabled: zone?.enabled !== false,
+          outages: zone?.enabled === false ? 0 : outages,
+          appeals: zone?.enabled === false ? 0 : appeals,
+          active: zone?.enabled !== false && outages > 0,
+          outageDivisionIds: divisionIds,
+          unitIds: unitIds.filter((id) => unitSummaryMap.has(id))
+        };
+      });
 
     const groupRows = availableGroups.map((group) => {
       const groupUnits = unitSummaries.filter(
@@ -707,6 +772,11 @@ export default {
       history: selectedHistory,
       historyConfigured: history.length > 0,
       divisionTable: divisionTableRows,
+      map: {
+        zones: mapZones,
+        source: "Схематически упрощённые муниципальные границы СПб и Ленинградской области",
+        updatedAt: outageUpdatedAt || new Date().toISOString()
+      },
       outages: {
         status: outageSnapshotState.status,
         message: outageSnapshotState.message || "",
