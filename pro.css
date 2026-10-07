@@ -1267,3 +1267,171 @@ html body .executive-division-link.is-static {
     height: 228px;
   }
 }
+
+/* =========================================================
+   FIGMA LAYOUT POLISH · 2026-10-07
+   - right dispatcher column gets enough vertical room
+   - Executive OMS ranking gets an internal scroll
+   - four trend/sparkline cards return before the summary table
+   ========================================================= */
+@media (min-width: 1181px) {
+  /* Keep the dispatcher workbench aligned: 340 + 16 + 350 = 706px. */
+  #dispatcherView .dispatcher-outages-panel {
+    min-height: 706px !important;
+    height: 706px !important;
+  }
+
+  #dispatcherView .dispatcher-grid > .dispatcher-panel:first-child {
+    min-height: 340px !important;
+    height: 340px !important;
+    overflow: visible !important;
+  }
+
+  #dispatcherView .dispatcher-workorders-panel {
+    min-height: 350px !important;
+    height: 350px !important;
+    overflow: hidden !important;
+  }
+
+  #dispatcherView .dispatcher-requests-chart-layout {
+    min-height: 184px;
+  }
+
+  #dispatcherView .dispatcher-workorders-chart-layout {
+    min-height: 152px;
+    margin-top: 12px;
+  }
+
+  #dispatcherView .dispatcher-workorders-panel .dispatcher-source-meta {
+    margin-top: 8px;
+  }
+
+  #dispatcherView .dispatcher-workorders-panel .dispatcher-source-breakdown {
+    margin-top: 8px;
+  }
+
+  /* If source details are expanded, keep the panel tidy instead of clipping
+     the donut/legend below it. */
+  #dispatcherView .dispatcher-workorders-panel .dispatcher-breakdown-options {
+    max-height: 86px !important;
+    overflow-y: auto !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(214,164,70,.38) rgba(255,255,255,.025);
+  }
+
+  #dispatcherView .dispatcher-workorders-panel .dispatcher-breakdown-options::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  #dispatcherView .dispatcher-workorders-panel .dispatcher-breakdown-options::-webkit-scrollbar-track {
+    background: rgba(255,255,255,.02);
+  }
+
+  #dispatcherView .dispatcher-workorders-panel .dispatcher-breakdown-options::-webkit-scrollbar-thumb {
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: rgba(214,164,70,.42);
+    background-clip: padding-box;
+  }
+
+  /* OMS operational background: always allow the user to inspect the rest
+     of the ranking without growing the entire dashboard. */
+  #executiveView .executive-outages-panel .executive-ranking-list {
+    max-height: 166px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    padding-right: 6px !important;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(214,164,70,.45) rgba(255,255,255,.025);
+  }
+
+  #executiveView .executive-outages-panel .executive-ranking-list::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  #executiveView .executive-outages-panel .executive-ranking-list::-webkit-scrollbar-track {
+    background: rgba(255,255,255,.018);
+    border-radius: 999px;
+  }
+
+  #executiveView .executive-outages-panel .executive-ranking-list::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: linear-gradient(180deg, rgba(214,164,70,.62), rgba(60,195,232,.38));
+  }
+
+  /* Keep the ranking module hidden in the approved desktop layout, but bring
+     the four historical trend graphs back exactly before the final table. */
+  #executiveView .executive-ranking-panel {
+    display: none !important;
+  }
+
+  #executiveView .executive-trend-panel {
+    display: grid !important;
+    grid-column: 1 / -1 !important;
+    min-height: 250px;
+    padding: 18px !important;
+    gap: 14px !important;
+    border-radius: 8px !important;
+  }
+
+  #executiveView .executive-trend-panel .executive-panel-head {
+    align-items: center;
+  }
+
+  #executiveView .executive-trend-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  #executiveView .executive-trend-card {
+    min-height: 176px;
+    padding: 13px !important;
+    border-radius: 6px !important;
+    background:
+      linear-gradient(rgba(140,170,190,.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(140,170,190,.045) 1px, transparent 1px),
+      #080d13 !important;
+    background-size: 26px 22px !important;
+  }
+
+  #executiveView .executive-trend-head > div > span {
+    font-size: 9px;
+    font-family: var(--mono);
+    letter-spacing: .035em;
+  }
+
+  #executiveView .executive-trend-head strong {
+    margin-top: 5px;
+    font-size: 25px;
+  }
+
+  #executiveView .executive-trend-card .executive-delta {
+    width: auto;
+    min-width: 42px;
+  }
+
+  #executiveView .executive-sparkline {
+    height: 96px;
+    margin-top: 10px;
+    border-radius: 4px;
+    background: rgba(2,8,13,.26);
+  }
+
+  #executiveView .executive-table-panel {
+    grid-column: 1 / -1;
+  }
+}
+
+/* On mid-size desktops keep the four graphs readable without squeezing them. */
+@media (min-width: 1181px) and (max-width: 1450px) {
+  #executiveView .executive-trend-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  #executiveView .executive-trend-panel {
+    min-height: 430px;
+  }
+}
