@@ -7,6 +7,7 @@ import { getLatestDispatcherSnapshot, aggregateDispatcherSources } from "../lib/
 import { getLatestWorkordersSnapshot, aggregateWorkordersSources } from "../lib/dispatcher-workorders-data.js";
 import { getOutageDivisions } from "../lib/outage-config.js";
 import { getLatestOutageSnapshot, aggregateOutageSources } from "../lib/outage-data.js";
+import { getExecutiveTableRows } from "../lib/executive-table-config.js";
 import { recordExecutivePoint, selectExecutiveHistory } from "../lib/executive-history.js";
 
 function json(data, status = 200) {
@@ -302,12 +303,14 @@ export default {
       dispatcherSnapshotState,
       workordersSnapshotState,
       outageSnapshotState,
-      outageDivisions
+      outageDivisions,
+      executiveTableConfigRows
     ] = await Promise.all([
       getLatestDispatcherSnapshot(),
       getLatestWorkordersSnapshot(),
       getLatestOutageSnapshot(),
-      getOutageDivisions()
+      getOutageDivisions(),
+      getExecutiveTableRows()
     ]);
 
     const outageSnapshot = outageSnapshotState.snapshot;
@@ -430,6 +433,70 @@ export default {
         })
       };
     });
+
+    const configuredDivisionTableRows = Array.isArray(executiveTableConfigRows)
+      ? executiveTableConfigRows
+      : [];
+
+    const divisionTableRows = configuredDivisionTableRows.length
+      ? configuredDivisionTableRows.map((row) => {
+          const filterAllowedIds = (values) => {
+            const ids = Array.isArray(values)
+              ? values.map(cleanId).filter(Boolean)
+              : [];
+            return hasAllGroups
+              ? ids
+              : ids.filter((id) => availableGroupIds.has(id));
+          };
+
+          const outageIds = filterAllowedIds(row.outageDivisionIds);
+          const requestGroupIds = filterAllowedIds(row.requestGroupIds);
+          const workorderGroupIds = filterAllowedIds(row.workorderGroupIds);
+          const unitGroupIdsRaw = filterAllowedIds(row.unitGroupIds);
+          const unitGroupIds = unitGroupIdsRaw.length
+            ? unitGroupIdsRaw
+            : [...new Set([...requestGroupIds, ...workorderGroupIds])];
+
+          const outageItems = outageIds
+            .map((id) => outageDivisionMap.get(id))
+            .filter(Boolean);
+          const requestUnits = unitSummaries.filter((item) =>
+            requestGroupIds.includes(cleanId(item.groupId))
+          );
+          const workorderUnits = unitSummaries.filter((item) =>
+            workorderGroupIds.includes(cleanId(item.groupId))
+          );
+          const unitItems = unitSummaries.filter((item) =>
+            unitGroupIds.includes(cleanId(item.groupId))
+          );
+
+          const requests = summarizeRequestUnits(requestUnits);
+          const workorders = summarizeWorkorderUnits(workorderUnits);
+          const outages = sumBy(outageItems, (item) => item.count);
+          const appeals = sumBy(outageItems, (item) => item.appeals);
+
+          return {
+            id: `summary:${row.id}`,
+            configId: row.id,
+            name: row.name,
+            description: row.description || `${unitItems.length} РЭС / районов`,
+            outages,
+            appeals,
+            requests: requests.total,
+            workorders: workorders.total,
+            openRequests: requests.review + requests.open,
+            workBreaks: workorders.break,
+            units: unitItems.length,
+            selectable: false,
+            status: operationalStatus({
+              outages,
+              requests: requests.total,
+              workorders: workorders.total,
+              hasOutageData: Boolean(outageSnapshot)
+            })
+          };
+        })
+      : groupRows.map((row) => ({ ...row, selectable: true }));
 
     const selectedGroup = selectedGroupId
       ? groupMap.get(selectedGroupId) || null
@@ -639,7 +706,7 @@ export default {
       deltas,
       history: selectedHistory,
       historyConfigured: history.length > 0,
-      divisionTable: groupRows,
+      divisionTable: divisionTableRows,
       outages: {
         status: outageSnapshotState.status,
         message: outageSnapshotState.message || "",

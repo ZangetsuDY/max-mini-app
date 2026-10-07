@@ -216,6 +216,11 @@ const dispatcherDeleteGroupButton = document.getElementById("dispatcherDeleteGro
 const dispatcherConfigStatus = document.getElementById("dispatcherConfigStatus");
 const dispatcherConfigList = document.getElementById("dispatcherConfigList");
 
+const executiveTableManagementPanel = document.getElementById("executiveTableManagementPanel");
+const executiveTableCreateButton = document.getElementById("executiveTableCreateButton");
+const executiveTableConfigStatus = document.getElementById("executiveTableConfigStatus");
+const executiveTableConfigList = document.getElementById("executiveTableConfigList");
+
 const dispatcherWorkordersManagementPanel = document.getElementById("dispatcherWorkordersManagementPanel");
 const dispatcherWorkordersConfigGroupSelect = document.getElementById("dispatcherWorkordersConfigGroupSelect");
 const dispatcherWorkordersConfigStatus = document.getElementById("dispatcherWorkordersConfigStatus");
@@ -291,6 +296,13 @@ let dispatcherWorkordersConfigCatalog = {
   units: [],
   availableSourceLabels: [],
   sourceData: {},
+  storageConfigured: false
+};
+
+let executiveTableConfigCatalog = {
+  rows: [],
+  groups: [],
+  outageDivisions: [],
   storageConfigured: false
 };
 
@@ -1450,15 +1462,19 @@ function renderExecutiveDivisionTable(rows, selectedGroupId = "") {
 
   body.innerHTML = list.map((row) => {
     const tone = String(row?.status?.tone || "muted");
-    const selected = String(row?.id || "") === String(selectedGroupId || "");
+    const selectable = row?.selectable !== false;
+    const selected = selectable && String(row?.id || "") === String(selectedGroupId || "");
+    const rowCopy = `
+      <strong>${escapeHtml(row?.name || "—")}</strong>
+      <small>${escapeHtml(row?.description || `${Number(row?.units || 0)} РЭС / районов`)}</small>
+    `;
 
     return `
       <tr class="${selected ? "is-selected" : ""}">
         <td>
-          <button class="executive-division-link" type="button" data-executive-table-group="${escapeHtml(row?.id || "")}">
-            <strong>${escapeHtml(row?.name || "—")}</strong>
-            <small>${escapeHtml(row?.description || `${Number(row?.units || 0)} РЭС / районов`)}</small>
-          </button>
+          ${selectable
+            ? `<button class="executive-division-link" type="button" data-executive-table-group="${escapeHtml(row?.id || "")}">${rowCopy}</button>`
+            : `<div class="executive-division-link is-static">${rowCopy}</div>`}
         </td>
         <td><span class="executive-status-chip is-${escapeHtml(tone)}">${escapeHtml(row?.status?.label || "—")}</span></td>
         <td><strong class="executive-table-number is-outage">${Number(row?.outages || 0)}</strong></td>
@@ -3845,6 +3861,11 @@ function renderAdminDashboard(
       payload.canManageRoles
     );
 
+  executiveTableManagementPanel.hidden =
+    !Boolean(
+      payload.canManageRoles
+    );
+
   dispatcherWorkordersManagementPanel.hidden =
     !Boolean(
       payload.canManageRoles
@@ -5354,6 +5375,295 @@ function openDispatcherWorkordersSourceEditor(
   );
 }
 
+
+function executiveSummarySourceName(type, id) {
+  const clean = String(id || "").trim();
+  if (!clean) return "—";
+
+  if (type === "outages") {
+    return executiveTableConfigCatalog.outageDivisions.find(
+      (item) => String(item?.id || "") === clean
+    )?.name || clean;
+  }
+
+  return executiveTableConfigCatalog.groups.find(
+    (item) => String(item?.id || "") === clean
+  )?.name || clean;
+}
+
+function renderExecutiveSummarySources(ids, type, emptyText) {
+  const list = Array.isArray(ids) ? ids : [];
+  if (!list.length) {
+    return `<span class="is-empty">${escapeHtml(emptyText)}</span>`;
+  }
+
+  return list.map((id) => `
+    <span>${escapeHtml(executiveSummarySourceName(type, id))}</span>
+  `).join("");
+}
+
+function renderExecutiveTableConfigList() {
+  if (!executiveTableConfigList) return;
+
+  const rows = Array.isArray(executiveTableConfigCatalog.rows)
+    ? executiveTableConfigCatalog.rows
+    : [];
+
+  if (executiveTableCreateButton) {
+    executiveTableCreateButton.disabled =
+      !executiveTableConfigCatalog.storageConfigured;
+  }
+
+  if (!rows.length) {
+    executiveTableConfigList.innerHTML = `
+      <div class="access-empty dispatcher-structure-empty">
+        <strong>Используется автоматическая таблица</strong>
+        <span>
+          Создайте первое сводное подразделение, чтобы самостоятельно
+          определить источники для каждой строки таблицы.
+        </span>
+      </div>
+    `;
+    return;
+  }
+
+  executiveTableConfigList.innerHTML = rows.map((row) => `
+    <article class="dispatcher-config-card executive-table-config-card">
+      <div class="dispatcher-config-card-head">
+        <div>
+          <span class="micro-label">СВОДНОЕ ПОДРАЗДЕЛЕНИЕ</span>
+          <h3>${escapeHtml(row?.name || "—")}</h3>
+          ${row?.description ? `<p class="executive-config-description">${escapeHtml(row.description)}</p>` : ""}
+        </div>
+        <span class="dispatcher-config-state is-custom">НАСТРОЕНО</span>
+      </div>
+
+      <div class="executive-config-source-grid">
+        <section>
+          <div class="dispatcher-config-section-label is-outages">Отключения / обращения</div>
+          <div class="dispatcher-config-sources">
+            ${renderExecutiveSummarySources(row?.outageDivisionIds, "outages", "Источники не выбраны")}
+          </div>
+        </section>
+
+        <section>
+          <div class="dispatcher-config-section-label">Заявки</div>
+          <div class="dispatcher-config-sources">
+            ${renderExecutiveSummarySources(row?.requestGroupIds, "groups", "Источники не выбраны")}
+          </div>
+        </section>
+
+        <section>
+          <div class="dispatcher-config-section-label">НДР</div>
+          <div class="dispatcher-config-sources">
+            ${renderExecutiveSummarySources(row?.workorderGroupIds, "groups", "Источники не выбраны")}
+          </div>
+        </section>
+
+        <section>
+          <div class="dispatcher-config-section-label">РЭС / районы</div>
+          <div class="dispatcher-config-sources">
+            ${renderExecutiveSummarySources(row?.unitGroupIds, "groups", "Если пусто — используются группы заявок и НДР")}
+          </div>
+        </section>
+      </div>
+
+      <div class="dispatcher-config-card-actions">
+        <button
+          class="role-action dispatcher-config-edit"
+          type="button"
+          data-executive-row-edit="${escapeHtml(row?.id || "")}"
+        >
+          Настроить
+        </button>
+        <button
+          class="role-action is-danger"
+          type="button"
+          data-executive-row-delete="${escapeHtml(row?.id || "")}"
+          data-executive-row-name="${escapeHtml(row?.name || "")}" 
+        >
+          Удалить
+        </button>
+      </div>
+    </article>
+  `).join("");
+
+  executiveTableConfigList
+    .querySelectorAll("[data-executive-row-edit]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        openExecutiveTableRowEditor(button.dataset.executiveRowEdit);
+      });
+    });
+
+  executiveTableConfigList
+    .querySelectorAll("[data-executive-row-delete]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        deleteExecutiveTableRowFromAdmin(
+          button.dataset.executiveRowDelete,
+          button.dataset.executiveRowName
+        );
+      });
+    });
+}
+
+function executiveSourceCheckboxes(items, selectedIds, inputName, emptyText) {
+  const list = Array.isArray(items) ? items : [];
+  const selected = new Set(Array.isArray(selectedIds) ? selectedIds : []);
+
+  if (!list.length) {
+    return `<div class="management-note is-warning">${escapeHtml(emptyText)}</div>`;
+  }
+
+  return `
+    <div class="permission-grid executive-source-picker">
+      ${list.map((item) => `
+        <label class="permission-option">
+          <input
+            type="checkbox"
+            name="${escapeHtml(inputName)}"
+            value="${escapeHtml(item?.id || "")}"
+            ${selected.has(String(item?.id || "")) ? "checked" : ""}
+          />
+          <span>
+            <strong>${escapeHtml(item?.name || item?.id || "—")}</strong>
+            ${item?.description ? `<small>${escapeHtml(item.description)}</small>` : ""}
+          </span>
+        </label>
+      `).join("")}
+    </div>
+  `;
+}
+
+function openExecutiveTableRowEditor(rowId = "") {
+  if (!currentUser?.isDeveloper) return;
+
+  const id = String(rowId || "").trim();
+  const row = id
+    ? executiveTableConfigCatalog.rows.find((item) => item.id === id)
+    : null;
+  const editing = Boolean(row);
+
+  openManagementModal({
+    eyebrow: "РУКОВОДЯЩИЙ КОНТУР · СВОДНАЯ ТАБЛИЦА",
+    title: editing
+      ? `Настройка · ${row.name}`
+      : "Новое сводное подразделение",
+    saveLabel: editing ? "Сохранить строку" : "Создать строку",
+    context: {
+      type: editing ? "executive-table-row-edit" : "executive-table-row-create",
+      rowId: row?.id || ""
+    },
+    bodyHtml: `
+      <label class="management-field">
+        <span>Название строки</span>
+        <input
+          id="executiveRowNameInput"
+          maxlength="80"
+          value="${escapeHtml(row?.name || "")}"
+          placeholder="Например: ВЭС"
+        />
+      </label>
+
+      <label class="management-field">
+        <span>Подпись / описание</span>
+        <input
+          id="executiveRowDescriptionInput"
+          maxlength="180"
+          value="${escapeHtml(row?.description || "")}"
+          placeholder="Например: Выборгские электрические сети"
+        />
+      </label>
+
+      <div class="executive-source-editor-section">
+        <div class="management-section-head">
+          <strong>Отключения и обращения</strong>
+          <small>Выбираются подразделения из настройки активных отключений.</small>
+        </div>
+        ${executiveSourceCheckboxes(
+          executiveTableConfigCatalog.outageDivisions,
+          row?.outageDivisionIds,
+          "executiveOutageDivision",
+          "Сначала создайте подразделения активных отключений."
+        )}
+      </div>
+
+      <div class="executive-source-editor-section">
+        <div class="management-section-head">
+          <strong>Заявки</strong>
+          <small>Суммируются заявки всех РЭС / районов выбранных диспетчерских подразделений.</small>
+        </div>
+        ${executiveSourceCheckboxes(
+          executiveTableConfigCatalog.groups,
+          row?.requestGroupIds,
+          "executiveRequestGroup",
+          "Диспетчерские подразделения пока не настроены."
+        )}
+      </div>
+
+      <div class="executive-source-editor-section">
+        <div class="management-section-head">
+          <strong>НДР</strong>
+          <small>Суммируются наряды / распоряжения выбранных подразделений.</small>
+        </div>
+        ${executiveSourceCheckboxes(
+          executiveTableConfigCatalog.groups,
+          row?.workorderGroupIds,
+          "executiveWorkorderGroup",
+          "Диспетчерские подразделения пока не настроены."
+        )}
+      </div>
+
+      <div class="executive-source-editor-section">
+        <div class="management-section-head">
+          <strong>РЭС / районы</strong>
+          <small>Определяет число в последнем столбце. Если ничего не выбрать, используются группы заявок и НДР.</small>
+        </div>
+        ${executiveSourceCheckboxes(
+          executiveTableConfigCatalog.groups,
+          row?.unitGroupIds,
+          "executiveUnitGroup",
+          "Диспетчерские подразделения пока не настроены."
+        )}
+      </div>
+    `
+  });
+
+  document.getElementById("executiveRowNameInput")?.focus();
+}
+
+function selectedExecutiveEditorIds(name) {
+  return [...managementBody.querySelectorAll(`input[name="${name}"]:checked`)]
+    .map((input) => String(input.value || "").trim())
+    .filter(Boolean);
+}
+
+async function deleteExecutiveTableRowFromAdmin(rowId, rowName) {
+  if (!rowId) return;
+
+  const confirmed = window.confirm(
+    `Удалить сводную строку «${rowName || rowId}»? После удаления она исчезнет из таблицы руководящего мониторинга.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await postDispatcherStructureAction({
+      action: "delete_executive_row",
+      rowId
+    });
+    await loadDispatcherConfigManagement();
+  } catch (error) {
+    openModal({
+      type: "denied",
+      eyebrow: "СВОДНАЯ ТАБЛИЦА",
+      title: "Не удалось удалить строку",
+      message: error instanceof Error ? error.message : "Попробуйте ещё раз."
+    });
+  }
+}
+
 async function loadDispatcherConfigManagement() {
   if (!currentUser?.isDeveloper) {
     return;
@@ -5413,6 +5723,23 @@ async function loadDispatcherConfigManagement() {
         Boolean(payload.storageConfigured)
     };
 
+    executiveTableConfigCatalog = {
+      rows:
+        Array.isArray(payload?.executiveTable?.rows)
+          ? payload.executiveTable.rows
+          : [],
+      groups:
+        Array.isArray(payload.groups)
+          ? payload.groups
+          : [],
+      outageDivisions:
+        Array.isArray(payload?.outages?.divisions)
+          ? payload.outages.divisions
+          : [],
+      storageConfigured:
+        Boolean(payload.storageConfigured)
+    };
+
     dispatcherWorkordersConfigCatalog = {
       groups:
         Array.isArray(payload.groups)
@@ -5461,6 +5788,18 @@ async function loadDispatcherConfigManagement() {
       !dispatcherConfigCatalog.storageConfigured
     );
 
+    executiveTableConfigStatus.textContent =
+      executiveTableConfigCatalog.storageConfigured
+        ? executiveTableConfigCatalog.rows.length
+          ? `Сводная таблица использует пользовательскую конфигурацию: ${executiveTableConfigCatalog.rows.length} ${pluralizeRu(executiveTableConfigCatalog.rows.length, "строка", "строки", "строк")}.`
+          : "Пользовательские строки пока не созданы. Таблица автоматически строится по диспетчерским подразделениям."
+        : "Redis не подключён: пользовательскую структуру сводной таблицы сохранить нельзя.";
+
+    executiveTableConfigStatus.classList.toggle(
+      "is-warning",
+      !executiveTableConfigCatalog.storageConfigured
+    );
+
     const workordersInfo =
       dispatcherWorkordersConfigCatalog.sourceData;
 
@@ -5481,6 +5820,7 @@ async function loadDispatcherConfigManagement() {
     );
 
     renderDispatcherConfigGroups();
+    renderExecutiveTableConfigList();
     renderDispatcherWorkordersConfigGroups();
   } catch (error) {
     dispatcherConfigStatus.textContent =
@@ -5493,6 +5833,13 @@ async function loadDispatcherConfigManagement() {
     );
 
     dispatcherConfigList.innerHTML = "";
+
+    executiveTableConfigStatus.textContent =
+      error instanceof Error
+        ? error.message
+        : "Ошибка загрузки сводных подразделений";
+    executiveTableConfigStatus.classList.add("is-warning");
+    executiveTableConfigList.innerHTML = "";
 
     dispatcherWorkordersConfigStatus.textContent =
       error instanceof Error
@@ -6885,6 +7232,30 @@ async function saveManagementEditor() {
 
   try {
     if (
+      managementContext.type === "executive-table-row-create" ||
+      managementContext.type === "executive-table-row-edit"
+    ) {
+      const name =
+        document.getElementById("executiveRowNameInput")?.value.trim() || "";
+      const description =
+        document.getElementById("executiveRowDescriptionInput")?.value.trim() || "";
+
+      await postDispatcherStructureAction({
+        action:
+          managementContext.type === "executive-table-row-create"
+            ? "create_executive_row"
+            : "update_executive_row",
+        rowId: managementContext.rowId || "",
+        name,
+        description,
+        outageDivisionIds: selectedExecutiveEditorIds("executiveOutageDivision"),
+        requestGroupIds: selectedExecutiveEditorIds("executiveRequestGroup"),
+        workorderGroupIds: selectedExecutiveEditorIds("executiveWorkorderGroup"),
+        unitGroupIds: selectedExecutiveEditorIds("executiveUnitGroup")
+      });
+    }
+
+    if (
       managementContext.type ===
       "create-user"
     ) {
@@ -7608,6 +7979,11 @@ createRoleButton.addEventListener(
 outageCreateDivisionButton.addEventListener(
   "click",
   openCreateOutageDivisionEditor
+);
+
+executiveTableCreateButton?.addEventListener(
+  "click",
+  () => openExecutiveTableRowEditor()
 );
 
 dispatcherConfigGroupSelect.addEventListener(

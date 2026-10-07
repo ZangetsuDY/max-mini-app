@@ -38,6 +38,13 @@ import {
 } from "../../lib/outage-config.js";
 
 import {
+  getExecutiveTableRows,
+  createExecutiveTableRow,
+  updateExecutiveTableRow,
+  deleteExecutiveTableRow
+} from "../../lib/executive-table-config.js";
+
+import {
   getLatestDispatcherSnapshot
 } from "../../lib/dispatcher-data.js";
 
@@ -113,7 +120,8 @@ export default {
           workordersSourceState,
           emergencyOutageState,
           plannedOutageState,
-          outageDivisions
+          outageDivisions,
+          executiveTableRows
         ] =
           await Promise.all([
             getDispatcherSourceConfig(),
@@ -123,7 +131,8 @@ export default {
             getLatestWorkordersSnapshot(),
             getLatestEmergencyOutageSnapshot(),
             getLatestPlannedOutageSnapshot(),
-            getOutageDivisions()
+            getOutageDivisions(),
+            getExecutiveTableRows()
           ]);
 
         return json({
@@ -131,6 +140,9 @@ export default {
             isRuntimeStoreConfigured(),
           groups:
             structure.groups,
+          executiveTable: {
+            rows: executiveTableRows
+          },
           units,
           availableSourceLabels:
             Array.isArray(
@@ -247,6 +259,40 @@ export default {
         .toLowerCase();
 
     try {
+      if (action === "create_executive_row") {
+        const row = await createExecutiveTableRow({
+          name: body?.name,
+          description: body?.description,
+          outageDivisionIds: body?.outageDivisionIds,
+          requestGroupIds: body?.requestGroupIds,
+          workorderGroupIds: body?.workorderGroupIds,
+          unitGroupIds: body?.unitGroupIds,
+          actor: auth.access
+        });
+
+        return json({ ok: true, row });
+      }
+
+      if (action === "update_executive_row") {
+        const row = await updateExecutiveTableRow({
+          rowId: body?.rowId,
+          name: body?.name,
+          description: body?.description,
+          outageDivisionIds: body?.outageDivisionIds,
+          requestGroupIds: body?.requestGroupIds,
+          workorderGroupIds: body?.workorderGroupIds,
+          unitGroupIds: body?.unitGroupIds,
+          actor: auth.access
+        });
+
+        return json({ ok: true, row });
+      }
+
+      if (action === "delete_executive_row") {
+        await deleteExecutiveTableRow({ rowId: body?.rowId });
+        return json({ ok: true });
+      }
+
       if (action === "create_group") {
         const group =
           await createDispatcherGroup({

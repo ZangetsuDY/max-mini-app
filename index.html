@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261006-2045" />
-  <link rel="stylesheet" href="pro.css?v=20261006-2045" />
+  <link rel="stylesheet" href="style.css?v=20261007-0855" />
+  <link rel="stylesheet" href="pro.css?v=20261007-0855" />
 </head>
 
 <body class="auth-pending">
@@ -1427,6 +1427,36 @@
       </article>
 
       <article
+        id="executiveTableManagementPanel"
+        class="admin-panel dispatcher-source-management executive-table-management"
+        hidden
+      >
+        <div class="admin-panel-heading access-heading">
+          <div>
+            <span class="micro-label">РУКОВОДЯЩИЙ КОНТУР · СВОДНАЯ ТАБЛИЦА</span>
+            <h2>Сводные подразделения</h2>
+            <p class="access-heading-copy">
+              Создавайте строки для таблицы «Подразделения в одном контуре» и отдельно
+              выбирайте, из каких подразделений брать отключения и обращения, заявки, НДР
+              и количество РЭС / районов. Если здесь ничего не настроено, используется
+              автоматическая таблица по диспетчерским подразделениям.
+            </p>
+          </div>
+
+          <button
+            id="executiveTableCreateButton"
+            class="secondary-action dispatcher-structure-action"
+            type="button"
+          >
+            + Сводное подразделение
+          </button>
+        </div>
+
+        <div id="executiveTableConfigStatus" class="dispatcher-config-status"></div>
+        <div id="executiveTableConfigList" class="dispatcher-config-list executive-table-config-list"></div>
+      </article>
+
+      <article
         id="dispatcherWorkordersManagementPanel"
         class="admin-panel dispatcher-source-management"
         hidden
@@ -1538,6 +1568,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261006-2045"></script>
+  <script src="app.js?v=20261007-0855"></script>
 </body>
 </html>
