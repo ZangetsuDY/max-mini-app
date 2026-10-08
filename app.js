@@ -1962,6 +1962,12 @@ function renderExcelPreview(payload) {
   const config = payload?.config || {};
   const rows = Array.isArray(payload?.rows) ? payload.rows : [];
   const columns = Array.isArray(config?.columns) ? config.columns : [];
+  const previewColumnWidths = Array.isArray(payload?.layout?.columnWidths)
+    ? payload.layout.columnWidths
+    : [];
+  const previewRowHeights = Array.isArray(payload?.layout?.rowHeights)
+    ? payload.layout.rowHeights
+    : [];
 
   excelEmergencyRowCount.textContent = Number(payload?.rowCount || 0);
   excelEmergencySourceState.textContent = payload?.source?.status === "ok"
@@ -1980,17 +1986,27 @@ function renderExcelPreview(payload) {
 
   const thead = excelPreviewTable.querySelector("thead");
   const tbody = excelPreviewTable.querySelector("tbody");
-  thead.innerHTML = `<tr>${columns.map((column) => `
-    <th style="min-width:${Math.max(70, Number(column?.width || 18) * 8)}px;text-align:${escapeHtml(column?.align || "left")};background:${escapeHtml(config?.headerStyle?.fill || "#d6a446")};color:${escapeHtml(config?.headerStyle?.color || "#15100a")};font-size:${Number(config?.headerStyle?.fontSize || 10)}px">${escapeHtml(column?.label || "")}</th>`).join("")}</tr>`;
+  thead.innerHTML = `<tr>${columns.map((column, columnIndex) => {
+    const widthUnits = Number(previewColumnWidths[columnIndex] || column?.width || 18);
+    const pixelWidth = Math.max(70, Math.round(widthUnits * 8));
+    return `<th style="width:${pixelWidth}px;min-width:${pixelWidth}px;text-align:${escapeHtml(column?.align || "left")};background:${escapeHtml(config?.headerStyle?.fill || "#d6a446")};color:${escapeHtml(config?.headerStyle?.color || "#15100a")};font-size:${Number(config?.headerStyle?.fontSize || 10)}px">${escapeHtml(column?.label || "")}</th>`;
+  }).join("")}</tr>`;
 
   tbody.innerHTML = rows.length
-    ? rows.map((row, rowIndex) => `<tr>${columns.map((column) => {
-        const value = excelPreviewValue(row, column?.field, rowIndex);
-        const background = rowIndex % 2
-          ? (config?.bodyStyle?.alternateFill || "#f3f7f9")
-          : (config?.bodyStyle?.fill || "#ffffff");
-        return `<td style="text-align:${escapeHtml(column?.align || "left")};background:${escapeHtml(background)};color:${escapeHtml(config?.bodyStyle?.color || "#17212b")};font-size:${Number(column?.fontSize || config?.bodyStyle?.fontSize || 10)}px;font-weight:${column?.bold ? 700 : 400};white-space:${column?.wrap ? "normal" : "nowrap"}">${escapeHtml(value)}</td>`;
-      }).join("")}</tr>`).join("")
+    ? rows.map((row, rowIndex) => {
+        const rowHeightPt = Number(previewRowHeights[rowIndex] || config?.bodyStyle?.rowHeight || 24);
+        const rowHeightPx = Math.max(24, Math.round(rowHeightPt * 1.333));
+        return `<tr style="height:${rowHeightPx}px">${columns.map((column, columnIndex) => {
+          const value = excelPreviewValue(row, column?.field, rowIndex);
+          const background = rowIndex % 2
+            ? (config?.bodyStyle?.alternateFill || "#f3f7f9")
+            : (config?.bodyStyle?.fill || "#ffffff");
+          const widthUnits = Number(previewColumnWidths[columnIndex] || column?.width || 18);
+          const pixelWidth = Math.max(70, Math.round(widthUnits * 8));
+          const shouldWrap = Boolean(column?.wrap || column?.autoHeight);
+          return `<td style="width:${pixelWidth}px;min-width:${pixelWidth}px;text-align:${escapeHtml(column?.align || "left")};background:${escapeHtml(background)};color:${escapeHtml(config?.bodyStyle?.color || "#17212b")};font-size:${Number(column?.fontSize || config?.bodyStyle?.fontSize || 10)}px;font-weight:${column?.bold ? 700 : 400};white-space:${shouldWrap ? "normal" : "nowrap"};overflow-wrap:${shouldWrap ? "anywhere" : "normal"}">${escapeHtml(value)}</td>`;
+        }).join("")}</tr>`;
+      }).join("")
     : `<tr><td colspan="${Math.max(1, columns.length)}">В текущей сводке нет аварийных отключений для выбранных подразделений.</td></tr>`;
 
   excelPreviewState.hidden = true;
@@ -2143,11 +2159,15 @@ function renderExcelTemplateColumns() {
         <div class="excel-column-order">${index + 1}</div>
         <label class="excel-col-field"><span>Источник</span><select data-excel-col="field">${excelColumnFieldOptions(column.field)}</select></label>
         <label class="excel-col-label"><span>Заголовок</span><input data-excel-col="label" type="text" maxlength="80" value="${escapeHtml(column.label || "")}" /></label>
-        <label><span>Ширина</span><input data-excel-col="width" type="number" min="6" max="60" value="${Number(column.width || 18)}" /></label>
+        <label><span>Ширина</span><input data-excel-col="width" type="number" min="6" max="60" value="${Number(column.width || 18)}" ${column.autoWidth ? "disabled" : ""}/></label>
         <label><span>Шрифт</span><input data-excel-col="fontSize" type="number" min="7" max="20" value="${Number(column.fontSize || 10)}" /></label>
         <label><span>Выравнивание</span><select data-excel-col="align"><option value="left" ${column.align === "left" ? "selected" : ""}>Слева</option><option value="center" ${column.align === "center" ? "selected" : ""}>Центр</option><option value="right" ${column.align === "right" ? "selected" : ""}>Справа</option></select></label>
-        <label class="excel-col-check"><input data-excel-col="bold" type="checkbox" ${column.bold ? "checked" : ""}/> Жирный</label>
-        <label class="excel-col-check"><input data-excel-col="wrap" type="checkbox" ${column.wrap ? "checked" : ""}/> Перенос</label>
+        <div class="excel-col-flags">
+          <label class="excel-col-check"><input data-excel-col="bold" type="checkbox" ${column.bold ? "checked" : ""}/> Жирный</label>
+          <label class="excel-col-check"><input data-excel-col="wrap" type="checkbox" ${column.wrap ? "checked" : ""}/> Перенос</label>
+          <label class="excel-col-check"><input data-excel-col="autoWidth" type="checkbox" ${column.autoWidth ? "checked" : ""}/> Автоширина</label>
+          <label class="excel-col-check"><input data-excel-col="autoHeight" type="checkbox" ${column.autoHeight ? "checked" : ""}/> Автовысота</label>
+        </div>
         <div class="excel-column-actions"><button type="button" data-excel-column-action="up" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" data-excel-column-action="down" ${index === columns.length - 1 ? "disabled" : ""}>↓</button><button type="button" data-excel-column-action="remove" class="is-danger">×</button></div>
       </div>`).join("")
     : `<div class="dispatcher-config-empty">Добавьте хотя бы один столбец.</div>`;
@@ -2227,6 +2247,9 @@ function syncExcelColumnDraftFromDom() {
     column.align = get("align")?.value || "left";
     column.bold = Boolean(get("bold")?.checked);
     column.wrap = Boolean(get("wrap")?.checked);
+    column.autoWidth = Boolean(get("autoWidth")?.checked);
+    column.autoHeight = Boolean(get("autoHeight")?.checked);
+    if (column.autoHeight) column.wrap = true;
   });
 }
 
@@ -3897,9 +3920,31 @@ excelTemplateAddColumnButton?.addEventListener(
       align: "left",
       fontSize: 10,
       bold: false,
-      wrap: true
+      wrap: true,
+      autoWidth: false,
+      autoHeight: false
     });
     renderExcelTemplateColumns();
+  }
+);
+
+excelTemplateColumns?.addEventListener(
+  "change",
+  (event) => {
+    const input = event.target.closest("[data-excel-col]");
+    if (!input) return;
+    const row = input.closest("[data-excel-column-index]");
+    if (!row) return;
+
+    if (input.dataset.excelCol === "autoWidth") {
+      const widthInput = row.querySelector('[data-excel-col="width"]');
+      if (widthInput) widthInput.disabled = Boolean(input.checked);
+    }
+
+    if (input.dataset.excelCol === "autoHeight" && input.checked) {
+      const wrapInput = row.querySelector('[data-excel-col="wrap"]');
+      if (wrapInput) wrapInput.checked = true;
+    }
   }
 );
 

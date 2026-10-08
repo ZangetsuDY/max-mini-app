@@ -17,7 +17,8 @@ import {
 } from "../lib/emergency-export-data.js";
 
 import {
-  buildEmergencyOutagesXlsx
+  buildEmergencyOutagesXlsx,
+  calculateEmergencyExcelLayout
 } from "../lib/xlsx-export.js";
 
 function json(data, status = 200) {
@@ -114,6 +115,11 @@ export default {
         Math.min(Number(url.searchParams.get("limit") || 25) || 25, 100)
       );
 
+      const layout = calculateEmergencyExcelLayout({
+        config,
+        rows: dataset.rows
+      });
+
       return json({
         type: "emergency",
         config,
@@ -121,6 +127,10 @@ export default {
         source: dataset.sourceState,
         rowCount: dataset.rows.length,
         rows: dataset.rows.slice(0, previewLimit),
+        layout: {
+          columnWidths: layout.columnWidths,
+          rowHeights: layout.rowHeights.slice(0, previewLimit)
+        },
         previewLimit,
         updatedAt: new Date().toISOString()
       });

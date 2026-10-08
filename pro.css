@@ -2077,7 +2077,7 @@ html body .module-card-excel .module-icon svg { stroke: var(--green) !important;
 .excel-template-columns { display:grid; gap:7px; }
 .excel-template-column {
   display:grid;
-  grid-template-columns:34px minmax(135px,.9fr) minmax(150px,1.15fr) 80px 70px 105px 72px 78px auto;
+  grid-template-columns:34px minmax(135px,.9fr) minmax(150px,1.15fr) 80px 70px 105px minmax(220px,1fr) auto;
   align-items:end;
   gap:7px;
   padding:9px;
@@ -2085,6 +2085,24 @@ html body .module-card-excel .module-icon svg { stroke: var(--green) !important;
   border-left:2px solid rgba(214,164,70,.55);
   border-radius:4px;
   background:#080d13;
+}
+
+.excel-col-flags {
+  display:grid;
+  grid-template-columns:repeat(2,minmax(95px,1fr));
+  gap:6px 10px;
+  align-self:end;
+  padding:5px 7px;
+  min-height:34px;
+  border:1px solid var(--line);
+  border-radius:4px;
+  background:rgba(255,255,255,.015);
+}
+.excel-col-flags .excel-col-check { min-width:0; white-space:nowrap; }
+.excel-template-column input:disabled {
+  opacity:.42;
+  cursor:not-allowed;
+  background:#05080d;
 }
 .excel-column-order { align-self:center; display:grid; place-items:center; width:28px; height:28px; border:1px solid var(--line); border-radius:3px; color:var(--gold); font:700 10px var(--mono); }
 .excel-column-actions { display:flex; gap:4px; align-self:center; }
@@ -2097,7 +2115,7 @@ html body .module-card-excel .module-icon svg { stroke: var(--green) !important;
   .excel-template-grid { grid-template-columns:1fr; }
   .excel-template-division-picker { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .excel-template-columns { overflow-x:auto; padding-bottom:5px; }
-  .excel-template-column { min-width:980px; }
+  .excel-template-column { min-width:1080px; }
 }
 
 @media (max-width:700px) {
@@ -2117,7 +2135,7 @@ html body .module-card-excel .module-icon svg { stroke: var(--green) !important;
   .excel-template-division-picker { grid-template-columns:1fr; }
   .excel-style-group { grid-template-columns:1fr 1fr; }
   .excel-style-group b { grid-column:1/-1; }
-  .excel-template-column { min-width:900px; }
+  .excel-template-column { min-width:1040px; }
 }
 
 
