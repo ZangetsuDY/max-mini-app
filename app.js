@@ -1947,6 +1947,7 @@ function navigateAdmin() {
 }
 
 function excelPreviewValue(row, field, index) {
+  if (field === "pending") return "";
   if (field === "index") return index + 1;
   if (field === "disconnectedObjects") {
     return Array.isArray(row?.disconnectedObjects)
@@ -2115,7 +2116,19 @@ async function downloadEmergencyExcel() {
 }
 
 function excelColumnFieldOptions(selected) {
-  return (excelTemplateCatalog.fieldOptions || []).map((field) =>
+  const sourceOptions = Array.isArray(excelTemplateCatalog.fieldOptions)
+    ? [...excelTemplateCatalog.fieldOptions]
+    : [];
+
+  if (!sourceOptions.some((field) => field?.id === "pending")) {
+    sourceOptions.unshift({
+      id: "pending",
+      name: "Пока не указан",
+      type: "text"
+    });
+  }
+
+  return sourceOptions.map((field) =>
     `<option value="${escapeHtml(field.id)}" ${field.id === selected ? "selected" : ""}>${escapeHtml(field.name)}</option>`
   ).join("");
 }
@@ -3875,13 +3888,13 @@ excelTemplateAddColumnButton?.addEventListener(
   () => {
     syncExcelColumnDraftFromDom();
     const columns = excelTemplateCatalog.config?.columns || [];
-    const fallback = excelTemplateCatalog.fieldOptions?.[0] || { id: "divisionName", name: "Подразделение" };
+    const fallback = { id: "pending", name: "Новый столбец", type: "text" };
     columns.push({
       id: `column-${Date.now()}`,
       field: fallback.id,
       label: fallback.name,
       width: 18,
-      align: fallback.type === "number" ? "center" : "left",
+      align: "left",
       fontSize: 10,
       bold: false,
       wrap: true
