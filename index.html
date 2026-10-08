@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261008-excel1" />
-  <link rel="stylesheet" href="pro.css?v=20261008-excel1" />
+  <link rel="stylesheet" href="style.css?v=20261008-excel2" />
+  <link rel="stylesheet" href="pro.css?v=20261008-excel2" />
 </head>
 
 <body class="auth-pending">
@@ -1238,7 +1238,8 @@
                 <option value="50">50 строк</option>
               </select>
             </label>
-            <button id="excelRefreshPreviewButton" class="secondary-action" type="button">Обновить предпросмотр</button>
+            <button id="excelTogglePreviewButton" class="secondary-action" type="button">Открыть предпросмотр</button>
+            <button id="excelRefreshPreviewButton" class="secondary-action" type="button" hidden>Обновить предпросмотр</button>
             <button id="excelDownloadEmergencyButton" class="primary-action excel-download-action" type="button">
               <span>Скачать XLSX</span>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"></path></svg>
@@ -1246,7 +1247,7 @@
           </div>
         </article>
 
-        <article class="excel-preview-panel glass-panel">
+        <article id="excelPreviewPanel" class="excel-preview-panel glass-panel" hidden>
           <div class="excel-preview-head">
             <div>
               <span class="micro-label">ПРЕДПРОСМОТР ДОКУМЕНТА</span>
@@ -1767,6 +1768,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261008-excel1"></script>
+  <script src="app.js?v=20261008-excel2"></script>
 </body>
 </html>

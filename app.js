@@ -72,7 +72,9 @@ const excelExportsUpdatedAt = document.getElementById("excelExportsUpdatedAt");
 const excelEmergencyRowCount = document.getElementById("excelEmergencyRowCount");
 const excelEmergencySourceState = document.getElementById("excelEmergencySourceState");
 const excelPreviewLimit = document.getElementById("excelPreviewLimit");
+const excelTogglePreviewButton = document.getElementById("excelTogglePreviewButton");
 const excelRefreshPreviewButton = document.getElementById("excelRefreshPreviewButton");
+const excelPreviewPanel = document.getElementById("excelPreviewPanel");
 const excelDownloadEmergencyButton = document.getElementById("excelDownloadEmergencyButton");
 const excelPreviewTitle = document.getElementById("excelPreviewTitle");
 const excelPreviewMeta = document.getElementById("excelPreviewMeta");
@@ -377,6 +379,7 @@ let excelTemplateCatalog = {
 };
 
 let excelPreviewPayload = null;
+let excelPreviewOpen = false;
 
 const EXECUTIVE_MAP_GEOMETRY = Object.freeze([
   { id: "vyborg", points: "88,58 132,25 226,18 258,82 236,166 190,214 118,202 66,146", x: 155, y: 112 },
@@ -2033,10 +2036,32 @@ async function loadExcelPreview({ quiet = false } = {}) {
   }
 }
 
+function setExcelPreviewOpen(open) {
+  excelPreviewOpen = Boolean(open);
+
+  if (excelPreviewPanel) {
+    excelPreviewPanel.hidden = !excelPreviewOpen;
+  }
+
+  if (excelTogglePreviewButton) {
+    excelTogglePreviewButton.textContent = excelPreviewOpen
+      ? "Скрыть предпросмотр"
+      : "Открыть предпросмотр";
+  }
+
+  if (excelRefreshPreviewButton) {
+    excelRefreshPreviewButton.hidden = !excelPreviewOpen;
+  }
+}
+
 async function navigateExcelExports() {
   if (!hasPanelAccess("excel-exports")) return;
   setView("excel-exports");
-  await loadExcelPreview();
+  setExcelPreviewOpen(false);
+  excelPreviewPayload = null;
+  if (excelEmergencyRowCount) excelEmergencyRowCount.textContent = "—";
+  if (excelEmergencySourceState) excelEmergencySourceState.textContent = "Откройте предпросмотр";
+  if (excelExportsUpdatedAt) excelExportsUpdatedAt.textContent = "Excel · готово к формированию";
 }
 
 async function downloadEmergencyExcel() {
@@ -3808,6 +3833,19 @@ backFromExcelExportsButton?.addEventListener(
   navigateHome
 );
 
+excelTogglePreviewButton?.addEventListener(
+  "click",
+  async () => {
+    if (excelPreviewOpen) {
+      setExcelPreviewOpen(false);
+      return;
+    }
+
+    setExcelPreviewOpen(true);
+    await loadExcelPreview();
+  }
+);
+
 excelRefreshPreviewButton?.addEventListener(
   "click",
   () => loadExcelPreview()
@@ -3815,7 +3853,11 @@ excelRefreshPreviewButton?.addEventListener(
 
 excelPreviewLimit?.addEventListener(
   "change",
-  () => { if (currentView === "excel-exports") loadExcelPreview(); }
+  () => {
+    if (currentView === "excel-exports" && excelPreviewOpen) {
+      loadExcelPreview();
+    }
+  }
 );
 
 excelDownloadEmergencyButton?.addEventListener(

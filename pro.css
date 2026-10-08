@@ -2119,3 +2119,78 @@ html body .module-card-excel .module-icon svg { stroke: var(--green) !important;
   .excel-style-group b { grid-column:1/-1; }
   .excel-template-column { min-width:900px; }
 }
+
+
+/* =========================================================
+   EXCEL PREVIEW · COLLAPSIBLE + SAFE VIEWPORT WIDTH
+   ========================================================= */
+html body .excel-export-shell,
+html body .excel-export-product,
+html body .excel-preview-panel,
+html body .excel-preview-sheet {
+  min-width:0 !important;
+  width:100%;
+  max-width:100%;
+}
+
+html body .excel-export-shell {
+  overflow:visible;
+}
+
+html body .excel-export-product,
+html body .excel-preview-panel {
+  overflow:hidden;
+}
+
+html body .excel-preview-sheet {
+  box-sizing:border-box;
+  overflow:hidden;
+}
+
+html body .excel-preview-scroll {
+  display:block;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  overflow-x:auto !important;
+  overflow-y:auto !important;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+  -webkit-overflow-scrolling:touch;
+}
+
+html body .excel-preview-table {
+  width:max-content !important;
+  min-width:100% !important;
+  max-width:none !important;
+}
+
+html body .excel-preview-scroll::-webkit-scrollbar {
+  height:10px;
+  width:10px;
+}
+html body .excel-preview-scroll::-webkit-scrollbar-track {
+  background:#dfe6eb;
+}
+html body .excel-preview-scroll::-webkit-scrollbar-thumb {
+  background:#81909c;
+  border:2px solid #dfe6eb;
+  border-radius:999px;
+}
+html body .excel-preview-scroll::-webkit-scrollbar-thumb:hover {
+  background:#65747f;
+}
+
+html body .excel-preview-panel[hidden],
+html body #excelRefreshPreviewButton[hidden] {
+  display:none !important;
+}
+
+@media (max-width:700px) {
+  html body .excel-preview-sheet {
+    padding:6px !important;
+  }
+  html body .excel-preview-scroll {
+    max-height:58vh;
+  }
+}
