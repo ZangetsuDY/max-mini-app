@@ -19,6 +19,8 @@ const API_ADMIN_USER_ROLES = "/api/admin/user-roles";
 const API_ADMIN_USERS = "/api/admin/users";
 const API_ADMIN_DISPATCHER_CONFIG = "/api/admin/dispatcher-config";
 const API_ADMIN_OUTAGE_CONFIG = "/api/admin/outage-config";
+const API_EXCEL_EXPORTS = "/api/excel-exports";
+const API_ADMIN_EXCEL_EXPORT_CONFIG = "/api/admin/excel-export-config";
 
 const REFRESH_INTERVAL_MS = 120_000;
 const HEARTBEAT_INTERVAL_MS = 60_000;
@@ -49,11 +51,13 @@ const homeView = document.getElementById("homeView");
 const monitoringView = document.getElementById("monitoringView");
 const dispatcherView = document.getElementById("dispatcherView");
 const executiveView = document.getElementById("executiveView");
+const excelExportsView = document.getElementById("excelExportsView");
 const adminView = document.getElementById("adminView");
 
 const openMonitoringButton = document.getElementById("openMonitoringButton");
 const openDispatcherButton = document.getElementById("openDispatcherButton");
 const openExecutiveButton = document.getElementById("openExecutiveButton");
+const openExcelExportsButton = document.getElementById("openExcelExportsButton");
 const openAdminButton = document.getElementById("openAdminButton");
 const dispatcherCardStatus = document.getElementById("dispatcherCardStatus");
 const executiveCardStatus = document.getElementById("executiveCardStatus");
@@ -61,7 +65,51 @@ const moduleCount = document.getElementById("moduleCount");
 const backToMenuButton = document.getElementById("backToMenuButton");
 const backFromDispatcherButton = document.getElementById("backFromDispatcherButton");
 const backFromExecutiveButton = document.getElementById("backFromExecutiveButton");
+const backFromExcelExportsButton = document.getElementById("backFromExcelExportsButton");
 const backFromAdminButton = document.getElementById("backFromAdminButton");
+
+const excelExportsUpdatedAt = document.getElementById("excelExportsUpdatedAt");
+const excelEmergencyRowCount = document.getElementById("excelEmergencyRowCount");
+const excelEmergencySourceState = document.getElementById("excelEmergencySourceState");
+const excelPreviewLimit = document.getElementById("excelPreviewLimit");
+const excelRefreshPreviewButton = document.getElementById("excelRefreshPreviewButton");
+const excelDownloadEmergencyButton = document.getElementById("excelDownloadEmergencyButton");
+const excelPreviewTitle = document.getElementById("excelPreviewTitle");
+const excelPreviewMeta = document.getElementById("excelPreviewMeta");
+const excelPreviewState = document.getElementById("excelPreviewState");
+const excelPreviewSheet = document.getElementById("excelPreviewSheet");
+const excelPreviewDocumentTitle = document.getElementById("excelPreviewDocumentTitle");
+const excelPreviewDocumentSubtitle = document.getElementById("excelPreviewDocumentSubtitle");
+const excelPreviewTable = document.getElementById("excelPreviewTable");
+
+const excelExportManagementPanel = document.getElementById("excelExportManagementPanel");
+const excelTemplateSaveButton = document.getElementById("excelTemplateSaveButton");
+const excelTemplateStatus = document.getElementById("excelTemplateStatus");
+const excelTemplateTitle = document.getElementById("excelTemplateTitle");
+const excelTemplateSubtitle = document.getElementById("excelTemplateSubtitle");
+const excelTemplateSheetName = document.getElementById("excelTemplateSheetName");
+const excelTemplateFileName = document.getElementById("excelTemplateFileName");
+const excelTemplateStartRow = document.getElementById("excelTemplateStartRow");
+const excelTemplateGeneratedAt = document.getElementById("excelTemplateGeneratedAt");
+const excelTemplateSourceAt = document.getElementById("excelTemplateSourceAt");
+const excelTemplateFreeze = document.getElementById("excelTemplateFreeze");
+const excelTemplateFilter = document.getElementById("excelTemplateFilter");
+const excelTitleFontSize = document.getElementById("excelTitleFontSize");
+const excelTitleRowHeight = document.getElementById("excelTitleRowHeight");
+const excelTitleColor = document.getElementById("excelTitleColor");
+const excelTitleFill = document.getElementById("excelTitleFill");
+const excelHeaderFontSize = document.getElementById("excelHeaderFontSize");
+const excelHeaderRowHeight = document.getElementById("excelHeaderRowHeight");
+const excelHeaderColor = document.getElementById("excelHeaderColor");
+const excelHeaderFill = document.getElementById("excelHeaderFill");
+const excelBodyFontSize = document.getElementById("excelBodyFontSize");
+const excelBodyRowHeight = document.getElementById("excelBodyRowHeight");
+const excelBodyColor = document.getElementById("excelBodyColor");
+const excelBodyFill = document.getElementById("excelBodyFill");
+const excelBodyAltFill = document.getElementById("excelBodyAltFill");
+const excelTemplateDivisionPicker = document.getElementById("excelTemplateDivisionPicker");
+const excelTemplateColumns = document.getElementById("excelTemplateColumns");
+const excelTemplateAddColumnButton = document.getElementById("excelTemplateAddColumnButton");
 
 const systemLine = document.getElementById("systemLine");
 const systemStatusText = document.getElementById("systemStatusText");
@@ -320,6 +368,15 @@ let executiveMapConfigCatalog = {
   outageDivisions: [],
   storageConfigured: false
 };
+
+let excelTemplateCatalog = {
+  config: null,
+  divisions: [],
+  fieldOptions: [],
+  storageConfigured: false
+};
+
+let excelPreviewPayload = null;
 
 const EXECUTIVE_MAP_GEOMETRY = Object.freeze([
   { id: "vyborg", points: "88,58 132,25 226,18 258,82 236,166 190,214 118,202 66,146", x: 155, y: 112 },
@@ -841,6 +898,7 @@ function setUserUi(user) {
               ? [
                   "monitoring",
                   "executive-monitoring",
+                  "excel-exports",
                   "system-control"
                 ]
               : user?.isDispatcher
@@ -926,6 +984,11 @@ function setUserUi(user) {
         )
       : "ДОСТУП ПО РОЛИ";
 
+  openExcelExportsButton.hidden =
+    !hasPanelAccess(
+      "excel-exports"
+    );
+
   openAdminButton.hidden =
     !hasPanelAccess(
       "system-control"
@@ -933,13 +996,8 @@ function setUserUi(user) {
 
   const visibleModules =
     3 +
-    (
-      hasPanelAccess(
-        "system-control"
-      )
-        ? 1
-        : 0
-    );
+    (hasPanelAccess("excel-exports") ? 1 : 0) +
+    (hasPanelAccess("system-control") ? 1 : 0);
 
   moduleCount.textContent =
     `${visibleModules} ${
@@ -969,6 +1027,7 @@ function showLoginScreen() {
   monitoringView.classList.remove("is-active");
   dispatcherView.classList.remove("is-active");
   executiveView.classList.remove("is-active");
+  excelExportsView.classList.remove("is-active");
   adminView.classList.remove("is-active");
 
   setTimeout(
@@ -1011,6 +1070,11 @@ function setView(view) {
   executiveView.classList.toggle(
     "is-active",
     view === "executive"
+  );
+
+  excelExportsView.classList.toggle(
+    "is-active",
+    view === "excel-exports"
   );
 
   adminView.classList.toggle(
@@ -1877,6 +1941,309 @@ function navigateAdmin() {
   setView("admin");
   loadAdminDashboard();
   startAdminRefresh();
+}
+
+function excelPreviewValue(row, field, index) {
+  if (field === "index") return index + 1;
+  if (field === "disconnectedObjects") {
+    return Array.isArray(row?.disconnectedObjects)
+      ? row.disconnectedObjects.join(", ")
+      : String(row?.disconnectedObjects || "");
+  }
+  return row?.[field] ?? "";
+}
+
+function renderExcelPreview(payload) {
+  excelPreviewPayload = payload;
+  const config = payload?.config || {};
+  const rows = Array.isArray(payload?.rows) ? payload.rows : [];
+  const columns = Array.isArray(config?.columns) ? config.columns : [];
+
+  excelEmergencyRowCount.textContent = Number(payload?.rowCount || 0);
+  excelEmergencySourceState.textContent = payload?.source?.status === "ok"
+    ? "Свежая сводка OMS"
+    : (payload?.source?.message || "Источник недоступен");
+  excelExportsUpdatedAt.textContent = `Обновлено: ${formatDateTime(payload?.updatedAt || new Date().toISOString())}`;
+  excelPreviewTitle.textContent = config?.name || "Аварийные отключения";
+  excelPreviewDocumentTitle.textContent = config?.title || "Аварийные отключения";
+  excelPreviewDocumentSubtitle.textContent = config?.subtitle || "";
+  excelPreviewMeta.textContent = `${Number(payload?.rowCount || 0)} строк · показано ${rows.length}`;
+
+  excelPreviewDocumentTitle.style.color = config?.titleStyle?.color || "#ffffff";
+  excelPreviewDocumentTitle.style.background = config?.titleStyle?.fill || "#12334a";
+  excelPreviewDocumentTitle.style.fontSize = `${Number(config?.titleStyle?.fontSize || 16)}px`;
+  excelPreviewDocumentTitle.style.textAlign = config?.titleStyle?.align || "left";
+
+  const thead = excelPreviewTable.querySelector("thead");
+  const tbody = excelPreviewTable.querySelector("tbody");
+  thead.innerHTML = `<tr>${columns.map((column) => `
+    <th style="min-width:${Math.max(70, Number(column?.width || 18) * 8)}px;text-align:${escapeHtml(column?.align || "left")};background:${escapeHtml(config?.headerStyle?.fill || "#d6a446")};color:${escapeHtml(config?.headerStyle?.color || "#15100a")};font-size:${Number(config?.headerStyle?.fontSize || 10)}px">${escapeHtml(column?.label || "")}</th>`).join("")}</tr>`;
+
+  tbody.innerHTML = rows.length
+    ? rows.map((row, rowIndex) => `<tr>${columns.map((column) => {
+        const value = excelPreviewValue(row, column?.field, rowIndex);
+        const background = rowIndex % 2
+          ? (config?.bodyStyle?.alternateFill || "#f3f7f9")
+          : (config?.bodyStyle?.fill || "#ffffff");
+        return `<td style="text-align:${escapeHtml(column?.align || "left")};background:${escapeHtml(background)};color:${escapeHtml(config?.bodyStyle?.color || "#17212b")};font-size:${Number(column?.fontSize || config?.bodyStyle?.fontSize || 10)}px;font-weight:${column?.bold ? 700 : 400};white-space:${column?.wrap ? "normal" : "nowrap"}">${escapeHtml(value)}</td>`;
+      }).join("")}</tr>`).join("")
+    : `<tr><td colspan="${Math.max(1, columns.length)}">В текущей сводке нет аварийных отключений для выбранных подразделений.</td></tr>`;
+
+  excelPreviewState.hidden = true;
+  excelPreviewSheet.hidden = false;
+}
+
+async function loadExcelPreview({ quiet = false } = {}) {
+  if (!hasPanelAccess("excel-exports")) return false;
+  if (!quiet) {
+    excelPreviewState.hidden = false;
+    excelPreviewState.textContent = "Формирование предпросмотра…";
+    excelPreviewSheet.hidden = true;
+    excelRefreshPreviewButton.disabled = true;
+  }
+
+  try {
+    const limit = Number(excelPreviewLimit?.value || 25);
+    const response = await fetch(`${API_EXCEL_EXPORTS}?type=emergency&limit=${limit}`, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "include",
+      headers: getSessionHeaders()
+    });
+    if (response.status === 401) {
+      setAppSessionToken("");
+      showLoginScreen();
+      return false;
+    }
+    if (response.status === 403) {
+      navigateHome();
+      return false;
+    }
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(payload?.error || "Не удалось загрузить предпросмотр");
+    renderExcelPreview(payload);
+    return true;
+  } catch (error) {
+    excelPreviewState.hidden = false;
+    excelPreviewSheet.hidden = true;
+    excelPreviewState.textContent = error instanceof Error ? error.message : "Ошибка предпросмотра";
+    return false;
+  } finally {
+    excelRefreshPreviewButton.disabled = false;
+  }
+}
+
+async function navigateExcelExports() {
+  if (!hasPanelAccess("excel-exports")) return;
+  setView("excel-exports");
+  await loadExcelPreview();
+}
+
+async function downloadEmergencyExcel() {
+  if (!hasPanelAccess("excel-exports")) return;
+  excelDownloadEmergencyButton.disabled = true;
+  const oldText = excelDownloadEmergencyButton.querySelector("span")?.textContent || "Скачать XLSX";
+  if (excelDownloadEmergencyButton.querySelector("span")) {
+    excelDownloadEmergencyButton.querySelector("span").textContent = "Формирование…";
+  }
+  try {
+    const response = await fetch(`${API_EXCEL_EXPORTS}?type=emergency&download=1`, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "include",
+      headers: getSessionHeaders()
+    });
+    if (response.status === 401) {
+      setAppSessionToken("");
+      showLoginScreen();
+      return;
+    }
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new Error(payload?.error || "Не удалось сформировать XLSX");
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get("content-disposition") || "";
+    const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1] || "";
+    const fileName = encoded ? decodeURIComponent(encoded) : "Аварийные_отключения.xlsx";
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  } catch (error) {
+    openModal({
+      type: "denied",
+      eyebrow: "EXCEL ВЫГРУЗКИ",
+      title: "Не удалось скачать файл",
+      message: error instanceof Error ? error.message : "Попробуйте ещё раз."
+    });
+  } finally {
+    excelDownloadEmergencyButton.disabled = false;
+    if (excelDownloadEmergencyButton.querySelector("span")) {
+      excelDownloadEmergencyButton.querySelector("span").textContent = oldText;
+    }
+  }
+}
+
+function excelColumnFieldOptions(selected) {
+  return (excelTemplateCatalog.fieldOptions || []).map((field) =>
+    `<option value="${escapeHtml(field.id)}" ${field.id === selected ? "selected" : ""}>${escapeHtml(field.name)}</option>`
+  ).join("");
+}
+
+function renderExcelTemplateColumns() {
+  const columns = Array.isArray(excelTemplateCatalog.config?.columns)
+    ? excelTemplateCatalog.config.columns
+    : [];
+  excelTemplateColumns.innerHTML = columns.length
+    ? columns.map((column, index) => `
+      <div class="excel-template-column" data-excel-column-index="${index}">
+        <div class="excel-column-order">${index + 1}</div>
+        <label class="excel-col-field"><span>Источник</span><select data-excel-col="field">${excelColumnFieldOptions(column.field)}</select></label>
+        <label class="excel-col-label"><span>Заголовок</span><input data-excel-col="label" type="text" maxlength="80" value="${escapeHtml(column.label || "")}" /></label>
+        <label><span>Ширина</span><input data-excel-col="width" type="number" min="6" max="60" value="${Number(column.width || 18)}" /></label>
+        <label><span>Шрифт</span><input data-excel-col="fontSize" type="number" min="7" max="20" value="${Number(column.fontSize || 10)}" /></label>
+        <label><span>Выравнивание</span><select data-excel-col="align"><option value="left" ${column.align === "left" ? "selected" : ""}>Слева</option><option value="center" ${column.align === "center" ? "selected" : ""}>Центр</option><option value="right" ${column.align === "right" ? "selected" : ""}>Справа</option></select></label>
+        <label class="excel-col-check"><input data-excel-col="bold" type="checkbox" ${column.bold ? "checked" : ""}/> Жирный</label>
+        <label class="excel-col-check"><input data-excel-col="wrap" type="checkbox" ${column.wrap ? "checked" : ""}/> Перенос</label>
+        <div class="excel-column-actions"><button type="button" data-excel-column-action="up" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" data-excel-column-action="down" ${index === columns.length - 1 ? "disabled" : ""}>↓</button><button type="button" data-excel-column-action="remove" class="is-danger">×</button></div>
+      </div>`).join("")
+    : `<div class="dispatcher-config-empty">Добавьте хотя бы один столбец.</div>`;
+}
+
+function renderExcelTemplateAdmin() {
+  const config = excelTemplateCatalog.config;
+  if (!config) return;
+  excelTemplateTitle.value = config.title || "";
+  excelTemplateSubtitle.value = config.subtitle || "";
+  excelTemplateSheetName.value = config.sheetName || "";
+  excelTemplateFileName.value = config.fileName || "";
+  excelTemplateStartRow.value = Number(config.tableStartRow || 5);
+  excelTemplateGeneratedAt.checked = Boolean(config.showGeneratedAt);
+  excelTemplateSourceAt.checked = Boolean(config.showSourceUpdatedAt);
+  excelTemplateFreeze.checked = Boolean(config.freezeHeader);
+  excelTemplateFilter.checked = Boolean(config.autoFilter);
+  excelTitleFontSize.value = Number(config.titleStyle?.fontSize || 16);
+  excelTitleRowHeight.value = Number(config.titleStyle?.rowHeight || 28);
+  excelTitleColor.value = config.titleStyle?.color || "#ffffff";
+  excelTitleFill.value = config.titleStyle?.fill || "#12334a";
+  excelHeaderFontSize.value = Number(config.headerStyle?.fontSize || 10);
+  excelHeaderRowHeight.value = Number(config.headerStyle?.rowHeight || 24);
+  excelHeaderColor.value = config.headerStyle?.color || "#15100a";
+  excelHeaderFill.value = config.headerStyle?.fill || "#d6a446";
+  excelBodyFontSize.value = Number(config.bodyStyle?.fontSize || 10);
+  excelBodyRowHeight.value = Number(config.bodyStyle?.rowHeight || 24);
+  excelBodyColor.value = config.bodyStyle?.color || "#17212b";
+  excelBodyFill.value = config.bodyStyle?.fill || "#ffffff";
+  excelBodyAltFill.value = config.bodyStyle?.alternateFill || "#f3f7f9";
+
+  const selected = new Set(config.includeDivisionIds || []);
+  excelTemplateDivisionPicker.innerHTML = (excelTemplateCatalog.divisions || []).map((division) => `
+    <label class="permission-option"><input type="checkbox" data-excel-division value="${escapeHtml(division.id)}" ${selected.has(division.id) ? "checked" : ""}/><span><strong>${escapeHtml(division.name)}</strong><small>${Number(division.sources?.length || 0)} ролей / источников</small></span></label>`).join("") || `<div class="dispatcher-config-empty">Подразделения активных отключений не настроены.</div>`;
+
+  renderExcelTemplateColumns();
+  excelTemplateStatus.textContent = excelTemplateCatalog.storageConfigured
+    ? `Шаблон готов · ${config.columns?.length || 0} столбцов`
+    : "Redis не подключён: используется стандартный шаблон, сохранение недоступно.";
+  excelTemplateStatus.classList.toggle("is-warning", !excelTemplateCatalog.storageConfigured);
+}
+
+async function loadExcelTemplateAdmin() {
+  if (!currentUser?.isDeveloper || !excelExportManagementPanel) return;
+  try {
+    const response = await fetch(API_ADMIN_EXCEL_EXPORT_CONFIG, {
+      method: "GET", cache: "no-store", credentials: "include", headers: getSessionHeaders()
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(payload?.error || "Не удалось загрузить Excel шаблон");
+    excelTemplateCatalog = {
+      config: payload?.config || null,
+      divisions: Array.isArray(payload?.divisions) ? payload.divisions : [],
+      fieldOptions: Array.isArray(payload?.fieldOptions) ? payload.fieldOptions : [],
+      storageConfigured: Boolean(payload?.storageConfigured)
+    };
+    renderExcelTemplateAdmin();
+  } catch (error) {
+    excelTemplateStatus.textContent = error instanceof Error ? error.message : "Ошибка загрузки шаблона";
+    excelTemplateStatus.classList.add("is-warning");
+  }
+}
+
+function syncExcelColumnDraftFromDom() {
+  const columns = Array.isArray(excelTemplateCatalog.config?.columns)
+    ? excelTemplateCatalog.config.columns
+    : [];
+  excelTemplateColumns.querySelectorAll("[data-excel-column-index]").forEach((row) => {
+    const index = Number(row.dataset.excelColumnIndex);
+    const column = columns[index];
+    if (!column) return;
+    const get = (key) => row.querySelector(`[data-excel-col="${key}"]`);
+    column.field = get("field")?.value || column.field;
+    column.label = get("label")?.value || column.label;
+    column.width = Number(get("width")?.value || column.width || 18);
+    column.fontSize = Number(get("fontSize")?.value || column.fontSize || 10);
+    column.align = get("align")?.value || "left";
+    column.bold = Boolean(get("bold")?.checked);
+    column.wrap = Boolean(get("wrap")?.checked);
+  });
+}
+
+function collectExcelTemplateConfig() {
+  syncExcelColumnDraftFromDom();
+  const base = excelTemplateCatalog.config || {};
+  return {
+    ...base,
+    title: excelTemplateTitle.value.trim(),
+    subtitle: excelTemplateSubtitle.value.trim(),
+    sheetName: excelTemplateSheetName.value.trim(),
+    fileName: excelTemplateFileName.value.trim(),
+    tableStartRow: Number(excelTemplateStartRow.value || 5),
+    showGeneratedAt: excelTemplateGeneratedAt.checked,
+    showSourceUpdatedAt: excelTemplateSourceAt.checked,
+    freezeHeader: excelTemplateFreeze.checked,
+    autoFilter: excelTemplateFilter.checked,
+    includeDivisionIds: [...excelTemplateDivisionPicker.querySelectorAll("[data-excel-division]:checked")].map((input) => input.value),
+    titleStyle: { ...(base.titleStyle || {}), fontSize: Number(excelTitleFontSize.value || 16), rowHeight: Number(excelTitleRowHeight.value || 28), color: excelTitleColor.value, fill: excelTitleFill.value },
+    headerStyle: { ...(base.headerStyle || {}), fontSize: Number(excelHeaderFontSize.value || 10), rowHeight: Number(excelHeaderRowHeight.value || 24), color: excelHeaderColor.value, fill: excelHeaderFill.value },
+    bodyStyle: { ...(base.bodyStyle || {}), fontSize: Number(excelBodyFontSize.value || 10), rowHeight: Number(excelBodyRowHeight.value || 24), color: excelBodyColor.value, fill: excelBodyFill.value, alternateFill: excelBodyAltFill.value },
+    columns: Array.isArray(base.columns) ? base.columns : []
+  };
+}
+
+async function saveExcelTemplateAdmin() {
+  if (!currentUser?.isDeveloper) return;
+  const config = collectExcelTemplateConfig();
+  if (!config.columns.length) {
+    excelTemplateStatus.textContent = "Добавьте хотя бы один столбец.";
+    excelTemplateStatus.classList.add("is-warning");
+    return;
+  }
+  excelTemplateSaveButton.disabled = true;
+  try {
+    const response = await fetch(API_ADMIN_EXCEL_EXPORT_CONFIG, {
+      method: "POST",
+      cache: "no-store",
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...getSessionHeaders() },
+      body: JSON.stringify({ config })
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(payload?.error || "Не удалось сохранить шаблон");
+    excelTemplateCatalog.config = payload.config;
+    excelTemplateCatalog.storageConfigured = Boolean(payload.config?.storageConfigured ?? true);
+    renderExcelTemplateAdmin();
+    excelTemplateStatus.textContent = "Шаблон сохранён. Следующая выгрузка будет использовать новые настройки.";
+    excelTemplateStatus.classList.remove("is-warning");
+  } catch (error) {
+    excelTemplateStatus.textContent = error instanceof Error ? error.message : "Ошибка сохранения";
+    excelTemplateStatus.classList.add("is-warning");
+  } finally {
+    excelTemplateSaveButton.disabled = false;
+  }
 }
 
 function getSessionHeaders() {
@@ -3431,6 +3798,78 @@ openExecutiveButton.addEventListener(
   navigateExecutive
 );
 
+openExcelExportsButton?.addEventListener(
+  "click",
+  navigateExcelExports
+);
+
+backFromExcelExportsButton?.addEventListener(
+  "click",
+  navigateHome
+);
+
+excelRefreshPreviewButton?.addEventListener(
+  "click",
+  () => loadExcelPreview()
+);
+
+excelPreviewLimit?.addEventListener(
+  "change",
+  () => { if (currentView === "excel-exports") loadExcelPreview(); }
+);
+
+excelDownloadEmergencyButton?.addEventListener(
+  "click",
+  downloadEmergencyExcel
+);
+
+excelTemplateSaveButton?.addEventListener(
+  "click",
+  saveExcelTemplateAdmin
+);
+
+excelTemplateAddColumnButton?.addEventListener(
+  "click",
+  () => {
+    syncExcelColumnDraftFromDom();
+    const columns = excelTemplateCatalog.config?.columns || [];
+    const fallback = excelTemplateCatalog.fieldOptions?.[0] || { id: "divisionName", name: "Подразделение" };
+    columns.push({
+      id: `column-${Date.now()}`,
+      field: fallback.id,
+      label: fallback.name,
+      width: 18,
+      align: fallback.type === "number" ? "center" : "left",
+      fontSize: 10,
+      bold: false,
+      wrap: true
+    });
+    renderExcelTemplateColumns();
+  }
+);
+
+excelTemplateColumns?.addEventListener(
+  "click",
+  (event) => {
+    const button = event.target.closest("[data-excel-column-action]");
+    if (!button) return;
+    const row = button.closest("[data-excel-column-index]");
+    const index = Number(row?.dataset.excelColumnIndex);
+    if (!Number.isInteger(index)) return;
+    syncExcelColumnDraftFromDom();
+    const columns = excelTemplateCatalog.config?.columns || [];
+    const action = button.dataset.excelColumnAction;
+    if (action === "up" && index > 0) {
+      [columns[index - 1], columns[index]] = [columns[index], columns[index - 1]];
+    } else if (action === "down" && index < columns.length - 1) {
+      [columns[index + 1], columns[index]] = [columns[index], columns[index + 1]];
+    } else if (action === "remove" && columns.length > 1) {
+      columns.splice(index, 1);
+    }
+    renderExcelTemplateColumns();
+  }
+);
+
 openAdminButton.addEventListener(
   "click",
   navigateAdmin
@@ -4025,6 +4464,11 @@ function renderAdminDashboard(
       !Boolean(payload.canManageRoles);
   }
 
+  if (excelExportManagementPanel) {
+    excelExportManagementPanel.hidden =
+      !Boolean(payload.canManageRoles);
+  }
+
   dispatcherWorkordersManagementPanel.hidden =
     !Boolean(
       payload.canManageRoles
@@ -4036,6 +4480,7 @@ function renderAdminDashboard(
     loadAccessManagement();
     loadOutageConfigManagement();
     loadDispatcherConfigManagement();
+    loadExcelTemplateAdmin();
   }
 
   adminUpdatedAt.textContent =

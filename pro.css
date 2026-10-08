@@ -1941,3 +1941,181 @@ html body .executive-config-source-tags > span.is-empty {
   background: transparent;
   padding-left: 0;
 }
+
+/* =========================================================
+   EXCEL EXPORTS · XLSX REPORT BUILDER
+   ========================================================= */
+html body .module-card-excel {
+  border-left: 3px solid var(--green) !important;
+}
+html body .module-card-excel .module-icon {
+  color: var(--green) !important;
+  border-color: rgba(63,210,154,.35) !important;
+  background: rgba(63,210,154,.08) !important;
+}
+html body .module-card-excel .module-icon svg { stroke: var(--green) !important; }
+
+.excel-export-shell { display:grid; gap:14px; }
+.excel-export-hero {
+  margin-top:14px;
+  padding:24px 26px !important;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 190px;
+  align-items:center;
+  gap:22px;
+  overflow:hidden;
+}
+.excel-export-hero h1 { margin:7px 0 0; }
+.excel-export-hero p { max-width:720px; margin:10px 0 0; font-size:11px; line-height:1.6; color:var(--text-2); }
+.excel-export-hero-mark {
+  min-height:92px;
+  padding:14px;
+  display:grid;
+  grid-template-columns:1fr auto;
+  align-content:center;
+  gap:5px 12px;
+  border:1px solid rgba(63,210,154,.23);
+  border-left:3px solid var(--green);
+  border-radius:5px;
+  background:linear-gradient(135deg,rgba(63,210,154,.08),rgba(8,13,19,.78));
+  font-family:var(--mono);
+}
+.excel-export-hero-mark span { color:var(--green); font-size:11px; letter-spacing:.15em; }
+.excel-export-hero-mark strong { grid-row:1 / span 2; grid-column:2; align-self:center; font-size:34px; color:#fff; }
+.excel-export-hero-mark small { color:var(--muted); font-size:9px; }
+
+.excel-export-product,
+.excel-preview-panel { padding:20px 22px !important; }
+.excel-export-product-head,
+.excel-preview-head {
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:20px;
+  padding-bottom:14px;
+  border-bottom:1px solid var(--line);
+}
+.excel-export-product-head h2,
+.excel-preview-head h2 { margin:5px 0 0; }
+.excel-export-product-head p { margin:7px 0 0; color:var(--text-2); font-size:10px; line-height:1.5; }
+.excel-export-status {
+  min-width:150px;
+  padding:10px 12px;
+  border:1px solid rgba(63,210,154,.22);
+  border-radius:5px;
+  background:rgba(63,210,154,.05);
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:4px 12px;
+}
+.excel-export-status span { font:600 9px var(--mono); color:var(--green); text-transform:uppercase; letter-spacing:.08em; }
+.excel-export-status strong { grid-row:1 / span 2; grid-column:2; font:700 25px var(--mono); color:#fff; }
+.excel-export-status small { color:var(--muted); font-size:8px; }
+.excel-export-actions { margin-top:14px; display:flex; align-items:end; justify-content:flex-end; gap:10px; flex-wrap:wrap; }
+.excel-preview-limit { display:grid; gap:5px; margin-right:auto; }
+.excel-preview-limit > span { font:600 9px var(--mono); color:var(--muted); text-transform:uppercase; }
+.excel-download-action { min-width:170px; min-height:40px !important; margin:0 !important; }
+.excel-preview-meta { font:600 10px var(--mono); color:var(--muted); }
+.excel-preview-state { padding:36px 10px; color:var(--text-2); text-align:center; font-size:11px; }
+.excel-preview-sheet {
+  margin-top:14px;
+  padding:14px;
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:5px;
+  background:#e9eef2;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.05),0 16px 45px rgba(0,0,0,.24);
+}
+.excel-preview-document-title { padding:11px 13px; font-weight:700; border-radius:2px 2px 0 0; }
+.excel-preview-document-subtitle { min-height:24px; padding:6px 13px; color:#667788; background:#fff; font-size:10px; border-bottom:1px solid #dce3e8; }
+.excel-preview-scroll { overflow:auto; max-height:520px; background:#fff; }
+.excel-preview-table { width:max-content; min-width:100%; border-collapse:collapse; color:#17212b; background:#fff; }
+.excel-preview-table th,
+.excel-preview-table td { position:static !important; padding:8px 10px !important; border:1px solid #d6dee4 !important; line-height:1.35; }
+.excel-preview-table th { font-family:Arial,sans-serif !important; letter-spacing:0 !important; text-transform:none !important; }
+.excel-preview-table td { font-family:Arial,sans-serif; vertical-align:middle; }
+
+/* admin constructor */
+.excel-export-management { margin-top:16px; }
+.excel-template-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+.excel-template-section {
+  min-width:0;
+  padding:14px;
+  border:1px solid var(--line);
+  border-radius:6px;
+  background:rgba(255,255,255,.018);
+}
+.excel-template-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+.excel-template-form-grid label,
+.excel-style-group label,
+.excel-template-column label { min-width:0; display:grid; gap:5px; color:var(--text-2); font-size:9px; }
+.excel-template-form-grid input,
+.excel-style-group input,
+.excel-template-column input,
+.excel-template-column select {
+  width:100%; min-width:0; height:34px; padding:0 9px;
+  border:1px solid var(--line); border-radius:4px; outline:0;
+  color:var(--text); background:#070b11; font:600 10px var(--mono);
+}
+.excel-template-form-grid input:focus,
+.excel-style-group input:focus,
+.excel-template-column input:focus,
+.excel-template-column select:focus { border-color:var(--gold); box-shadow:0 0 0 2px rgba(214,164,70,.1); }
+.excel-template-flags { display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; }
+.excel-template-flags label,
+.excel-col-check { display:flex !important; align-items:center; gap:6px; color:var(--text-2); font-size:9px; }
+.excel-template-flags input,
+.excel-col-check input { width:14px !important; height:14px !important; accent-color:var(--gold); }
+.excel-style-groups { display:grid; gap:8px; }
+.excel-style-group { display:grid; grid-template-columns:90px repeat(4,minmax(0,1fr)); align-items:end; gap:8px; padding:9px; border:1px solid var(--line); border-radius:4px; background:#080d13; }
+.excel-style-group b { align-self:center; color:#fff; font-size:10px; }
+.excel-style-group input[type="color"] { padding:3px; }
+.excel-template-divisions-section,
+.excel-template-columns-section { margin-top:12px; }
+.excel-template-division-picker { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
+.excel-template-division-picker .permission-option { margin:0; }
+.excel-template-columns-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
+.excel-template-columns { display:grid; gap:7px; }
+.excel-template-column {
+  display:grid;
+  grid-template-columns:34px minmax(135px,.9fr) minmax(150px,1.15fr) 80px 70px 105px 72px 78px auto;
+  align-items:end;
+  gap:7px;
+  padding:9px;
+  border:1px solid var(--line);
+  border-left:2px solid rgba(214,164,70,.55);
+  border-radius:4px;
+  background:#080d13;
+}
+.excel-column-order { align-self:center; display:grid; place-items:center; width:28px; height:28px; border:1px solid var(--line); border-radius:3px; color:var(--gold); font:700 10px var(--mono); }
+.excel-column-actions { display:flex; gap:4px; align-self:center; }
+.excel-column-actions button { width:29px; height:29px; border:1px solid var(--line); border-radius:3px; color:var(--text); background:rgba(255,255,255,.03); cursor:pointer; }
+.excel-column-actions button:hover { border-color:var(--gold); color:var(--gold); }
+.excel-column-actions button.is-danger { color:#ff8890; }
+.excel-column-actions button:disabled { opacity:.25; cursor:default; }
+
+@media (max-width:1180px) {
+  .excel-template-grid { grid-template-columns:1fr; }
+  .excel-template-division-picker { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .excel-template-columns { overflow-x:auto; padding-bottom:5px; }
+  .excel-template-column { min-width:980px; }
+}
+
+@media (max-width:700px) {
+  .excel-export-hero { grid-template-columns:1fr; padding:15px !important; }
+  .excel-export-hero-mark { display:none; }
+  .excel-export-product,
+  .excel-preview-panel { padding:13px !important; }
+  .excel-export-product-head,
+  .excel-preview-head { display:grid; gap:9px; }
+  .excel-export-status { width:100%; }
+  .excel-export-actions { display:grid; grid-template-columns:1fr 1fr; align-items:end; }
+  .excel-preview-limit { margin:0; }
+  .excel-download-action { min-width:0; width:100%; }
+  .excel-preview-sheet { padding:7px; }
+  .excel-preview-scroll { max-height:430px; }
+  .excel-template-form-grid,
+  .excel-template-division-picker { grid-template-columns:1fr; }
+  .excel-style-group { grid-template-columns:1fr 1fr; }
+  .excel-style-group b { grid-column:1/-1; }
+  .excel-template-column { min-width:900px; }
+}

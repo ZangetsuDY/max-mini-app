@@ -65,6 +65,14 @@
     {
       "source": "/api/admin/outage-config",
       "destination": "/api/router?route=admin/outage-config"
+    },
+    {
+      "source": "/api/excel-exports",
+      "destination": "/api/router?route=excel-exports"
+    },
+    {
+      "source": "/api/admin/excel-export-config",
+      "destination": "/api/router?route=admin/excel-export-config"
     }
   ]
 }

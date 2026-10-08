@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261007-regionalmap1" />
-  <link rel="stylesheet" href="pro.css?v=20261007-regionalmap1" />
+  <link rel="stylesheet" href="style.css?v=20261008-excel1" />
+  <link rel="stylesheet" href="pro.css?v=20261008-excel1" />
 </head>
 
 <body class="auth-pending">
@@ -309,6 +309,29 @@
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M5 12h14M13 6l6 6-6 6"></path>
             </svg>
+          </div>
+        </button>
+
+        <button id="openExcelExportsButton" class="module-card module-card-excel" type="button" hidden>
+          <div class="module-topline">
+            <div class="module-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 3h11l3 3v15H5z"></path>
+                <path d="M8 10h8M8 14h8M8 18h5M9 7v10M14 7v10"></path>
+              </svg>
+            </div>
+            <span class="module-status module-status-live"><i></i> XLSX</span>
+          </div>
+
+          <div class="module-copy">
+            <span>ОТЧЁТНОСТЬ</span>
+            <h3>Excel выгрузки</h3>
+            <p>Предпросмотр и скачивание настроенных оперативных Excel-отчётов.</p>
+          </div>
+
+          <div class="module-footer">
+            <span>Открыть выгрузки</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
           </div>
         </button>
 
@@ -1167,6 +1190,84 @@
       </div>
     </section>
 
+    <!-- EXCEL EXPORTS -->
+    <section id="excelExportsView" class="app-view">
+      <div class="view-toolbar">
+        <button id="backFromExcelExportsButton" class="back-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"></path></svg>
+          <span>Главное меню</span>
+        </button>
+        <div class="toolbar-status">
+          <span class="system-pulse"></span>
+          <span id="excelExportsUpdatedAt">Excel · ожидание данных</span>
+        </div>
+      </div>
+
+      <div class="excel-export-shell">
+        <div class="excel-export-hero glass-panel">
+          <div>
+            <span class="micro-label">ОТЧЁТНОСТЬ · XLSX</span>
+            <h1>Excel выгрузки</h1>
+            <p>Готовые оперативные отчёты формируются по шаблонам, настроенным в центре управления системой.</p>
+          </div>
+          <div class="excel-export-hero-mark" aria-hidden="true">
+            <span>XLSX</span><strong>01</strong><small>доступная форма</small>
+          </div>
+        </div>
+
+        <article class="excel-export-product glass-panel">
+          <div class="excel-export-product-head">
+            <div>
+              <span class="micro-label">СК-11 OMS · АВАРИЙНЫЕ ОТКЛЮЧЕНИЯ</span>
+              <h2>Аварийные отключения</h2>
+              <p>Одна строка Excel — одно активное аварийное отключение из выбранных подразделений.</p>
+            </div>
+            <div class="excel-export-status">
+              <span>Строк</span>
+              <strong id="excelEmergencyRowCount">—</strong>
+              <small id="excelEmergencySourceState">Ожидание данных</small>
+            </div>
+          </div>
+
+          <div class="excel-export-actions">
+            <label class="excel-preview-limit">
+              <span>Предпросмотр</span>
+              <select id="excelPreviewLimit" class="dispatcher-select">
+                <option value="10">10 строк</option>
+                <option value="25" selected>25 строк</option>
+                <option value="50">50 строк</option>
+              </select>
+            </label>
+            <button id="excelRefreshPreviewButton" class="secondary-action" type="button">Обновить предпросмотр</button>
+            <button id="excelDownloadEmergencyButton" class="primary-action excel-download-action" type="button">
+              <span>Скачать XLSX</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"></path></svg>
+            </button>
+          </div>
+        </article>
+
+        <article class="excel-preview-panel glass-panel">
+          <div class="excel-preview-head">
+            <div>
+              <span class="micro-label">ПРЕДПРОСМОТР ДОКУМЕНТА</span>
+              <h2 id="excelPreviewTitle">Аварийные отключения</h2>
+            </div>
+            <span id="excelPreviewMeta" class="excel-preview-meta">—</span>
+          </div>
+          <div id="excelPreviewState" class="excel-preview-state">Получение текущих данных…</div>
+          <div id="excelPreviewSheet" class="excel-preview-sheet" hidden>
+            <div class="excel-preview-document-title" id="excelPreviewDocumentTitle">Аварийные отключения</div>
+            <div class="excel-preview-document-subtitle" id="excelPreviewDocumentSubtitle"></div>
+            <div class="excel-preview-scroll">
+              <table id="excelPreviewTable" class="excel-preview-table">
+                <thead></thead><tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <!-- DEVELOPER CONTROL CENTER -->
     <section id="adminView" class="app-view">
       <div class="view-toolbar">
@@ -1500,6 +1601,60 @@
         <div id="executiveMapConfigList" class="dispatcher-config-list executive-map-config-list"></div>
       </article>
 
+      <article id="excelExportManagementPanel" class="admin-panel excel-export-management" hidden>
+        <div class="admin-panel-heading access-heading">
+          <div>
+            <span class="micro-label">ОТЧЁТНОСТЬ · КОНСТРУКТОР XLSX</span>
+            <h2>Шаблон аварийных отключений</h2>
+            <p class="access-heading-copy">Настройте заголовок, лист, внешний вид и состав столбцов. Предпросмотр в панели Excel использует этот же шаблон.</p>
+          </div>
+          <button id="excelTemplateSaveButton" class="primary-action admin-save-button" type="button"><span>Сохранить шаблон</span></button>
+        </div>
+
+        <div id="excelTemplateStatus" class="dispatcher-config-status"></div>
+
+        <div class="excel-template-grid">
+          <section class="excel-template-section">
+            <div class="management-section-head"><strong>Документ</strong><small>Основные параметры будущего файла.</small></div>
+            <div class="excel-template-form-grid">
+              <label><span>Заголовок</span><input id="excelTemplateTitle" type="text" maxlength="160" /></label>
+              <label><span>Подзаголовок</span><input id="excelTemplateSubtitle" type="text" maxlength="200" /></label>
+              <label><span>Имя листа</span><input id="excelTemplateSheetName" type="text" maxlength="31" /></label>
+              <label><span>Имя файла</span><input id="excelTemplateFileName" type="text" maxlength="80" /></label>
+              <label><span>Строка начала таблицы</span><input id="excelTemplateStartRow" type="number" min="4" max="20" /></label>
+            </div>
+            <div class="excel-template-flags">
+              <label><input id="excelTemplateGeneratedAt" type="checkbox" /> Дата формирования</label>
+              <label><input id="excelTemplateSourceAt" type="checkbox" /> Дата обновления источника</label>
+              <label><input id="excelTemplateFreeze" type="checkbox" /> Закрепить шапку</label>
+              <label><input id="excelTemplateFilter" type="checkbox" /> Автофильтр</label>
+            </div>
+          </section>
+
+          <section class="excel-template-section">
+            <div class="management-section-head"><strong>Стиль</strong><small>Цвета, размеры шрифта и высота строк.</small></div>
+            <div class="excel-style-groups">
+              <div class="excel-style-group"><b>Заголовок</b><label>Шрифт <input id="excelTitleFontSize" type="number" min="7" max="28" /></label><label>Высота <input id="excelTitleRowHeight" type="number" min="14" max="60" /></label><label>Текст <input id="excelTitleColor" type="color" /></label><label>Фон <input id="excelTitleFill" type="color" /></label></div>
+              <div class="excel-style-group"><b>Шапка</b><label>Шрифт <input id="excelHeaderFontSize" type="number" min="7" max="28" /></label><label>Высота <input id="excelHeaderRowHeight" type="number" min="14" max="60" /></label><label>Текст <input id="excelHeaderColor" type="color" /></label><label>Фон <input id="excelHeaderFill" type="color" /></label></div>
+              <div class="excel-style-group"><b>Строки</b><label>Шрифт <input id="excelBodyFontSize" type="number" min="7" max="20" /></label><label>Высота <input id="excelBodyRowHeight" type="number" min="14" max="60" /></label><label>Текст <input id="excelBodyColor" type="color" /></label><label>Фон <input id="excelBodyFill" type="color" /></label><label>Чередование <input id="excelBodyAltFill" type="color" /></label></div>
+            </div>
+          </section>
+        </div>
+
+        <section class="excel-template-section excel-template-divisions-section">
+          <div class="management-section-head"><strong>Подразделения</strong><small>Если ничего не выбрано — в файл попадают все настроенные подразделения аварийных отключений.</small></div>
+          <div id="excelTemplateDivisionPicker" class="excel-template-division-picker"></div>
+        </section>
+
+        <section class="excel-template-section excel-template-columns-section">
+          <div class="excel-template-columns-head">
+            <div class="management-section-head"><strong>Столбцы Excel</strong><small>Меняйте порядок, источник данных, подпись, ширину и отображение каждой колонки.</small></div>
+            <button id="excelTemplateAddColumnButton" class="secondary-action" type="button">+ Столбец</button>
+          </div>
+          <div id="excelTemplateColumns" class="excel-template-columns"></div>
+        </section>
+      </article>
+
       <article
         id="dispatcherWorkordersManagementPanel"
         class="admin-panel dispatcher-source-management"
@@ -1612,6 +1767,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261007-regionalmap1"></script>
+  <script src="app.js?v=20261008-excel1"></script>
 </body>
 </html>

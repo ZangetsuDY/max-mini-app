@@ -4,6 +4,7 @@ import me from "../handlers/me.js";
 import outages from "../handlers/outages.js";
 import dispatcher from "../handlers/dispatcher.js";
 import executiveMonitoring from "../handlers/executive-monitoring.js";
+import excelExports from "../handlers/excel-exports.js";
 import heartbeat from "../handlers/heartbeat.js";
 import system from "../handlers/system.js";
 
@@ -15,6 +16,7 @@ import adminUserRoles from "../handlers/admin/user-roles.js";
 import adminUsers from "../handlers/admin/users.js";
 import adminDispatcherConfig from "../handlers/admin/dispatcher-config.js";
 import adminOutageConfig from "../handlers/admin/outage-config.js";
+import adminExcelExportConfig from "../handlers/admin/excel-export-config.js";
 
 const ROUTES = new Map([
   ["login", login],
@@ -23,6 +25,7 @@ const ROUTES = new Map([
   ["outages", outages],
   ["dispatcher", dispatcher],
   ["executive-monitoring", executiveMonitoring],
+  ["excel-exports", excelExports],
   ["heartbeat", heartbeat],
   ["system", system],
   ["admin/dashboard", adminDashboard],
@@ -32,7 +35,8 @@ const ROUTES = new Map([
   ["admin/user-roles", adminUserRoles],
   ["admin/users", adminUsers],
   ["admin/dispatcher-config", adminDispatcherConfig],
-  ["admin/outage-config", adminOutageConfig]
+  ["admin/outage-config", adminOutageConfig],
+  ["admin/excel-export-config", adminExcelExportConfig]
 ]);
 
 function json(data, status = 200) {
