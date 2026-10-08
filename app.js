@@ -380,6 +380,7 @@ let excelTemplateCatalog = {
 
 let excelPreviewPayload = null;
 let excelPreviewOpen = false;
+let excelTemplateDirty = false;
 
 const EXECUTIVE_MAP_GEOMETRY = Object.freeze([
   { id: "vyborg", points: "88,58 132,25 226,18 258,82 236,166 190,214 118,202 66,146", x: 155, y: 112 },
@@ -1942,8 +1943,10 @@ function navigateAdmin() {
   }
 
   setView("admin");
+  stopAdminRefresh();
   loadAdminDashboard();
-  startAdminRefresh();
+  // Центр управления не обновляется по таймеру: это защищает
+  // незавершённые настройки от перерисовки во время редактирования.
 }
 
 function excelPreviewValue(row, field, index) {
@@ -2131,6 +2134,15 @@ async function downloadEmergencyExcel() {
   }
 }
 
+function markExcelTemplateDirty() {
+  if (excelTemplateDirty) return;
+  excelTemplateDirty = true;
+  if (excelTemplateStatus) {
+    excelTemplateStatus.textContent = "Есть несохранённые изменения. Автообновление не перезапишет их.";
+    excelTemplateStatus.classList.add("is-warning");
+  }
+}
+
 function excelColumnFieldOptions(selected) {
   const sourceOptions = Array.isArray(excelTemplateCatalog.fieldOptions)
     ? [...excelTemplateCatalog.fieldOptions]
@@ -2210,8 +2222,9 @@ function renderExcelTemplateAdmin() {
   excelTemplateStatus.classList.toggle("is-warning", !excelTemplateCatalog.storageConfigured);
 }
 
-async function loadExcelTemplateAdmin() {
+async function loadExcelTemplateAdmin({ force = false } = {}) {
   if (!currentUser?.isDeveloper || !excelExportManagementPanel) return;
+  if (excelTemplateDirty && !force) return;
   try {
     const response = await fetch(API_ADMIN_EXCEL_EXPORT_CONFIG, {
       method: "GET", cache: "no-store", credentials: "include", headers: getSessionHeaders()
@@ -2224,6 +2237,7 @@ async function loadExcelTemplateAdmin() {
       fieldOptions: Array.isArray(payload?.fieldOptions) ? payload.fieldOptions : [],
       storageConfigured: Boolean(payload?.storageConfigured)
     };
+    excelTemplateDirty = false;
     renderExcelTemplateAdmin();
   } catch (error) {
     excelTemplateStatus.textContent = error instanceof Error ? error.message : "Ошибка загрузки шаблона";
@@ -2296,6 +2310,7 @@ async function saveExcelTemplateAdmin() {
     if (!response.ok) throw new Error(payload?.error || "Не удалось сохранить шаблон");
     excelTemplateCatalog.config = payload.config;
     excelTemplateCatalog.storageConfigured = Boolean(payload.config?.storageConfigured ?? true);
+    excelTemplateDirty = false;
     renderExcelTemplateAdmin();
     excelTemplateStatus.textContent = "Шаблон сохранён. Следующая выгрузка будет использовать новые настройки.";
     excelTemplateStatus.classList.remove("is-warning");
@@ -3906,6 +3921,24 @@ excelTemplateSaveButton?.addEventListener(
   saveExcelTemplateAdmin
 );
 
+excelExportManagementPanel?.addEventListener(
+  "input",
+  (event) => {
+    if (event.target.closest("input, textarea, select")) {
+      markExcelTemplateDirty();
+    }
+  }
+);
+
+excelExportManagementPanel?.addEventListener(
+  "change",
+  (event) => {
+    if (event.target.closest("input, textarea, select")) {
+      markExcelTemplateDirty();
+    }
+  }
+);
+
 excelTemplateAddColumnButton?.addEventListener(
   "click",
   () => {
@@ -3924,6 +3957,7 @@ excelTemplateAddColumnButton?.addEventListener(
       autoWidth: false,
       autoHeight: false
     });
+    markExcelTemplateDirty();
     renderExcelTemplateColumns();
   }
 );
@@ -3945,6 +3979,8 @@ excelTemplateColumns?.addEventListener(
       const wrapInput = row.querySelector('[data-excel-col="wrap"]');
       if (wrapInput) wrapInput.checked = true;
     }
+
+    markExcelTemplateDirty();
   }
 );
 
@@ -3959,13 +3995,18 @@ excelTemplateColumns?.addEventListener(
     syncExcelColumnDraftFromDom();
     const columns = excelTemplateCatalog.config?.columns || [];
     const action = button.dataset.excelColumnAction;
+    let changed = false;
     if (action === "up" && index > 0) {
       [columns[index - 1], columns[index]] = [columns[index], columns[index - 1]];
+      changed = true;
     } else if (action === "down" && index < columns.length - 1) {
       [columns[index + 1], columns[index]] = [columns[index], columns[index + 1]];
+      changed = true;
     } else if (action === "remove" && columns.length > 1) {
       columns.splice(index, 1);
+      changed = true;
     }
+    if (changed) markExcelTemplateDirty();
     renderExcelTemplateColumns();
   }
 );
