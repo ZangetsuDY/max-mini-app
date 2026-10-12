@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261008-1345" />
-  <link rel="stylesheet" href="pro.css?v=20261008-1345" />
+  <link rel="stylesheet" href="style.css?v=20261012-1703" />
+  <link rel="stylesheet" href="pro.css?v=20261012-1703" />
 </head>
 
 <body class="auth-pending">
@@ -232,7 +232,7 @@
                 <path d="M4 18V9m5 9V5m5 13v-7m5 7V3"></path>
               </svg>
             </div>
-            <span class="module-status module-status-live">
+            <span id="monitoringCardStatus" class="module-status module-status-live">
               <i></i> ДОСТУПЕН
             </span>
           </div>
@@ -312,7 +312,7 @@
           </div>
         </button>
 
-        <button id="openExcelExportsButton" class="module-card module-card-excel" type="button" hidden>
+        <button id="openExcelExportsButton" class="module-card module-card-excel" type="button">
           <div class="module-topline">
             <div class="module-icon">
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -320,7 +320,7 @@
                 <path d="M8 10h8M8 14h8M8 18h5M9 7v10M14 7v10"></path>
               </svg>
             </div>
-            <span class="module-status module-status-live"><i></i> XLSX</span>
+            <span id="excelExportsCardStatus" class="module-status module-status-live"><i></i> XLSX</span>
           </div>
 
           <div class="module-copy">
@@ -339,7 +339,6 @@
           id="openAdminButton"
           class="module-card module-card-admin"
           type="button"
-          hidden
         >
           <div class="module-topline">
             <div class="module-icon">
@@ -347,7 +346,7 @@
                 <path d="M4 7h16M7 4v6M4 17h16M16 14v6"></path>
               </svg>
             </div>
-            <span class="module-status module-status-developer">
+            <span id="adminCardStatus" class="module-status module-status-developer">
               РОЛЬ: РАЗРАБОТЧИК
             </span>
           </div>
@@ -1768,6 +1767,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261008-1345"></script>
+  <script src="app.js?v=20261012-1703"></script>
 </body>
 </html>

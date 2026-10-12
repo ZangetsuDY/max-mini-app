@@ -59,6 +59,9 @@ const openDispatcherButton = document.getElementById("openDispatcherButton");
 const openExecutiveButton = document.getElementById("openExecutiveButton");
 const openExcelExportsButton = document.getElementById("openExcelExportsButton");
 const openAdminButton = document.getElementById("openAdminButton");
+const monitoringCardStatus = document.getElementById("monitoringCardStatus");
+const excelExportsCardStatus = document.getElementById("excelExportsCardStatus");
+const adminCardStatus = document.getElementById("adminCardStatus");
 const dispatcherCardStatus = document.getElementById("dispatcherCardStatus");
 const executiveCardStatus = document.getElementById("executiveCardStatus");
 const moduleCount = document.getElementById("moduleCount");
@@ -839,6 +842,58 @@ function hasPanelAccess(
   );
 }
 
+const PANEL_ACCESS_META = {
+  monitoring: {
+    title: "Активные отключения",
+    description: "У вашей текущей роли нет доступа к панели «Активные отключения»."
+  },
+  dispatcher: {
+    title: "Интерфейс Диспетчера",
+    description: "У вашей текущей роли нет доступа к панели «Интерфейс Диспетчера»."
+  },
+  "executive-monitoring": {
+    title: "Диспетчерский мониторинг",
+    description: "У вашей текущей роли нет доступа к панели «Диспетчерский мониторинг»."
+  },
+  "excel-exports": {
+    title: "Excel выгрузки",
+    description: "У вашей текущей роли нет доступа к панели «Excel выгрузки»."
+  },
+  "system-control": {
+    title: "Центр управления системой",
+    description: "У вашей текущей роли нет доступа к панели «Центр управления системой»."
+  }
+};
+
+function showPanelAccessDenied(panelId) {
+  const meta = PANEL_ACCESS_META[panelId] || {
+    title: "Раздел недоступен",
+    description: "У вашей текущей роли нет доступа к выбранной панели."
+  };
+
+  openModal({
+    type: "denied",
+    eyebrow: "ДОСТУП ПО РОЛИ",
+    title: "Недостаточно прав",
+    message: `${meta.description} Обратитесь к администратору приложения, если этот раздел нужен для вашей работы.`
+  });
+}
+
+function applyModuleAccessState(button, status, panelId, allowedText = "ДОСТУПЕН") {
+  if (!button) return;
+  const allowed = hasPanelAccess(panelId);
+  button.hidden = false;
+  button.classList.toggle("is-access-locked", !allowed);
+  button.setAttribute("aria-disabled", allowed ? "false" : "true");
+  button.dataset.accessPanel = panelId;
+
+  if (status) {
+    status.classList.toggle("module-status-denied", !allowed);
+    status.classList.toggle("module-status-live", allowed && panelId !== "system-control");
+    status.textContent = allowed ? allowedText : "НЕТ ДОСТУПА";
+  }
+}
+
 function setUserUi(user) {
   currentUser = {
     username:
@@ -963,9 +1018,7 @@ function setUserUi(user) {
   );
 
   dispatcherCardStatus.textContent =
-    hasPanelAccess(
-      "dispatcher"
-    )
+    hasPanelAccess("dispatcher")
       ? (
           currentUser?.dispatcherAllDivisions
             ? "КОНТУР: ВСЕ ПОДРАЗДЕЛЕНИЯ"
@@ -973,12 +1026,10 @@ function setUserUi(user) {
               ? `КОНТУР: ${currentUser.dispatcherDivisionName}`
               : "ДОСТУП РАЗРЕШЁН"
         )
-      : "ДОСТУП ПО РОЛИ";
+      : "НЕТ ДОСТУПА";
 
   executiveCardStatus.textContent =
-    hasPanelAccess(
-      "executive-monitoring"
-    )
+    hasPanelAccess("executive-monitoring")
       ? (
           currentUser?.dispatcherAllDivisions
             ? "КОНТУР: ВСЕ ПОДРАЗДЕЛЕНИЯ"
@@ -986,22 +1037,40 @@ function setUserUi(user) {
               ? `ФОКУС: ${currentUser.dispatcherDivisionName}`
               : "СВОДНЫЙ ДОСТУП"
         )
-      : "ДОСТУП ПО РОЛИ";
+      : "НЕТ ДОСТУПА";
 
-  openExcelExportsButton.hidden =
-    !hasPanelAccess(
-      "excel-exports"
-    );
+  applyModuleAccessState(
+    openMonitoringButton,
+    monitoringCardStatus,
+    "monitoring",
+    "ДОСТУПЕН"
+  );
+  applyModuleAccessState(
+    openDispatcherButton,
+    dispatcherCardStatus,
+    "dispatcher",
+    dispatcherCardStatus.textContent
+  );
+  applyModuleAccessState(
+    openExecutiveButton,
+    executiveCardStatus,
+    "executive-monitoring",
+    executiveCardStatus.textContent
+  );
+  applyModuleAccessState(
+    openExcelExportsButton,
+    excelExportsCardStatus,
+    "excel-exports",
+    "XLSX"
+  );
+  applyModuleAccessState(
+    openAdminButton,
+    adminCardStatus,
+    "system-control",
+    currentUser.isDeveloper ? "РОЛЬ: РАЗРАБОТЧИК" : "ДОСТУП РАЗРЕШЁН"
+  );
 
-  openAdminButton.hidden =
-    !hasPanelAccess(
-      "system-control"
-    );
-
-  const visibleModules =
-    3 +
-    (hasPanelAccess("excel-exports") ? 1 : 0) +
-    (hasPanelAccess("system-control") ? 1 : 0);
+  const visibleModules = 5;
 
   moduleCount.textContent =
     `${visibleModules} ${
@@ -1185,12 +1254,7 @@ function openOutageKind(kind) {
 
 function navigateMonitoring() {
   if (!hasPanelAccess("monitoring")) {
-    openModal({
-      type: "denied",
-      eyebrow: "ДОСТУП ПО РОЛИ",
-      title: "Нет доступа",
-      message: "У вашей текущей роли нет доступа к панели «Активные отключения»."
-    });
+    showPanelAccessDenied("monitoring");
     return;
   }
 
@@ -1333,6 +1397,11 @@ async function loadDispatcherDashboard({
 }
 
 async function navigateDispatcher() {
+  if (!hasPanelAccess("dispatcher")) {
+    showPanelAccessDenied("dispatcher");
+    return;
+  }
+
   await loadDispatcherDashboard({
     openView: true
   });
@@ -1852,12 +1921,7 @@ async function loadExecutiveDashboard(options = {}) {
 
   if (!hasPanelAccess("executive-monitoring")) {
     if (!quiet) {
-      openModal({
-        type: "denied",
-        eyebrow: "ДОСТУП ПО РОЛИ",
-        title: "Нет доступа",
-        message: "У вашей текущей роли нет доступа к панели «Диспетчерский мониторинг»."
-      });
+      showPanelAccessDenied("executive-monitoring");
     }
     return false;
   }
@@ -1939,6 +2003,7 @@ function navigateAdmin() {
       "system-control"
     )
   ) {
+    showPanelAccessDenied("system-control");
     return;
   }
 
@@ -2075,7 +2140,10 @@ function setExcelPreviewOpen(open) {
 }
 
 async function navigateExcelExports() {
-  if (!hasPanelAccess("excel-exports")) return;
+  if (!hasPanelAccess("excel-exports")) {
+    showPanelAccessDenied("excel-exports");
+    return;
+  }
   setView("excel-exports");
   setExcelPreviewOpen(false);
   excelPreviewPayload = null;
