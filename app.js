@@ -3597,6 +3597,35 @@ function renderDispatcherOutages(payload) {
   );
 }
 
+function enableDispatcherOutageDetailsWheelScroll() {
+  [dispatcherEmergencyOutagesDetails, dispatcherPlannedOutagesDetails]
+    .filter(Boolean)
+    .forEach((element) => {
+      if (element.dataset.wheelScrollReady === "1") return;
+      element.dataset.wheelScrollReady = "1";
+      element.addEventListener(
+        "wheel",
+        (event) => {
+          const maxScroll = element.scrollHeight - element.clientHeight;
+          if (maxScroll <= 0) return;
+
+          const movingDown = event.deltaY > 0;
+          const movingUp = event.deltaY < 0;
+          const canMoveDown = element.scrollTop < maxScroll - 1;
+          const canMoveUp = element.scrollTop > 1;
+
+          if ((movingDown && canMoveDown) || (movingUp && canMoveUp)) {
+            event.preventDefault();
+            element.scrollTop += event.deltaY;
+          }
+        },
+        { passive: false }
+      );
+    });
+}
+
+enableDispatcherOutageDetailsWheelScroll();
+
 function renderDispatcherRoleHierarchy(payload) {
   if (!dispatcherHierarchyPanel) return;
 
