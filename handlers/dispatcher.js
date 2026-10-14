@@ -48,6 +48,11 @@ import {
   getOutageDivisions
 } from "../lib/outage-config.js";
 
+import {
+  getLatestDutyPersonnelSnapshot,
+  getPersonnelNamesForRole
+} from "../lib/duty-personnel-data.js";
+
 function json(data, status = 200) {
   return new Response(
     JSON.stringify(data),
@@ -305,7 +310,8 @@ export default {
       workordersSnapshotState,
       emergencyOutageState,
       plannedOutageState,
-      outageDivisions
+      outageDivisions,
+      dutyPersonnelState
     ] = await Promise.all([
       getDispatcherUnitConfig(
         selectedUnit.id
@@ -320,7 +326,8 @@ export default {
       getLatestWorkordersSnapshot(),
       getLatestEmergencyOutageSnapshot(),
       getLatestPlannedOutageSnapshot(),
-      getOutageDivisions()
+      getOutageDivisions(),
+      getLatestDutyPersonnelSnapshot()
     ]);
 
     const aggregation =
@@ -474,10 +481,28 @@ export default {
       availableUnits,
       hierarchy: {
         mainRole: roleHierarchy?.mainRole || "",
+        mainPersonNames: getPersonnelNamesForRole(
+          dutyPersonnelState?.snapshot,
+          roleHierarchy?.mainRole || ""
+        ),
         subordinateRoles: Array.isArray(roleHierarchy?.subordinateRoles)
           ? roleHierarchy.subordinateRoles
           : [],
-        customized: Boolean(roleHierarchy?.customized)
+        subordinatePersonnel: Array.isArray(roleHierarchy?.subordinateRoles)
+          ? roleHierarchy.subordinateRoles.map((role) => ({
+              role,
+              personNames: getPersonnelNamesForRole(dutyPersonnelState?.snapshot, role)
+            }))
+          : [],
+        customized: Boolean(roleHierarchy?.customized),
+        personnelSource: {
+          configured: Boolean(dutyPersonnelState?.configured),
+          status: dutyPersonnelState?.status || "not_configured",
+          message: dutyPersonnelState?.message || "",
+          sourceUpdatedAt: dutyPersonnelState?.snapshot?.sourceUpdatedAt || "",
+          employees: dutyPersonnelState?.snapshot?.employees ?? null,
+          assignmentCount: dutyPersonnelState?.snapshot?.assignmentCount || 0
+        }
       },
       sources: {
         configured:

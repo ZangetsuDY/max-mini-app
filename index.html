@@ -904,36 +904,6 @@
 
         <div id="dispatcherDataNotice" class="dispatcher-data-notice" hidden></div>
 
-        <article id="dispatcherHierarchyPanel" class="dispatcher-hierarchy-panel glass-panel">
-          <div class="dispatcher-hierarchy-head">
-            <div>
-              <span class="micro-label">ОПЕРАТИВНОЕ ПОДЧИНЕНИЕ</span>
-              <h3 id="dispatcherHierarchyScope">—</h3>
-            </div>
-            <span id="dispatcherHierarchyCount" class="dispatcher-hierarchy-count">0 ПОДЧ.</span>
-          </div>
-
-          <div class="dispatcher-hierarchy-flow">
-            <div class="dispatcher-hierarchy-main">
-              <span>ГЛАВНАЯ РОЛЬ</span>
-              <div id="dispatcherHierarchyMainRole" class="dispatcher-hierarchy-role is-main">
-                Иерархия не настроена — <em>(ФИО не указано)</em>
-              </div>
-            </div>
-
-            <div class="dispatcher-hierarchy-link" aria-hidden="true">
-              <i></i><i></i><i></i>
-            </div>
-
-            <div class="dispatcher-hierarchy-subordinates">
-              <span>ПОДЧИНЁННЫЕ РОЛИ</span>
-              <div id="dispatcherHierarchySubordinateList" class="dispatcher-hierarchy-subordinate-list">
-                <div class="dispatcher-hierarchy-empty">Подчинённые роли не настроены</div>
-              </div>
-            </div>
-          </div>
-        </article>
-
         <article class="dispatcher-panel glass-panel dispatcher-outages-panel">
           <div class="dispatcher-panel-head">
             <div>
@@ -1138,6 +1108,40 @@
                     диспетчерского интерфейса.
                   </span>
                 </div>
+              </div>
+            </article>
+
+            <article id="dispatcherHierarchyPanel" class="dispatcher-panel glass-panel dispatcher-hierarchy-panel">
+              <div class="dispatcher-panel-head">
+                <div>
+                  <span class="micro-label">ОПЕРАТИВНОЕ ПОДЧИНЕНИЕ</span>
+                  <h2 id="dispatcherHierarchyScope">—</h2>
+                </div>
+                <span id="dispatcherHierarchyCount" class="dispatcher-hierarchy-count">0 ПОДЧ.</span>
+              </div>
+
+              <div id="dispatcherHierarchySourceMeta" class="dispatcher-source-meta dispatcher-hierarchy-source-meta">
+                Источник ФИО: не настроен
+              </div>
+
+              <div class="dispatcher-hierarchy-main-card">
+                <span>ГЛАВНАЯ РОЛЬ</span>
+                <strong id="dispatcherHierarchyMainRole">Иерархия не настроена</strong>
+                <small id="dispatcherHierarchyMainPerson">(ФИО не указано)</small>
+              </div>
+
+              <div class="dispatcher-hierarchy-table-wrap">
+                <table class="dispatcher-hierarchy-table">
+                  <thead>
+                    <tr>
+                      <th>Подчинённая роль</th>
+                      <th>ФИО</th>
+                    </tr>
+                  </thead>
+                  <tbody id="dispatcherHierarchySubordinateList">
+                    <tr><td colspan="2">Подчинённые роли не настроены</td></tr>
+                  </tbody>
+                </table>
               </div>
             </article>
 
@@ -1600,6 +1604,19 @@
             <span>Подразделение</span>
             <select id="dispatcherHierarchyConfigGroupSelect" class="dispatcher-select"></select>
           </label>
+        </div>
+
+        <div class="dispatcher-personnel-source-card">
+          <div class="dispatcher-personnel-source-copy">
+            <span class="micro-label">MAX · ДЕЖУРНЫЙ ПЕРСОНАЛ СК-11</span>
+            <strong>Источник ФИО для оперативного подчинения</strong>
+            <small id="dispatcherPersonnelSourceStatus">ID чата пока не указан</small>
+          </div>
+          <label class="management-field dispatcher-personnel-chat-field">
+            <span>ID чата MAX</span>
+            <input id="dispatcherPersonnelChatIdInput" type="text" maxlength="120" placeholder="Например: -123456789..." />
+          </label>
+          <button id="dispatcherPersonnelChatSaveButton" class="role-action" type="button">Сохранить и проверить</button>
         </div>
 
         <div id="dispatcherHierarchyConfigStatus" class="dispatcher-config-status"></div>

@@ -72,6 +72,12 @@ import {
   getLatestOutageSnapshot as getLatestPlannedOutageSnapshot
 } from "../../lib/planned-outage-data.js";
 
+import {
+  getDutyPersonnelConfig,
+  setDutyPersonnelConfig,
+  getLatestDutyPersonnelSnapshot
+} from "../../lib/duty-personnel-data.js";
+
 function json(data, status = 200) {
   return new Response(
     JSON.stringify(data),
@@ -135,7 +141,9 @@ export default {
           outageDivisions,
           executiveTableRows,
           executiveMapZones,
-          dispatcherHierarchyUnits
+          dispatcherHierarchyUnits,
+          dutyPersonnelConfig,
+          dutyPersonnelState
         ] =
           await Promise.all([
             getDispatcherSourceConfig(),
@@ -148,7 +156,9 @@ export default {
             getOutageDivisions(),
             getExecutiveTableRows(),
             getExecutiveMapZones(),
-            getDispatcherRoleHierarchyConfig()
+            getDispatcherRoleHierarchyConfig(),
+            getDutyPersonnelConfig(),
+            getLatestDutyPersonnelSnapshot()
           ]);
 
         return json({
@@ -164,7 +174,17 @@ export default {
           },
           dispatcherHierarchy: {
             units: dispatcherHierarchyUnits,
-            roleCatalog: getDispatcherRoleHierarchyCatalog()
+            roleCatalog: getDispatcherRoleHierarchyCatalog(),
+            personnel: {
+              chatId: dutyPersonnelConfig?.chatId || "",
+              configured: Boolean(dutyPersonnelState?.configured),
+              status: dutyPersonnelState?.status || "not_configured",
+              message: dutyPersonnelState?.message || "",
+              sourceUpdatedAt: dutyPersonnelState?.snapshot?.sourceUpdatedAt || "",
+              employees: dutyPersonnelState?.snapshot?.employees ?? null,
+              assignmentCount: dutyPersonnelState?.snapshot?.assignmentCount || 0,
+              parts: dutyPersonnelState?.snapshot?.parts || 0
+            }
           },
           units,
           availableSourceLabels:
@@ -282,6 +302,23 @@ export default {
         .toLowerCase();
 
     try {
+      if (action === "save_duty_personnel_config") {
+        const config = await setDutyPersonnelConfig({
+          chatId: body?.chatId,
+          actor: auth.access
+        });
+        const source = await getLatestDutyPersonnelSnapshot({ force: true });
+        return json({ ok: true, config, source: {
+          configured: Boolean(source?.configured),
+          status: source?.status || "",
+          message: source?.message || "",
+          sourceUpdatedAt: source?.snapshot?.sourceUpdatedAt || "",
+          employees: source?.snapshot?.employees ?? null,
+          assignmentCount: source?.snapshot?.assignmentCount || 0,
+          parts: source?.snapshot?.parts || 0
+        }});
+      }
+
       if (action === "save_role_hierarchy") {
         const hierarchy = await setDispatcherUnitRoleHierarchy({
           unitId: body?.unitId,

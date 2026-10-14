@@ -258,6 +258,8 @@ const dispatcherHierarchyPanel = document.getElementById("dispatcherHierarchyPan
 const dispatcherHierarchyScope = document.getElementById("dispatcherHierarchyScope");
 const dispatcherHierarchyCount = document.getElementById("dispatcherHierarchyCount");
 const dispatcherHierarchyMainRole = document.getElementById("dispatcherHierarchyMainRole");
+const dispatcherHierarchyMainPerson = document.getElementById("dispatcherHierarchyMainPerson");
+const dispatcherHierarchySourceMeta = document.getElementById("dispatcherHierarchySourceMeta");
 const dispatcherHierarchySubordinateList = document.getElementById("dispatcherHierarchySubordinateList");
 
 const outageManagementPanel = document.getElementById("outageManagementPanel");
@@ -277,6 +279,9 @@ const dispatcherHierarchyManagementPanel = document.getElementById("dispatcherHi
 const dispatcherHierarchyConfigGroupSelect = document.getElementById("dispatcherHierarchyConfigGroupSelect");
 const dispatcherHierarchyConfigStatus = document.getElementById("dispatcherHierarchyConfigStatus");
 const dispatcherHierarchyConfigList = document.getElementById("dispatcherHierarchyConfigList");
+const dispatcherPersonnelChatIdInput = document.getElementById("dispatcherPersonnelChatIdInput");
+const dispatcherPersonnelChatSaveButton = document.getElementById("dispatcherPersonnelChatSaveButton");
+const dispatcherPersonnelSourceStatus = document.getElementById("dispatcherPersonnelSourceStatus");
 
 const executiveTableManagementPanel = document.getElementById("executiveTableManagementPanel");
 const executiveTableCreateButton = document.getElementById("executiveTableCreateButton");
@@ -363,6 +368,7 @@ let dispatcherHierarchyConfigCatalog = {
   groups: [],
   units: [],
   roleCatalog: [],
+  personnel: {},
   storageConfigured: false
 };
 
@@ -2707,18 +2713,16 @@ function renderDispatcherDonutChart(
   let cursor = 0;
   const gradientParts = [];
   const markerData = [];
-  const chartSize =
-    Math.max(
-      chartElement.clientWidth || 0,
-      chartElement.clientHeight || 0,
-      150
-    );
-  const center = chartSize / 2;
-  const anchorRadius = chartSize * 0.34;
-  const labelRadius = chartSize * 0.43;
-  const sideOffset = chartSize * 0.09;
-  const verticalPadding = chartSize * 0.14;
-  const minVerticalGap = Math.max(18, chartSize * 0.11);
+  const chartWidth = Math.max(110, chartElement.clientWidth || 150);
+  const chartHeight = Math.max(110, chartElement.clientHeight || chartWidth);
+  const chartSize = Math.max(110, Math.min(chartWidth, chartHeight));
+  const centerX = chartWidth / 2;
+  const centerY = chartHeight / 2;
+  const anchorRadius = chartSize * 0.31;
+  const labelRadius = chartSize * 0.35;
+  const sideOffset = chartSize * 0.025;
+  const verticalPadding = Math.max(15, chartHeight * 0.12);
+  const minVerticalGap = Math.max(18, chartSize * 0.105);
 
   normalized.forEach((segment) => {
     const safeValue = Math.max(0, segment.value);
@@ -2745,15 +2749,15 @@ function renderDispatcherDonutChart(
         segment,
         safeValue,
         side,
-        anchorX: center + cos * anchorRadius,
-        anchorY: center + sin * anchorRadius,
+        anchorX: centerX + cos * anchorRadius,
+        anchorY: centerY + sin * anchorRadius,
         labelX:
-          center +
+          centerX +
           cos * labelRadius +
           (side === "right"
             ? sideOffset
             : -sideOffset),
-        labelY: center + sin * labelRadius
+        labelY: centerY + sin * labelRadius
       });
     }
 
@@ -2782,7 +2786,7 @@ function renderDispatcherDonutChart(
     ) {
       const item = sideMarkers[index];
       const maxY =
-        chartSize -
+        chartHeight -
         verticalPadding -
         (sideMarkers.length - 1 - index) *
           minVerticalGap;
@@ -2794,6 +2798,9 @@ function renderDispatcherDonutChart(
   });
 
   markerData.forEach((item) => {
+    item.labelX = Math.max(18, Math.min(chartWidth - 18, item.labelX));
+    item.labelY = Math.max(14, Math.min(chartHeight - 14, item.labelY));
+
     const marker =
       document.createElement("div");
 
@@ -3595,11 +3602,18 @@ function renderDispatcherRoleHierarchy(payload) {
 
   const hierarchy = payload?.hierarchy || {};
   const mainRole = String(hierarchy?.mainRole || "").trim();
+  const mainPersonNames = Array.isArray(hierarchy?.mainPersonNames)
+    ? hierarchy.mainPersonNames.filter(Boolean)
+    : [];
   const subordinateRoles = Array.isArray(hierarchy?.subordinateRoles)
     ? hierarchy.subordinateRoles
         .map((role) => String(role || "").trim())
         .filter(Boolean)
     : [];
+  const subordinatePersonnel = Array.isArray(hierarchy?.subordinatePersonnel)
+    ? hierarchy.subordinatePersonnel
+    : [];
+  const personnelSource = hierarchy?.personnelSource || {};
 
   const groupName = String(payload?.group?.name || "").trim();
   const unitName = String(payload?.unit?.name || "").trim();
@@ -3610,28 +3624,51 @@ function renderDispatcherRoleHierarchy(payload) {
   dispatcherHierarchyCount.textContent =
     `${subordinateRoles.length} ${pluralizeRu(subordinateRoles.length, "ПОДЧ.", "ПОДЧ.", "ПОДЧ.")}`;
 
-  dispatcherHierarchyMainRole.innerHTML = mainRole
-    ? `${escapeHtml(mainRole)} <span>— (ФИО не указано)</span>`
-    : `Главная роль не настроена <span>— (ФИО не указано)</span>`;
+  dispatcherHierarchyMainRole.textContent = mainRole || "Главная роль не настроена";
+  if (dispatcherHierarchyMainPerson) {
+    dispatcherHierarchyMainPerson.textContent = mainPersonNames.length
+      ? mainPersonNames.join(" · ")
+      : "(ФИО не указано)";
+    dispatcherHierarchyMainPerson.classList.toggle("is-missing", !mainPersonNames.length);
+  }
 
-  dispatcherHierarchyMainRole.classList.toggle(
-    "is-empty",
-    !mainRole
-  );
+  if (dispatcherHierarchySourceMeta) {
+    if (personnelSource?.configured) {
+      const update = personnelSource?.sourceUpdatedAt
+        ? ` · ${personnelSource.sourceUpdatedAt}`
+        : "";
+      dispatcherHierarchySourceMeta.textContent =
+        `Дежурный персонал СК-11${update}`;
+      dispatcherHierarchySourceMeta.classList.toggle(
+        "is-warning",
+        personnelSource?.status === "stale" || personnelSource?.status === "error"
+      );
+    } else {
+      dispatcherHierarchySourceMeta.textContent = "Источник ФИО не настроен";
+      dispatcherHierarchySourceMeta.classList.add("is-warning");
+    }
+  }
 
   dispatcherHierarchySubordinateList.innerHTML = subordinateRoles.length
     ? subordinateRoles
-        .map((role) => `
-          <div class="dispatcher-hierarchy-role">
-            ${escapeHtml(role)} <span>— (ФИО не указано)</span>
-          </div>
-        `)
+        .map((role) => {
+          const entry = subordinatePersonnel.find(
+            (item) => String(item?.role || "").trim() === role
+          );
+          const names = Array.isArray(entry?.personNames)
+            ? entry.personNames.filter(Boolean)
+            : [];
+          return `
+            <tr>
+              <td>${escapeHtml(role)}</td>
+              <td class="${names.length ? "" : "is-missing"}">
+                ${escapeHtml(names.length ? names.join(" · ") : "(ФИО не указано)")}
+              </td>
+            </tr>
+          `;
+        })
         .join("")
-    : `
-      <div class="dispatcher-hierarchy-empty">
-        Подчинённые роли не настроены
-      </div>
-    `;
+    : `<tr><td colspan="2" class="is-empty">Подчинённые роли не настроены</td></tr>`;
 }
 
 function renderDispatcherDashboard(payload) {
@@ -6777,9 +6814,27 @@ async function loadDispatcherConfigManagement() {
         Array.isArray(payload?.dispatcherHierarchy?.roleCatalog)
           ? payload.dispatcherHierarchy.roleCatalog
           : [],
+      personnel: payload?.dispatcherHierarchy?.personnel || {},
       storageConfigured:
         Boolean(payload.storageConfigured)
     };
+
+    if (dispatcherPersonnelChatIdInput) {
+      dispatcherPersonnelChatIdInput.value =
+        String(dispatcherHierarchyConfigCatalog.personnel?.chatId || "");
+    }
+
+    if (dispatcherPersonnelSourceStatus) {
+      const personnel = dispatcherHierarchyConfigCatalog.personnel || {};
+      const details = personnel?.configured
+        ? `Последняя полная волна: ${personnel.sourceUpdatedAt || "—"}. Назначений: ${Number(personnel.assignmentCount || 0)}${personnel.employees !== null && personnel.employees !== undefined ? ` · сотрудников: ${Number(personnel.employees || 0)}` : ""}.`
+        : (personnel?.message || "ID чата пока не указан");
+      dispatcherPersonnelSourceStatus.textContent = details;
+      dispatcherPersonnelSourceStatus.classList.toggle(
+        "is-warning",
+        !personnel?.configured || ["error", "stale", "waiting_parts"].includes(personnel?.status)
+      );
+    }
 
     executiveTableConfigCatalog = {
       rows:
@@ -9398,6 +9453,30 @@ dispatcherWorkordersConfigGroupSelect.addEventListener(
   "change",
   renderDispatcherWorkordersConfigList
 );
+
+dispatcherPersonnelChatSaveButton?.addEventListener("click", async () => {
+  const chatId = String(dispatcherPersonnelChatIdInput?.value || "").trim();
+  dispatcherPersonnelChatSaveButton.disabled = true;
+  if (dispatcherPersonnelSourceStatus) {
+    dispatcherPersonnelSourceStatus.textContent = "Сохраняю ID чата и проверяю последнюю полную волну…";
+    dispatcherPersonnelSourceStatus.classList.remove("is-warning");
+  }
+  try {
+    await postDispatcherStructureAction({
+      action: "save_duty_personnel_config",
+      chatId
+    });
+    await loadDispatcherConfigManagement();
+  } catch (error) {
+    if (dispatcherPersonnelSourceStatus) {
+      dispatcherPersonnelSourceStatus.textContent =
+        error instanceof Error ? error.message : "Не удалось сохранить источник ФИО";
+      dispatcherPersonnelSourceStatus.classList.add("is-warning");
+    }
+  } finally {
+    dispatcherPersonnelChatSaveButton.disabled = false;
+  }
+});
 
 dispatcherHierarchyConfigGroupSelect?.addEventListener(
   "change",

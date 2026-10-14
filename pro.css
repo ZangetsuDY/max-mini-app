@@ -2555,3 +2555,505 @@ html body .modal-icon.is-denied {
     animation: none !important;
   }
 }
+
+/* =========================================================
+   DISPATCHER HIERARCHY V2 · personnel roster + vertical table
+   ========================================================= */
+#dispatcherView .dispatcher-hierarchy-panel {
+  min-width: 0;
+  overflow: hidden;
+}
+
+#dispatcherView .dispatcher-hierarchy-panel .dispatcher-panel-head {
+  margin: 0;
+}
+
+#dispatcherView .dispatcher-hierarchy-count {
+  flex: 0 0 auto;
+  padding: 6px 8px;
+  border: 1px solid rgba(227,177,67,.24);
+  border-radius: 4px;
+  color: #e6ba58;
+  background: rgba(227,177,67,.055);
+  font-family: var(--mono);
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+#dispatcherView .dispatcher-hierarchy-source-meta {
+  margin-top: 8px;
+}
+
+#dispatcherView .dispatcher-hierarchy-main-card {
+  margin-top: 10px;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
+  border: 1px solid rgba(227,177,67,.16);
+  border-left: 2px solid rgba(227,177,67,.75);
+  border-radius: 5px;
+  background: rgba(227,177,67,.025);
+}
+
+#dispatcherView .dispatcher-hierarchy-main-card > span {
+  color: #718b9e;
+  font-family: var(--mono);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+#dispatcherView .dispatcher-hierarchy-main-card strong {
+  color: #eef7fc;
+  font-size: 10px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+#dispatcherView .dispatcher-hierarchy-main-card small {
+  color: #61d6f3;
+  font-size: 9px;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+#dispatcherView .dispatcher-hierarchy-main-card small.is-missing {
+  color: #718796;
+}
+
+#dispatcherView .dispatcher-hierarchy-table-wrap {
+  min-width: 0;
+  max-height: 178px;
+  margin-top: 10px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 1px solid rgba(77,124,153,.13);
+  border-radius: 5px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(72,177,211,.34) transparent;
+}
+
+#dispatcherView .dispatcher-hierarchy-table-wrap::-webkit-scrollbar { width: 5px; }
+#dispatcherView .dispatcher-hierarchy-table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(72,177,211,.34);
+  border-radius: 999px;
+}
+
+#dispatcherView .dispatcher-hierarchy-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+  color: #dceaf2;
+  font-size: 8px;
+}
+
+#dispatcherView .dispatcher-hierarchy-table th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 7px 9px;
+  text-align: left;
+  color: #7e9caf;
+  background: #0b151f;
+  border-bottom: 1px solid rgba(227,177,67,.18);
+  font-family: var(--mono);
+  font-size: 6.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+#dispatcherView .dispatcher-hierarchy-table th:first-child { width: 56%; }
+#dispatcherView .dispatcher-hierarchy-table th:last-child { width: 44%; }
+
+#dispatcherView .dispatcher-hierarchy-table td {
+  padding: 7px 9px;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(88,126,149,.10);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+#dispatcherView .dispatcher-hierarchy-table tr:last-child td { border-bottom: 0; }
+#dispatcherView .dispatcher-hierarchy-table td:last-child { color: #72d9f3; }
+#dispatcherView .dispatcher-hierarchy-table td.is-missing { color: #667f90; }
+#dispatcherView .dispatcher-hierarchy-table td.is-empty { color: #667f90; text-align: center; }
+
+/* The values are already present in the legend and centre; external pills can escape compact panels. */
+#dispatcherView .dispatcher-donut-marker {
+  display: none !important;
+}
+
+#dispatcherView .dispatcher-workorders-donut,
+#dispatcherView .dispatcher-requests-donut {
+  overflow: hidden !important;
+}
+
+/* Admin: MAX personnel source */
+.dispatcher-personnel-source-card {
+  margin: 14px 0 12px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(260px, .75fr) auto;
+  gap: 12px;
+  align-items: end;
+  border: 1px solid rgba(62,196,229,.16);
+  border-left: 2px solid rgba(62,196,229,.62);
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(52,187,224,.035), transparent 40%), #08131d;
+}
+
+.dispatcher-personnel-source-copy {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.dispatcher-personnel-source-copy strong {
+  color: #edf7fc;
+  font-size: 12px;
+}
+
+.dispatcher-personnel-source-copy small {
+  color: #7894a7;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.dispatcher-personnel-source-copy small.is-warning { color: #d2a652; }
+.dispatcher-personnel-chat-field { margin: 0 !important; }
+
+@media (min-width: 1181px) {
+  #dispatcherView .dispatcher-outages-panel {
+    grid-row: span 3 !important;
+    min-height: 858px !important;
+  }
+
+  #dispatcherView .dispatcher-hierarchy-panel {
+    grid-column: 2 !important;
+    min-height: 285px !important;
+    height: 285px !important;
+    padding: 16px 18px !important;
+    border-radius: 8px !important;
+    background: #0b141e !important;
+  }
+
+  #dispatcherView .dispatcher-workorders-panel {
+    min-height: 245px !important;
+    height: 245px !important;
+  }
+}
+
+@media (max-width: 1180px) {
+  #dispatcherView .dispatcher-hierarchy-panel {
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 14px !important;
+  }
+
+  #dispatcherView .dispatcher-hierarchy-table-wrap {
+    max-height: 250px;
+  }
+
+  .dispatcher-personnel-source-card {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 760px) {
+  #dispatcherView .dispatcher-hierarchy-table {
+    font-size: 7.5px;
+  }
+
+  #dispatcherView .dispatcher-hierarchy-table th:first-child { width: 54%; }
+  #dispatcherView .dispatcher-hierarchy-table th:last-child { width: 46%; }
+  #dispatcherView .dispatcher-hierarchy-table th,
+  #dispatcherView .dispatcher-hierarchy-table td { padding: 7px; }
+}
+
+/* =========================================================
+   DISPATCHER DUTY PERSONNEL · VERTICAL TILE + SAFE CHART FIT
+   ========================================================= */
+#dispatcherView .dispatcher-hierarchy-panel {
+  min-width: 0;
+  width: 100%;
+  padding: 16px 18px !important;
+  display: block;
+  border-radius: 8px !important;
+  overflow: hidden;
+  background:
+    linear-gradient(145deg, rgba(227,177,67,.025), transparent 34%),
+    #0b141e !important;
+}
+
+#dispatcherView .dispatcher-hierarchy-panel .dispatcher-panel-head {
+  margin-bottom: 10px;
+}
+
+#dispatcherView .dispatcher-hierarchy-panel .dispatcher-panel-head h2 {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+#dispatcherView .dispatcher-hierarchy-source-meta {
+  min-height: 34px !important;
+  margin: 0 0 10px;
+  padding: 8px 10px !important;
+  display: flex !important;
+  justify-content: flex-start !important;
+  align-items: center !important;
+  border: 1px solid rgba(74,164,197,.12);
+  border-radius: 5px;
+  background: rgba(4,16,26,.44);
+  color: #7f9aae;
+  font-family: var(--mono);
+  font-size: 7.5px;
+  line-height: 1.35;
+}
+
+#dispatcherView .dispatcher-hierarchy-source-meta.is-warning {
+  color: #d9ad57;
+  border-color: rgba(227,177,67,.18);
+}
+
+#dispatcherView .dispatcher-hierarchy-main-card {
+  min-width: 0;
+  margin-bottom: 10px;
+  padding: 11px 12px;
+  display: grid;
+  gap: 5px;
+  border: 1px solid rgba(227,177,67,.20);
+  border-left: 2px solid rgba(227,177,67,.78);
+  border-radius: 5px;
+  background: rgba(227,177,67,.035);
+}
+
+#dispatcherView .dispatcher-hierarchy-main-card > span {
+  color: #7f94a4;
+  font-family: var(--mono);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .11em;
+}
+
+#dispatcherView .dispatcher-hierarchy-main-card strong {
+  min-width: 0;
+  color: #f0f7fb;
+  font-size: 10px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+#dispatcherView .dispatcher-hierarchy-main-card small {
+  color: #cbd9e2;
+  font-size: 9px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+#dispatcherView .dispatcher-hierarchy-main-card small.is-missing {
+  color: #748b9b;
+}
+
+#dispatcherView .dispatcher-hierarchy-table-wrap {
+  width: 100%;
+  min-width: 0;
+  max-height: 360px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 1px solid rgba(74,164,197,.12);
+  border-radius: 5px;
+  background: rgba(3,13,22,.46);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(69,180,214,.34) transparent;
+}
+
+#dispatcherView .dispatcher-hierarchy-table-wrap::-webkit-scrollbar {
+  width: 6px;
+}
+
+#dispatcherView .dispatcher-hierarchy-table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(69,180,214,.34);
+  border-radius: 999px;
+}
+
+#dispatcherView .dispatcher-hierarchy-table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
+
+#dispatcherView .dispatcher-hierarchy-table th,
+#dispatcherView .dispatcher-hierarchy-table td {
+  min-width: 0;
+  padding: 9px 10px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid rgba(92,130,154,.10);
+  overflow-wrap: anywhere;
+  word-break: normal;
+}
+
+#dispatcherView .dispatcher-hierarchy-table th:first-child,
+#dispatcherView .dispatcher-hierarchy-table td:first-child {
+  width: 54%;
+}
+
+#dispatcherView .dispatcher-hierarchy-table th:last-child,
+#dispatcherView .dispatcher-hierarchy-table td:last-child {
+  width: 46%;
+}
+
+#dispatcherView .dispatcher-hierarchy-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: #7893a6;
+  background: #09141f;
+  font-family: var(--mono);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+}
+
+#dispatcherView .dispatcher-hierarchy-table td {
+  color: #e5f0f6;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+#dispatcherView .dispatcher-hierarchy-table td:last-child {
+  color: #ffffff;
+  font-weight: 650;
+}
+
+#dispatcherView .dispatcher-hierarchy-table td.is-missing,
+#dispatcherView .dispatcher-hierarchy-table td.is-empty {
+  color: #6f8797;
+  font-weight: 500;
+}
+
+/* Duty-personnel MAX source in admin. */
+.dispatcher-personnel-source-card {
+  margin: 0 0 14px;
+  padding: 13px 14px;
+  display: grid;
+  grid-template-columns: minmax(260px,1.2fr) minmax(260px,.85fr) auto;
+  gap: 12px;
+  align-items: end;
+  border: 1px solid rgba(67,184,219,.13);
+  border-left: 2px solid rgba(67,184,219,.55);
+  border-radius: 5px;
+  background: rgba(4,15,24,.52);
+}
+
+.dispatcher-personnel-source-copy {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.dispatcher-personnel-source-copy strong {
+  color: #eef7fc;
+  font-size: 11px;
+}
+
+.dispatcher-personnel-source-copy small {
+  color: #7991a2;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.dispatcher-personnel-source-copy small.is-warning {
+  color: #d8ab56;
+}
+
+.dispatcher-personnel-chat-field {
+  margin: 0 !important;
+}
+
+/* The right dispatcher tiles must grow with their content instead of clipping it. */
+@media (min-width: 1181px) {
+  #dispatcherView .dispatcher-grid > .dispatcher-panel:first-child {
+    height: auto !important;
+    min-height: 340px !important;
+    overflow: hidden !important;
+  }
+
+  #dispatcherView .dispatcher-workorders-panel {
+    height: auto !important;
+    min-height: 350px !important;
+    overflow: hidden !important;
+  }
+
+  #dispatcherView .dispatcher-hierarchy-panel {
+    grid-column: 2 !important;
+    min-height: 310px !important;
+    height: auto !important;
+  }
+}
+
+/* Keep donut value markers inside the instrument panel. */
+#dispatcherView .dispatcher-workorders-donut,
+#dispatcherView .dispatcher-requests-donut {
+  overflow: visible !important;
+  isolation: isolate;
+}
+
+#dispatcherView .dispatcher-donut-marker {
+  min-width: 24px;
+  min-height: 21px;
+  padding: 0 6px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+#dispatcherView .dispatcher-workorders-legend-item {
+  min-width: 0;
+  overflow: hidden;
+}
+
+#dispatcherView .dispatcher-workorders-legend-item span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+#dispatcherView .dispatcher-workorders-legend-item strong {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 1180px) {
+  #dispatcherView .dispatcher-hierarchy-panel {
+    grid-column: auto !important;
+  }
+
+  .dispatcher-personnel-source-card {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 760px) {
+  #dispatcherView .dispatcher-hierarchy-table-wrap {
+    max-height: 320px;
+  }
+
+  #dispatcherView .dispatcher-hierarchy-table th,
+  #dispatcherView .dispatcher-hierarchy-table td {
+    padding: 8px;
+  }
+
+  #dispatcherView .dispatcher-hierarchy-table th:first-child,
+  #dispatcherView .dispatcher-hierarchy-table td:first-child {
+    width: 50%;
+  }
+
+  #dispatcherView .dispatcher-hierarchy-table th:last-child,
+  #dispatcherView .dispatcher-hierarchy-table td:last-child {
+    width: 50%;
+  }
+}
