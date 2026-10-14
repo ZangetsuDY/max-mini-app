@@ -3103,3 +3103,9 @@ html body .modal-icon.is-denied {
     padding-right: 5px;
   }
 }
+
+
+/* Temporary executive monitoring cleanup — keep panels in DOM/code, hide in all layouts. */
+#executiveView .is-temporarily-hidden {
+  display: none !important;
+}
