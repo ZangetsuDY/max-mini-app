@@ -50,6 +50,13 @@ import {
 } from "../../lib/executive-map-config.js";
 
 import {
+  getDispatcherRoleHierarchyConfig,
+  getDispatcherRoleHierarchyCatalog,
+  setDispatcherUnitRoleHierarchy,
+  resetDispatcherUnitRoleHierarchy
+} from "../../lib/dispatcher-role-hierarchy-config.js";
+
+import {
   getLatestDispatcherSnapshot
 } from "../../lib/dispatcher-data.js";
 
@@ -127,7 +134,8 @@ export default {
           plannedOutageState,
           outageDivisions,
           executiveTableRows,
-          executiveMapZones
+          executiveMapZones,
+          dispatcherHierarchyUnits
         ] =
           await Promise.all([
             getDispatcherSourceConfig(),
@@ -139,7 +147,8 @@ export default {
             getLatestPlannedOutageSnapshot(),
             getOutageDivisions(),
             getExecutiveTableRows(),
-            getExecutiveMapZones()
+            getExecutiveMapZones(),
+            getDispatcherRoleHierarchyConfig()
           ]);
 
         return json({
@@ -152,6 +161,10 @@ export default {
           },
           executiveMap: {
             zones: executiveMapZones
+          },
+          dispatcherHierarchy: {
+            units: dispatcherHierarchyUnits,
+            roleCatalog: getDispatcherRoleHierarchyCatalog()
           },
           units,
           availableSourceLabels:
@@ -269,6 +282,27 @@ export default {
         .toLowerCase();
 
     try {
+      if (action === "save_role_hierarchy") {
+        const hierarchy = await setDispatcherUnitRoleHierarchy({
+          unitId: body?.unitId,
+          mainRole: body?.mainRole,
+          subordinateRoles: Array.isArray(body?.subordinateRoles)
+            ? body.subordinateRoles
+            : [],
+          actor: auth.access
+        });
+
+        return json({ ok: true, hierarchy });
+      }
+
+      if (action === "reset_role_hierarchy") {
+        const hierarchy = await resetDispatcherUnitRoleHierarchy({
+          unitId: body?.unitId
+        });
+
+        return json({ ok: true, hierarchy });
+      }
+
       if (action === "update_executive_map_zone") {
         const zone = await updateExecutiveMapZone({
           zoneId: body?.zoneId,

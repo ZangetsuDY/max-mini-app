@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261012-1703" />
-  <link rel="stylesheet" href="pro.css?v=20261012-1703" />
+  <link rel="stylesheet" href="style.css?v=20261014-1545" />
+  <link rel="stylesheet" href="pro.css?v=20261014-1545" />
 </head>
 
 <body class="auth-pending">
@@ -904,6 +904,36 @@
 
         <div id="dispatcherDataNotice" class="dispatcher-data-notice" hidden></div>
 
+        <article id="dispatcherHierarchyPanel" class="dispatcher-hierarchy-panel glass-panel">
+          <div class="dispatcher-hierarchy-head">
+            <div>
+              <span class="micro-label">ОПЕРАТИВНОЕ ПОДЧИНЕНИЕ</span>
+              <h3 id="dispatcherHierarchyScope">—</h3>
+            </div>
+            <span id="dispatcherHierarchyCount" class="dispatcher-hierarchy-count">0 ПОДЧ.</span>
+          </div>
+
+          <div class="dispatcher-hierarchy-flow">
+            <div class="dispatcher-hierarchy-main">
+              <span>ГЛАВНАЯ РОЛЬ</span>
+              <div id="dispatcherHierarchyMainRole" class="dispatcher-hierarchy-role is-main">
+                Иерархия не настроена — <em>(ФИО не указано)</em>
+              </div>
+            </div>
+
+            <div class="dispatcher-hierarchy-link" aria-hidden="true">
+              <i></i><i></i><i></i>
+            </div>
+
+            <div class="dispatcher-hierarchy-subordinates">
+              <span>ПОДЧИНЁННЫЕ РОЛИ</span>
+              <div id="dispatcherHierarchySubordinateList" class="dispatcher-hierarchy-subordinate-list">
+                <div class="dispatcher-hierarchy-empty">Подчинённые роли не настроены</div>
+              </div>
+            </div>
+          </div>
+        </article>
+
         <article class="dispatcher-panel glass-panel dispatcher-outages-panel">
           <div class="dispatcher-panel-head">
             <div>
@@ -1551,6 +1581,32 @@
       </article>
 
       <article
+        id="dispatcherHierarchyManagementPanel"
+        class="admin-panel dispatcher-source-management dispatcher-hierarchy-management"
+        hidden
+      >
+        <div class="admin-panel-heading access-heading">
+          <div>
+            <span class="micro-label">ДИСПЕТЧЕР · ОПЕРАТИВНОЕ ПОДЧИНЕНИЕ</span>
+            <h2>Иерархия диспетчерских ролей</h2>
+            <p class="access-heading-copy">
+              Для каждого РЭС / района укажите главную роль и подчинённые роли.
+              В интерфейсе диспетчера они показываются вместе с заглушкой «ФИО не указано».
+              Позже к этой же структуре можно будет автоматически привязать сотрудников.
+            </p>
+          </div>
+
+          <label class="dispatcher-config-filter dispatcher-hierarchy-filter">
+            <span>Подразделение</span>
+            <select id="dispatcherHierarchyConfigGroupSelect" class="dispatcher-select"></select>
+          </label>
+        </div>
+
+        <div id="dispatcherHierarchyConfigStatus" class="dispatcher-config-status"></div>
+        <div id="dispatcherHierarchyConfigList" class="dispatcher-config-list dispatcher-hierarchy-config-list"></div>
+      </article>
+
+      <article
         id="executiveTableManagementPanel"
         class="admin-panel dispatcher-source-management executive-table-management"
         hidden
@@ -1767,6 +1823,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261012-1703"></script>
+  <script src="app.js?v=20261014-1545"></script>
 </body>
 </html>

@@ -254,6 +254,11 @@ const dispatcherEmergencyOutagesTableBody = document.getElementById("dispatcherE
 const dispatcherPlannedOutagesTableBody = document.getElementById("dispatcherPlannedOutagesTableBody");
 const dispatcherEmergencyOutagesDetails = document.getElementById("dispatcherEmergencyOutagesDetails");
 const dispatcherPlannedOutagesDetails = document.getElementById("dispatcherPlannedOutagesDetails");
+const dispatcherHierarchyPanel = document.getElementById("dispatcherHierarchyPanel");
+const dispatcherHierarchyScope = document.getElementById("dispatcherHierarchyScope");
+const dispatcherHierarchyCount = document.getElementById("dispatcherHierarchyCount");
+const dispatcherHierarchyMainRole = document.getElementById("dispatcherHierarchyMainRole");
+const dispatcherHierarchySubordinateList = document.getElementById("dispatcherHierarchySubordinateList");
 
 const outageManagementPanel = document.getElementById("outageManagementPanel");
 const outageCreateDivisionButton = document.getElementById("outageCreateDivisionButton");
@@ -268,6 +273,10 @@ const dispatcherEditGroupButton = document.getElementById("dispatcherEditGroupBu
 const dispatcherDeleteGroupButton = document.getElementById("dispatcherDeleteGroupButton");
 const dispatcherConfigStatus = document.getElementById("dispatcherConfigStatus");
 const dispatcherConfigList = document.getElementById("dispatcherConfigList");
+const dispatcherHierarchyManagementPanel = document.getElementById("dispatcherHierarchyManagementPanel");
+const dispatcherHierarchyConfigGroupSelect = document.getElementById("dispatcherHierarchyConfigGroupSelect");
+const dispatcherHierarchyConfigStatus = document.getElementById("dispatcherHierarchyConfigStatus");
+const dispatcherHierarchyConfigList = document.getElementById("dispatcherHierarchyConfigList");
 
 const executiveTableManagementPanel = document.getElementById("executiveTableManagementPanel");
 const executiveTableCreateButton = document.getElementById("executiveTableCreateButton");
@@ -347,6 +356,13 @@ let dispatcherConfigCatalog = {
   outageDivisions: [],
   outageSourceData: { emergency: {}, planned: {} },
   sourceData: {},
+  storageConfigured: false
+};
+
+let dispatcherHierarchyConfigCatalog = {
+  groups: [],
+  units: [],
+  roleCatalog: [],
   storageConfigured: false
 };
 
@@ -3574,6 +3590,50 @@ function renderDispatcherOutages(payload) {
   );
 }
 
+function renderDispatcherRoleHierarchy(payload) {
+  if (!dispatcherHierarchyPanel) return;
+
+  const hierarchy = payload?.hierarchy || {};
+  const mainRole = String(hierarchy?.mainRole || "").trim();
+  const subordinateRoles = Array.isArray(hierarchy?.subordinateRoles)
+    ? hierarchy.subordinateRoles
+        .map((role) => String(role || "").trim())
+        .filter(Boolean)
+    : [];
+
+  const groupName = String(payload?.group?.name || "").trim();
+  const unitName = String(payload?.unit?.name || "").trim();
+
+  dispatcherHierarchyScope.textContent =
+    [groupName, unitName].filter(Boolean).join(" · ") || "Выбранный РЭС / район";
+
+  dispatcherHierarchyCount.textContent =
+    `${subordinateRoles.length} ${pluralizeRu(subordinateRoles.length, "ПОДЧ.", "ПОДЧ.", "ПОДЧ.")}`;
+
+  dispatcherHierarchyMainRole.innerHTML = mainRole
+    ? `${escapeHtml(mainRole)} <span>— (ФИО не указано)</span>`
+    : `Главная роль не настроена <span>— (ФИО не указано)</span>`;
+
+  dispatcherHierarchyMainRole.classList.toggle(
+    "is-empty",
+    !mainRole
+  );
+
+  dispatcherHierarchySubordinateList.innerHTML = subordinateRoles.length
+    ? subordinateRoles
+        .map((role) => `
+          <div class="dispatcher-hierarchy-role">
+            ${escapeHtml(role)} <span>— (ФИО не указано)</span>
+          </div>
+        `)
+        .join("")
+    : `
+      <div class="dispatcher-hierarchy-empty">
+        Подчинённые роли не настроены
+      </div>
+    `;
+}
+
 function renderDispatcherDashboard(payload) {
   const groups =
     Array.isArray(
@@ -3649,6 +3709,8 @@ function renderDispatcherDashboard(payload) {
     payload?.unit
       ? `${payload.unit.name} · ${payload?.group?.name || ""}`
       : "Оперативный счётчик";
+
+  renderDispatcherRoleHierarchy(payload);
 
   setDispatcherRequestCounts(
     payload?.requests
@@ -4662,6 +4724,11 @@ function renderAdminDashboard(
     !Boolean(
       payload.canManageRoles
     );
+
+  if (dispatcherHierarchyManagementPanel) {
+    dispatcherHierarchyManagementPanel.hidden =
+      !Boolean(payload.canManageRoles);
+  }
 
   executiveTableManagementPanel.hidden =
     !Boolean(
@@ -6697,6 +6764,23 @@ async function loadDispatcherConfigManagement() {
         Boolean(payload.storageConfigured)
     };
 
+    dispatcherHierarchyConfigCatalog = {
+      groups:
+        Array.isArray(payload.groups)
+          ? payload.groups
+          : [],
+      units:
+        Array.isArray(payload?.dispatcherHierarchy?.units)
+          ? payload.dispatcherHierarchy.units
+          : [],
+      roleCatalog:
+        Array.isArray(payload?.dispatcherHierarchy?.roleCatalog)
+          ? payload.dispatcherHierarchy.roleCatalog
+          : [],
+      storageConfigured:
+        Boolean(payload.storageConfigured)
+    };
+
     executiveTableConfigCatalog = {
       rows:
         Array.isArray(payload?.executiveTable?.rows)
@@ -6783,6 +6867,21 @@ async function loadDispatcherConfigManagement() {
       !dispatcherConfigCatalog.storageConfigured
     );
 
+    if (dispatcherHierarchyConfigStatus) {
+      const configuredHierarchyCount =
+        dispatcherHierarchyConfigCatalog.units.filter(
+          (unit) => unit?.mainRole
+        ).length;
+      dispatcherHierarchyConfigStatus.textContent =
+        dispatcherHierarchyConfigCatalog.storageConfigured
+          ? `Иерархия подготовлена для ${configuredHierarchyCount} ${pluralizeRu(configuredHierarchyCount, "РЭС / района", "РЭС / районов", "РЭС / районов")}. Базовые связи заполнены по предоставленной таблице ролей; каждую запись можно изменить вручную.`
+          : "Redis не подключён: используются базовые связи из справочника, пользовательские изменения сохранить нельзя.";
+      dispatcherHierarchyConfigStatus.classList.toggle(
+        "is-warning",
+        !dispatcherHierarchyConfigCatalog.storageConfigured
+      );
+    }
+
     executiveTableConfigStatus.textContent =
       executiveTableConfigCatalog.storageConfigured
         ? executiveTableConfigCatalog.rows.length
@@ -6827,6 +6926,7 @@ async function loadDispatcherConfigManagement() {
     );
 
     renderDispatcherConfigGroups();
+    renderDispatcherHierarchyConfigGroups();
     renderExecutiveTableConfigList();
     renderExecutiveMapConfigList();
     renderDispatcherWorkordersConfigGroups();
@@ -6841,6 +6941,17 @@ async function loadDispatcherConfigManagement() {
     );
 
     dispatcherConfigList.innerHTML = "";
+
+    if (dispatcherHierarchyConfigStatus) {
+      dispatcherHierarchyConfigStatus.textContent =
+        error instanceof Error
+          ? error.message
+          : "Ошибка загрузки иерархии ролей";
+      dispatcherHierarchyConfigStatus.classList.add("is-warning");
+    }
+    if (dispatcherHierarchyConfigList) {
+      dispatcherHierarchyConfigList.innerHTML = "";
+    }
 
     executiveTableConfigStatus.textContent =
       error instanceof Error
@@ -6865,6 +6976,244 @@ async function loadDispatcherConfigManagement() {
     );
     dispatcherWorkordersConfigList.innerHTML = "";
   }
+}
+
+function renderDispatcherHierarchyConfigList() {
+  if (!dispatcherHierarchyConfigList || !dispatcherHierarchyConfigGroupSelect) {
+    return;
+  }
+
+  const selectedGroupId =
+    dispatcherHierarchyConfigGroupSelect.value ||
+    dispatcherHierarchyConfigCatalog.groups[0]?.id ||
+    "";
+
+  const units = dispatcherHierarchyConfigCatalog.units.filter(
+    (unit) => unit.groupId === selectedGroupId
+  );
+
+  if (!units.length) {
+    dispatcherHierarchyConfigList.innerHTML = `
+      <div class="access-empty dispatcher-structure-empty">
+        <strong>Для подразделения пока нет РЭС / районов</strong>
+        <span>Добавьте РЭС / район в основной настройке диспетчерской структуры.</span>
+      </div>
+    `;
+    return;
+  }
+
+  dispatcherHierarchyConfigList.innerHTML = units
+    .map((unit) => {
+      const subordinateRoles = Array.isArray(unit.subordinateRoles)
+        ? unit.subordinateRoles
+        : [];
+      const preview = subordinateRoles.slice(0, 3);
+      const left = Math.max(0, subordinateRoles.length - preview.length);
+
+      return `
+        <article class="dispatcher-config-card dispatcher-hierarchy-config-card">
+          <div class="dispatcher-config-card-head">
+            <div>
+              <span class="micro-label">${escapeHtml(dispatcherConfigGroupName(unit.groupId))}</span>
+              <h3>${escapeHtml(unit.unitName || "РЭС / район")}</h3>
+            </div>
+            <span class="dispatcher-config-state ${unit.customized ? "is-custom" : ""}">
+              ${unit.customized ? "ИЗМЕНЕНО" : unit.mainRole ? "ИЗ СПРАВОЧНИКА" : "НЕ НАСТРОЕНО"}
+            </span>
+          </div>
+
+          <div class="dispatcher-hierarchy-admin-main">
+            <span>Главная роль</span>
+            <strong>${escapeHtml(unit.mainRole || "Не настроена")}</strong>
+          </div>
+
+          <div class="dispatcher-config-section-label">Подчинённые роли · ${subordinateRoles.length}</div>
+          <div class="dispatcher-config-sources dispatcher-hierarchy-admin-sources">
+            ${preview.length
+              ? preview.map((role) => `<span>${escapeHtml(role)}</span>`).join("")
+              : `<span class="is-empty">Подчинённые роли не настроены</span>`}
+            ${left ? `<span class="dispatcher-hierarchy-more">+ ещё ${left}</span>` : ""}
+          </div>
+
+          <div class="dispatcher-config-card-actions">
+            <button
+              class="role-action"
+              type="button"
+              data-dispatcher-hierarchy-unit="${escapeHtml(unit.unitId)}"
+            >
+              Настроить подчинение
+            </button>
+            <button
+              class="role-action"
+              type="button"
+              data-reset-dispatcher-hierarchy="${escapeHtml(unit.unitId)}"
+              ${unit.customized && dispatcherHierarchyConfigCatalog.storageConfigured ? "" : "disabled"}
+            >
+              Сбросить к справочнику
+            </button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  dispatcherHierarchyConfigList
+    .querySelectorAll("[data-dispatcher-hierarchy-unit]")
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        openDispatcherHierarchyEditor(button.dataset.dispatcherHierarchyUnit);
+      });
+    });
+
+  dispatcherHierarchyConfigList
+    .querySelectorAll("[data-reset-dispatcher-hierarchy]")
+    .forEach((button) => {
+      button.addEventListener("click", async () => {
+        const unitId = String(button.dataset.resetDispatcherHierarchy || "").trim();
+        if (!unitId) return;
+
+        try {
+          await postDispatcherStructureAction({
+            action: "reset_role_hierarchy",
+            unitId
+          });
+          await loadDispatcherConfigManagement();
+        } catch (error) {
+          openModal({
+            type: "denied",
+            eyebrow: "ИЕРАРХИЯ РОЛЕЙ",
+            title: "Не удалось сбросить настройку",
+            message: error instanceof Error ? error.message : "Попробуйте ещё раз."
+          });
+        }
+      });
+    });
+}
+
+function renderDispatcherHierarchyConfigGroups() {
+  if (!dispatcherHierarchyConfigGroupSelect) return;
+
+  const groups = dispatcherHierarchyConfigCatalog.groups || [];
+  const oldValue = dispatcherHierarchyConfigGroupSelect.value;
+
+  dispatcherHierarchyConfigGroupSelect.innerHTML = groups.length
+    ? groups
+        .map(
+          (group) => `
+            <option value="${escapeHtml(group.id)}">
+              ${escapeHtml(group.name)}${group.description ? ` — ${escapeHtml(group.description)}` : ""}
+            </option>
+          `
+        )
+        .join("")
+    : `<option value="">Нет подразделений</option>`;
+
+  if (groups.some((group) => group.id === oldValue)) {
+    dispatcherHierarchyConfigGroupSelect.value = oldValue;
+  }
+
+  renderDispatcherHierarchyConfigList();
+}
+
+function dispatcherHierarchyCatalogEntry(mainRole) {
+  const clean = String(mainRole || "").trim();
+  return (
+    dispatcherHierarchyConfigCatalog.roleCatalog.find(
+      (item) => String(item?.mainRole || "").trim() === clean
+    ) || null
+  );
+}
+
+function openDispatcherHierarchyEditor(unitId) {
+  const unit = dispatcherHierarchyConfigCatalog.units.find(
+    (item) => item.unitId === unitId
+  );
+
+  if (!unit) return;
+
+  const roleCatalog = Array.isArray(dispatcherHierarchyConfigCatalog.roleCatalog)
+    ? dispatcherHierarchyConfigCatalog.roleCatalog
+    : [];
+
+  const datalistOptions = roleCatalog
+    .map((item) => `<option value="${escapeHtml(item.mainRole)}"></option>`)
+    .join("");
+
+  openManagementModal({
+    eyebrow: "ДИСПЕТЧЕР · ИЕРАРХИЯ РОЛЕЙ",
+    title: `${dispatcherConfigGroupName(unit.groupId)} · ${unit.unitName}`,
+    context: {
+      type: "dispatcher-role-hierarchy",
+      unitId: unit.unitId
+    },
+    bodyHtml: `
+      <div class="management-note">
+        Укажите главную роль выбранного РЭС / района и роли, которые находятся у неё в подчинении.
+        Пока сотрудники не подключены, в панели диспетчера рядом с каждой ролью показывается «(ФИО не указано)».
+      </div>
+
+      <label class="management-field">
+        <span>Главная роль</span>
+        <input
+          id="dispatcherHierarchyMainRoleInput"
+          list="dispatcherHierarchyMainRoleOptions"
+          maxlength="180"
+          value="${escapeHtml(unit.mainRole || "")}"
+          placeholder="Например: Диспетчер ОДГ Выборгского РЭС ВЭС"
+        />
+        <datalist id="dispatcherHierarchyMainRoleOptions">${datalistOptions}</datalist>
+      </label>
+
+      <div class="dispatcher-hierarchy-editor-tools">
+        <button id="dispatcherHierarchyApplyCatalogButton" class="role-action" type="button">
+          Подставить подчинённых из справочника
+        </button>
+        <button id="dispatcherHierarchyRestoreDefaultButton" class="role-action" type="button">
+          Базовая настройка РЭС
+        </button>
+      </div>
+
+      <label class="management-field dispatcher-source-editor-field">
+        <span>Подчинённые роли · по одной на строку</span>
+        <textarea
+          id="dispatcherHierarchySubordinatesTextarea"
+          rows="12"
+          placeholder="ОВБ ВЭС Выборгский РЭС"
+        >${escapeHtml((unit.subordinateRoles || []).join("\n"))}</textarea>
+      </label>
+
+      <div class="dispatcher-source-defaults">
+        <span>Базовая главная роль:</span>
+        <strong>${escapeHtml(unit.defaultMainRole || "не задана")}</strong>
+      </div>
+    `
+  });
+
+  const mainInput = document.getElementById("dispatcherHierarchyMainRoleInput");
+  const subordinateTextarea = document.getElementById("dispatcherHierarchySubordinatesTextarea");
+
+  document.getElementById("dispatcherHierarchyApplyCatalogButton")?.addEventListener(
+    "click",
+    () => {
+      const entry = dispatcherHierarchyCatalogEntry(mainInput?.value);
+      if (!entry || !subordinateTextarea) return;
+      subordinateTextarea.value = (entry.subordinateRoles || []).join("\n");
+      subordinateTextarea.focus();
+    }
+  );
+
+  document.getElementById("dispatcherHierarchyRestoreDefaultButton")?.addEventListener(
+    "click",
+    () => {
+      if (mainInput) mainInput.value = unit.defaultMainRole || "";
+      if (subordinateTextarea) {
+        subordinateTextarea.value = (unit.defaultSubordinateRoles || []).join("\n");
+        subordinateTextarea.focus();
+      }
+    }
+  );
+
+  mainInput?.focus();
 }
 
 async function postDispatcherStructureAction(
@@ -8616,6 +8965,33 @@ async function saveManagementEditor() {
 
     if (
       managementContext.type ===
+      "dispatcher-role-hierarchy"
+    ) {
+      const mainRole =
+        document.getElementById(
+          "dispatcherHierarchyMainRoleInput"
+        )?.value.trim() || "";
+
+      const subordinateRoles =
+        String(
+          document.getElementById(
+            "dispatcherHierarchySubordinatesTextarea"
+          )?.value || ""
+        )
+          .split("\n")
+          .map((value) => value.trim())
+          .filter(Boolean);
+
+      await postDispatcherStructureAction({
+        action: "save_role_hierarchy",
+        unitId: managementContext.unitId,
+        mainRole,
+        subordinateRoles
+      });
+    }
+
+    if (
+      managementContext.type ===
       "dispatcher-workorders-source"
     ) {
       const textarea =
@@ -9021,6 +9397,11 @@ dispatcherConfigGroupSelect.addEventListener(
 dispatcherWorkordersConfigGroupSelect.addEventListener(
   "change",
   renderDispatcherWorkordersConfigList
+);
+
+dispatcherHierarchyConfigGroupSelect?.addEventListener(
+  "change",
+  renderDispatcherHierarchyConfigList
 );
 
 dispatcherCreateGroupButton.addEventListener(

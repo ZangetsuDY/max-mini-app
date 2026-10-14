@@ -2264,3 +2264,294 @@ html body .module-card.is-access-locked .module-footer {
 html body .modal-icon.is-denied {
   box-shadow: 0 0 0 1px rgba(240,84,95,.04), 0 0 28px rgba(240,84,95,.06);
 }
+
+/* =========================================================
+   DISPATCHER ROLE HIERARCHY · 2026-10-14
+   Compact operational chain for selected RES / district.
+   ========================================================= */
+#dispatcherView .dispatcher-hierarchy-panel {
+  grid-column: 1 / -1;
+  min-width: 0;
+  min-height: 112px;
+  padding: 14px 18px !important;
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 18px;
+  align-items: stretch;
+  border-radius: 8px !important;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(228, 174, 63, .035), transparent 28%),
+    #0b141e !important;
+}
+
+#dispatcherView .dispatcher-hierarchy-head {
+  min-width: 0;
+  padding-right: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-right: 1px solid rgba(115, 150, 173, .14);
+}
+
+#dispatcherView .dispatcher-hierarchy-head h3 {
+  margin: 7px 0 0;
+  color: #eef7fc;
+  font-size: 15px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+#dispatcherView .dispatcher-hierarchy-count {
+  flex: 0 0 auto;
+  padding: 6px 8px;
+  border: 1px solid rgba(227, 177, 67, .24);
+  border-radius: 4px;
+  color: #e6ba58;
+  background: rgba(227, 177, 67, .055);
+  font-family: var(--mono);
+  font-size: 7.5px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+#dispatcherView .dispatcher-hierarchy-flow {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(270px, .9fr) 42px minmax(0, 1.5fr);
+  align-items: center;
+  gap: 12px;
+}
+
+#dispatcherView .dispatcher-hierarchy-main,
+#dispatcherView .dispatcher-hierarchy-subordinates {
+  min-width: 0;
+}
+
+#dispatcherView .dispatcher-hierarchy-main > span,
+#dispatcherView .dispatcher-hierarchy-subordinates > span {
+  display: block;
+  margin-bottom: 7px;
+  color: #718b9e;
+  font-family: var(--mono);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+#dispatcherView .dispatcher-hierarchy-role {
+  min-width: max-content;
+  max-width: 100%;
+  padding: 9px 11px;
+  border: 1px solid rgba(68, 188, 226, .15);
+  border-radius: 5px;
+  background: rgba(5, 18, 29, .72);
+  color: #e8f4fb;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1.25;
+  box-shadow: inset 2px 0 0 rgba(64, 203, 239, .48);
+}
+
+#dispatcherView .dispatcher-hierarchy-role.is-main {
+  min-width: 0;
+  width: 100%;
+  border-color: rgba(227, 177, 67, .20);
+  box-shadow: inset 2px 0 0 rgba(227, 177, 67, .72);
+}
+
+#dispatcherView .dispatcher-hierarchy-role span {
+  color: #7792a5;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+#dispatcherView .dispatcher-hierarchy-role.is-empty {
+  color: #7890a0;
+  box-shadow: inset 2px 0 0 rgba(120, 144, 160, .28);
+}
+
+#dispatcherView .dispatcher-hierarchy-link {
+  height: 36px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#dispatcherView .dispatcher-hierarchy-link::before {
+  content: "";
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(227,177,67,.38), rgba(67,200,239,.50));
+}
+
+#dispatcherView .dispatcher-hierarchy-link i {
+  position: relative;
+  z-index: 1;
+  width: 4px;
+  height: 4px;
+  margin: 0 3px;
+  border-radius: 50%;
+  background: #46c8ef;
+  box-shadow: 0 0 8px rgba(70, 200, 239, .45);
+  animation: dispatcherHierarchyPulse 2.6s ease-in-out infinite;
+}
+
+#dispatcherView .dispatcher-hierarchy-link i:nth-child(2) { animation-delay: .35s; }
+#dispatcherView .dispatcher-hierarchy-link i:nth-child(3) { animation-delay: .70s; }
+
+@keyframes dispatcherHierarchyPulse {
+  0%, 100% { opacity: .25; transform: scale(.8); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+#dispatcherView .dispatcher-hierarchy-subordinate-list {
+  min-width: 0;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 0 5px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(72, 177, 211, .34) transparent;
+}
+
+#dispatcherView .dispatcher-hierarchy-subordinate-list::-webkit-scrollbar {
+  height: 4px;
+}
+
+#dispatcherView .dispatcher-hierarchy-subordinate-list::-webkit-scrollbar-thumb {
+  background: rgba(72, 177, 211, .34);
+  border-radius: 999px;
+}
+
+#dispatcherView .dispatcher-hierarchy-empty {
+  padding: 9px 11px;
+  color: #6e8696;
+  font-size: 9px;
+  border: 1px dashed rgba(112, 143, 163, .16);
+  border-radius: 5px;
+}
+
+/* Admin hierarchy builder */
+.dispatcher-hierarchy-management .access-heading {
+  align-items: end;
+}
+
+.dispatcher-hierarchy-filter {
+  min-width: min(360px, 36vw);
+}
+
+.dispatcher-hierarchy-config-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dispatcher-hierarchy-config-card {
+  min-width: 0;
+}
+
+.dispatcher-hierarchy-admin-main {
+  margin-top: 10px;
+  padding: 11px 12px;
+  display: grid;
+  gap: 5px;
+  border: 1px solid rgba(227, 177, 67, .14);
+  border-radius: 5px;
+  background: rgba(227, 177, 67, .025);
+}
+
+.dispatcher-hierarchy-admin-main > span {
+  color: #758ea0;
+  font-family: var(--mono);
+  font-size: 7px;
+  letter-spacing: .10em;
+  text-transform: uppercase;
+}
+
+.dispatcher-hierarchy-admin-main strong {
+  color: #eef7fc;
+  font-size: 10px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.dispatcher-hierarchy-admin-sources {
+  max-height: 94px;
+  overflow: hidden;
+}
+
+.dispatcher-hierarchy-more {
+  color: #e1b34e !important;
+  border-color: rgba(225, 179, 78, .20) !important;
+}
+
+.dispatcher-hierarchy-editor-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+
+@media (max-width: 1180px) {
+  #dispatcherView .dispatcher-hierarchy-panel {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  #dispatcherView .dispatcher-hierarchy-head {
+    padding-right: 0;
+    padding-bottom: 10px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(115, 150, 173, .14);
+  }
+
+  #dispatcherView .dispatcher-hierarchy-flow {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  #dispatcherView .dispatcher-hierarchy-link {
+    display: none;
+  }
+
+  .dispatcher-hierarchy-config-list {
+    grid-template-columns: 1fr;
+  }
+
+  .dispatcher-hierarchy-filter {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 760px) {
+  #dispatcherView .dispatcher-hierarchy-panel {
+    min-height: 0;
+    padding: 11px !important;
+  }
+
+  #dispatcherView .dispatcher-hierarchy-head h3 {
+    font-size: 13px;
+  }
+
+  #dispatcherView .dispatcher-hierarchy-role,
+  #dispatcherView .dispatcher-hierarchy-empty {
+    padding: 8px 9px;
+    font-size: 8px;
+  }
+
+  #dispatcherView .dispatcher-hierarchy-role span {
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #dispatcherView .dispatcher-hierarchy-link i {
+    animation: none !important;
+  }
+}

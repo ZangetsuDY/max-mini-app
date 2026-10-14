@@ -16,6 +16,10 @@ import {
 } from "../lib/dispatcher-config.js";
 
 import {
+  getDispatcherUnitRoleHierarchy
+} from "../lib/dispatcher-role-hierarchy-config.js";
+
+import {
   getWorkordersUnitConfig
 } from "../lib/dispatcher-workorders-config.js";
 
@@ -296,6 +300,7 @@ export default {
     const [
       unitConfig,
       workordersUnitConfig,
+      roleHierarchy,
       snapshotState,
       workordersSnapshotState,
       emergencyOutageState,
@@ -306,6 +311,9 @@ export default {
         selectedUnit.id
       ),
       getWorkordersUnitConfig(
+        selectedUnit.id
+      ),
+      getDispatcherUnitRoleHierarchy(
         selectedUnit.id
       ),
       getLatestDispatcherSnapshot(),
@@ -464,6 +472,13 @@ export default {
       unit: selectedUnit,
       availableGroups,
       availableUnits,
+      hierarchy: {
+        mainRole: roleHierarchy?.mainRole || "",
+        subordinateRoles: Array.isArray(roleHierarchy?.subordinateRoles)
+          ? roleHierarchy.subordinateRoles
+          : [],
+        customized: Boolean(roleHierarchy?.customized)
+      },
       sources: {
         configured:
           unitConfig?.sources || [],
