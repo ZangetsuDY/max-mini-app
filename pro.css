@@ -3109,3 +3109,32 @@ html body .modal-icon.is-denied {
 #executiveView .is-temporarily-hidden {
   display: none !important;
 }
+
+
+/* Temporary executive monitoring focus: only Requests + NDR analytics on desktop.
+   Operational background remains in DOM and can be restored by removing is-temporarily-hidden. */
+@media (min-width: 1181px) {
+  #executiveView .executive-grid {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  #executiveView .executive-chart-panel {
+    grid-column: span 6 !important;
+    min-height: 300px !important;
+    height: 300px !important;
+    align-self: stretch;
+  }
+
+  #executiveView .executive-chart-panel .executive-chart-layout {
+    min-height: 205px;
+    grid-template-columns: minmax(170px, 220px) minmax(0, 1fr);
+    align-items: center;
+  }
+
+  #executiveView .executive-table-panel,
+  #executiveView .executive-map-panel {
+    grid-column: 1 / -1 !important;
+  }
+}
