@@ -3649,24 +3649,38 @@ function renderDispatcherRoleHierarchy(payload) {
     }
   }
 
-  dispatcherHierarchySubordinateList.innerHTML = subordinateRoles.length
-    ? subordinateRoles
-        .map((role) => {
-          const entry = subordinatePersonnel.find(
-            (item) => String(item?.role || "").trim() === role
-          );
-          const names = Array.isArray(entry?.personNames)
-            ? entry.personNames.filter(Boolean)
-            : [];
-          return `
+  const subordinateRows = subordinateRoles.map((role, index) => {
+    const entry = subordinatePersonnel.find(
+      (item) => String(item?.role || "").trim() === role
+    );
+    const names = Array.isArray(entry?.personNames)
+      ? entry.personNames.filter(Boolean)
+      : [];
+    return {
+      role,
+      names,
+      index,
+      hasPersonnel: names.length > 0,
+    };
+  });
+
+  subordinateRows.sort((left, right) => {
+    if (left.hasPersonnel !== right.hasPersonnel) {
+      return left.hasPersonnel ? -1 : 1;
+    }
+    return left.index - right.index;
+  });
+
+  dispatcherHierarchySubordinateList.innerHTML = subordinateRows.length
+    ? subordinateRows
+        .map(({ role, names }) => `
             <tr>
               <td>${escapeHtml(role)}</td>
               <td class="${names.length ? "" : "is-missing"}">
                 ${escapeHtml(names.length ? names.join(" · ") : "(ФИО не указано)")}
               </td>
             </tr>
-          `;
-        })
+          `)
         .join("")
     : `<tr><td colspan="2" class="is-empty">Подчинённые роли не настроены</td></tr>`;
 }
