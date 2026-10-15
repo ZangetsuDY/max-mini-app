@@ -3924,52 +3924,6 @@ html body .grid-loader-caption {
    ЭНЕРГЕТИЧЕСКИЕ АНИМАЦИИ (ПК и мобильная версия)
    ========================================================= */
 
-/* Импульс «тока» вдоль верхней кромки панелей и карточек */
-html body .energy-trace {
-  position: absolute;
-  top: 0;
-  left: 10px;
-  right: 10px;
-  height: 2px;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 2;
-}
-
-html body .energy-trace::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 28%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(69,200,244,.0) 10%, rgba(69,200,244,.85) 70%, #e9fbff 92%, transparent);
-  box-shadow: 0 0 8px rgba(69,200,244,.65);
-  transform: translateX(-120%);
-  animation: energyTrace var(--trace-duration, 8s) cubic-bezier(.55,.05,.35,1) var(--trace-delay, 0s) infinite;
-  will-change: transform;
-}
-
-html body .topbar > .energy-trace {
-  top: auto;
-  bottom: -1px;
-  left: 0;
-  right: 0;
-}
-
-html body .topbar > .energy-trace::before {
-  width: 18%;
-  background: linear-gradient(90deg, transparent, rgba(214,164,70,.8) 70%, #fff3d6 92%, transparent);
-  box-shadow: 0 0 8px rgba(214,164,70,.6);
-}
-
-@keyframes energyTrace {
-  0% { transform: translateX(-120%); opacity: 0; }
-  6% { opacity: 1; }
-  38% { transform: translateX(460%); opacity: 1; }
-  44%, 100% { transform: translateX(460%); opacity: 0; }
-}
-
 /* Токовое кольцо вокруг круговых диаграмм */
 html body .donut-orbit {
   position: absolute;
@@ -4060,14 +4014,12 @@ html body .request-card.is-ending {
 
 /* Выключение анимаций */
 @media (prefers-reduced-motion: reduce) {
-  html body .energy-trace,
   html body .donut-orbit { display: none; }
   html body .module-icon,
   html body .request-card { animation: none !important; }
   html body #homeView.is-active .module-icon svg path { animation: none !important; stroke-dashoffset: 0; }
 }
 
-body.low-bandwidth .energy-trace,
 body.low-bandwidth .donut-orbit { display: none !important; }
 body.low-bandwidth .module-icon,
 body.low-bandwidth .request-card { animation: none !important; }

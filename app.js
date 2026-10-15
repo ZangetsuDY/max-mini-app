@@ -10973,35 +10973,11 @@ document.addEventListener(
 
 
 /*
-  Энергетические анимации: импульс «тока» вдоль кромки панелей,
-  токовое кольцо вокруг круговых диаграмм. Элементы декоративные
-  (aria-hidden), всё движение — в CSS и выключается при
-  prefers-reduced-motion и в экономном режиме (low-bandwidth).
+  Энергетические анимации: токовое кольцо вокруг круговых диаграмм.
+  Элемент декоративный (aria-hidden), движение — в CSS и выключается
+  при prefers-reduced-motion и в экономном режиме (low-bandwidth).
 */
 (function setupEnergyAnimations() {
-  const TRACE_SELECTOR = [
-    ".topbar",
-    ".module-card",
-    ".glass-panel",
-    ".admin-panel",
-    ".active-outage-type-card",
-    ".division-card"
-  ].join(",");
-
-  const addTrace = (element, index) => {
-    if (!element || element.querySelector(":scope > .energy-trace")) return;
-    if (getComputedStyle(element).position === "static") {
-      element.style.position = "relative";
-    }
-    const trace = document.createElement("span");
-    trace.className = "energy-trace";
-    trace.setAttribute("aria-hidden", "true");
-    // Разные задержки и скорость, чтобы импульсы не шли синхронно.
-    trace.style.setProperty("--trace-delay", `${-((index * 1.7) % 9).toFixed(2)}s`);
-    trace.style.setProperty("--trace-duration", `${7 + (index % 4) * 1.3}s`);
-    element.appendChild(trace);
-  };
-
   const addOrbit = (donut) => {
     if (!donut || donut.querySelector(":scope > .donut-orbit")) return;
     const orbit = document.createElement("span");
@@ -11010,23 +10986,7 @@ document.addEventListener(
     donut.appendChild(orbit);
   };
 
-  const scan = (root = document) => {
-    root.querySelectorAll(TRACE_SELECTOR).forEach(addTrace);
-    root.querySelectorAll(".dispatcher-workorders-donut").forEach(addOrbit);
-  };
-
-  scan();
-
-  // Панели, которые дорисовываются позже (например, в Центре управления).
-  let scheduled = false;
-  new MutationObserver(() => {
-    if (scheduled) return;
-    scheduled = true;
-    requestAnimationFrame(() => {
-      scheduled = false;
-      scan();
-    });
-  }).observe(document.body, { childList: true, subtree: true });
+  document.querySelectorAll(".dispatcher-workorders-donut").forEach(addOrbit);
 })();
 
 
