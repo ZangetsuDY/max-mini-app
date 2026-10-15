@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261014-1849b" />
-  <link rel="stylesheet" href="pro.css?v=20261014-1849b" />
+  <link rel="stylesheet" href="style.css?v=20261015-exit1" />
+  <link rel="stylesheet" href="pro.css?v=20261015-exit1" />
 </head>
 
 <body class="auth-pending">
@@ -517,6 +517,25 @@
       </div>
 
       <div class="executive-shell">
+        <div class="executive-filter-panel glass-panel">
+          <div>
+            <span class="micro-label">ФИЛЬТРЫ НАБЛЮДЕНИЯ</span>
+            <h2>Подразделение и РЭС / район</h2>
+          </div>
+
+          <div class="executive-filter-controls">
+            <label class="dispatcher-select-label">
+              <span>Подразделение</span>
+              <select id="executiveGroupSelect" class="dispatcher-select"></select>
+            </label>
+
+            <label class="dispatcher-select-label">
+              <span>РЭС / район</span>
+              <select id="executiveUnitSelect" class="dispatcher-select"></select>
+            </label>
+          </div>
+        </div>
+
         <div class="executive-hero glass-panel">
           <div class="ambient-energy-schematic ambient-energy-schematic-executive" aria-hidden="true">
             <svg viewBox="0 0 320 100">
@@ -530,7 +549,7 @@
             <span class="micro-label">РУКОВОДЯЩИЙ КОНТУР</span>
             <h1>Диспетчерский мониторинг</h1>
             <p>
-              Единая управленческая панель по аварийным отключениям, обращениям, заявкам и наряд-допускам / распоряжениям.
+              Единая управленческая панель по аварийным отключениям и обращениям.
               Сводная инфографика помогает быстро увидеть общую картину и переключиться на нужное подразделение или РЭС.
             </p>
           </div>
@@ -552,41 +571,6 @@
                 <span id="executiveDeltaAppeals" class="executive-delta is-neutral">—</span>
               </div>
             </div>
-            <div class="executive-kpi-tile executive-kpi-requests">
-              <span>Заявки</span>
-              <strong id="executiveHeroRequests">0</strong>
-              <div class="executive-kpi-foot">
-                <small>суммарно по выборке</small>
-                <span id="executiveDeltaRequests" class="executive-delta is-neutral">—</span>
-              </div>
-            </div>
-            <div class="executive-kpi-tile executive-kpi-workorders">
-              <span>НДР</span>
-              <strong id="executiveHeroWorkorders">0</strong>
-              <div class="executive-kpi-foot">
-                <small>наряды / распоряжения / допуски</small>
-                <span id="executiveDeltaWorkorders" class="executive-delta is-neutral">—</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="executive-filter-panel glass-panel">
-          <div>
-            <span class="micro-label">ФИЛЬТРЫ НАБЛЮДЕНИЯ</span>
-            <h2>Подразделение и РЭС / район</h2>
-          </div>
-
-          <div class="executive-filter-controls">
-            <label class="dispatcher-select-label">
-              <span>Подразделение</span>
-              <select id="executiveGroupSelect" class="dispatcher-select"></select>
-            </label>
-
-            <label class="dispatcher-select-label">
-              <span>РЭС / район</span>
-              <select id="executiveUnitSelect" class="dispatcher-select"></select>
-            </label>
           </div>
         </div>
 
@@ -1840,6 +1824,37 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261014-1849b"></script>
+  <!-- VIEW LOADING -->
+  <div id="viewLoadingOverlay" class="view-loading-overlay" role="status" aria-live="polite" hidden>
+    <div class="view-loading-spinner" aria-hidden="true"></div>
+    <span id="viewLoadingText">Загрузка данных…</span>
+  </div>
+
+  <!-- EXIT CONFIRMATION -->
+  <div id="exitConfirmModal" class="modal-backdrop exit-confirm-backdrop" aria-hidden="true">
+    <div class="modal-card exit-confirm-card" role="dialog" aria-modal="true" aria-labelledby="exitConfirmTitle">
+      <button id="exitConfirmCloseButton" class="icon-button modal-close" type="button" aria-label="Остаться в приложении">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 6l12 12M18 6 6 18"></path>
+        </svg>
+      </button>
+
+      <div class="modal-icon is-development">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"></path>
+          <path d="M10 17l-5-5 5-5M5 12h11"></path>
+        </svg>
+      </div>
+
+      <span class="micro-label">ВЫХОД</span>
+      <h2 id="exitConfirmTitle">Вы точно хотите выйти из приложения?</h2>
+
+      <button id="exitConfirmYesButton" class="secondary-action" type="button">
+        Да
+      </button>
+    </div>
+  </div>
+
+  <script src="app.js?v=20261015-exit1"></script>
 </body>
 </html>

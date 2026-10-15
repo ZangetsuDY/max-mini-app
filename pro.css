@@ -3138,3 +3138,138 @@ html body .modal-icon.is-denied {
     grid-column: 1 / -1 !important;
   }
 }
+
+/* =========================================================
+   DONUT · значения на кольце (без выносок и наложений)
+   ========================================================= */
+.donut-ring-label {
+  position: absolute;
+  z-index: 3;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--label-color, #45c8f4) 70%, #ffffff 30%);
+  background: rgba(5, 12, 22, .88);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .35);
+  color: #ffffff;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -.02em;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+@media (max-width: 760px) {
+  .donut-ring-label {
+    min-width: 18px;
+    height: 17px;
+    padding: 0 4px;
+    font-size: 9.5px;
+  }
+}
+
+/* =========================================================
+   EXECUTIVE · в шапке только отключения и обращения
+   ========================================================= */
+#executiveView .executive-hero-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+@media (min-width: 1181px) {
+  #executiveView .executive-hero {
+    grid-template-columns: minmax(0, 1fr) minmax(360px, 520px) !important;
+  }
+}
+
+/* =========================================================
+   Мгновенный отклик карточек главного экрана
+   ========================================================= */
+.module-card {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.module-card:active {
+  transform: scale(.985) !important;
+  transition-duration: .08s !important;
+}
+
+.view-loading-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: grid;
+  place-items: center;
+  gap: 14px;
+  align-content: center;
+  background: rgba(1, 8, 17, .55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  color: #dbe8f4;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  animation: viewLoadingIn .18s ease;
+}
+
+.view-loading-overlay[hidden] {
+  display: none;
+}
+
+.view-loading-spinner {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 3px solid rgba(120, 200, 235, .18);
+  border-top-color: #45c8f4;
+  animation: viewLoadingSpin .8s linear infinite;
+}
+
+@keyframes viewLoadingSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes viewLoadingIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* =========================================================
+   Подтверждение выхода из приложения
+   ========================================================= */
+.exit-confirm-backdrop {
+  z-index: 260;
+}
+
+.exit-confirm-card {
+  text-align: center;
+}
+
+.exit-confirm-card .modal-icon {
+  margin-inline: auto;
+}
+
+.exit-confirm-card h2 {
+  margin: 8px 0 22px;
+}
+
+.exit-confirm-card .secondary-action {
+  width: 100%;
+  justify-content: center;
+}
+
+#executiveView .executive-hero-stats .executive-delta {
+  width: auto !important;
+  max-width: 100%;
+  white-space: nowrap;
+  justify-self: start;
+}

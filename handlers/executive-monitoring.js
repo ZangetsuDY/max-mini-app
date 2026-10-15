@@ -503,7 +503,15 @@ export default {
       ? executiveTableConfigRows
       : [];
 
-    const divisionTableRows = configuredDivisionTableRows.length
+    // Выбрано конкретное подразделение — в сводной таблице только оно.
+    // Полный список (в т.ч. настроенные сводные строки) — только для «Все подразделения».
+    const selectedGroupRow = selectedGroupId
+      ? groupRows.find((row) => row.id === selectedGroupId) || null
+      : null;
+
+    const divisionTableRows = selectedGroupRow
+      ? [{ ...selectedGroupRow, selectable: true }]
+      : configuredDivisionTableRows.length
       ? configuredDivisionTableRows.map((row) => {
           const filterAllowedIds = (values) => {
             const ids = Array.isArray(values)
