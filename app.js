@@ -302,6 +302,12 @@ const dispatcherWorkordersConfigList = document.getElementById("dispatcherWorkor
 const accessModal = document.getElementById("accessModal");
 const closeModalButton = document.getElementById("closeModalButton");
 const modalActionButton = document.getElementById("modalActionButton");
+const viewLoadingOverlay = document.getElementById("viewLoadingOverlay");
+const viewLoadingText = document.getElementById("viewLoadingText");
+const exitConfirmModal = document.getElementById("exitConfirmModal");
+const exitConfirmCloseButton = document.getElementById("exitConfirmCloseButton");
+const exitConfirmYesButton = document.getElementById("exitConfirmYesButton");
+let viewLoadingToken = 0;
 const modalIcon = document.getElementById("modalIcon");
 const modalEyebrow = document.getElementById("modalEyebrow");
 const modalTitle = document.getElementById("modalTitle");
@@ -1110,6 +1116,7 @@ function showLoginScreen() {
   stopAdminRefresh();
   stopDispatcherRefresh();
   stopExecutiveRefresh();
+  hideViewLoading();
 
   currentUser = null;
   currentView = "home";
@@ -1140,6 +1147,7 @@ function showApplication(user) {
 
   clearLoginError();
   navigateHome();
+  attachMaxExitHandlers();
   startHeartbeat();
   loadSystemState();
 }
@@ -1200,6 +1208,7 @@ function setView(view) {
 }
 
 function navigateHome() {
+  hideViewLoading();
   setView("home");
 }
 
@@ -1418,15 +1427,58 @@ async function loadDispatcherDashboard({
   }
 }
 
+function showViewLoading(text = "Загрузка данных…") {
+  viewLoadingToken += 1;
+  if (viewLoadingText) viewLoadingText.textContent = text;
+  if (viewLoadingOverlay) viewLoadingOverlay.hidden = false;
+  return viewLoadingToken;
+}
+
+function hideViewLoading(token) {
+  // Скрываем только «свой» лоадер: если пользователь уже открыл другой
+  // раздел, его загрузка продолжает показываться.
+  if (token !== undefined && token !== viewLoadingToken) return;
+  if (viewLoadingOverlay) viewLoadingOverlay.hidden = true;
+}
+
+/*
+  Переход в раздел происходит сразу по клику, а данные догружаются
+  под экраном загрузки. Раньше экран переключался только после ответа
+  сервера, из-за чего клик казался «несработавшим».
+*/
+async function openViewWithLoading(view, load, startRefresh, loadingText) {
+  setView(view);
+  const token = showViewLoading(loadingText);
+
+  try {
+    const ok = await load();
+
+    if (currentView !== view) {
+      return;
+    }
+
+    if (ok) {
+      startRefresh();
+    } else {
+      navigateHome();
+    }
+  } finally {
+    hideViewLoading(token);
+  }
+}
+
 async function navigateDispatcher() {
   if (!hasPanelAccess("dispatcher")) {
     showPanelAccessDenied("dispatcher");
     return;
   }
 
-  await loadDispatcherDashboard({
-    openView: true
-  });
+  await openViewWithLoading(
+    "dispatcher",
+    () => loadDispatcherDashboard(),
+    startDispatcherRefresh,
+    "Загрузка интерфейса диспетчера…"
+  );
 }
 
 function startDispatcherRefresh() {
@@ -1849,13 +1901,9 @@ function renderExecutiveDashboard(payload) {
   executiveEl("executiveScopeTitle").textContent = scopeTitle;
   executiveEl("executiveHeroOutages").textContent = Number(payload?.headline?.outagesTotal || 0);
   executiveEl("executiveHeroAppeals").textContent = Number(payload?.headline?.appealsTotal || 0);
-  executiveEl("executiveHeroRequests").textContent = Number(payload?.headline?.requestsTotal || 0);
-  executiveEl("executiveHeroWorkorders").textContent = Number(payload?.headline?.workordersTotal || 0);
 
   renderExecutiveDelta("executiveDeltaOutages", payload?.deltas?.outages);
   renderExecutiveDelta("executiveDeltaAppeals", payload?.deltas?.appeals);
-  renderExecutiveDelta("executiveDeltaRequests", payload?.deltas?.requests);
-  renderExecutiveDelta("executiveDeltaWorkorders", payload?.deltas?.workorders);
 
   executiveEl("executiveOutagesScope").textContent = payload?.outages?.scopeLabel || scopeTitle;
   executiveEl("executiveOutagesTotal").textContent = Number(payload?.outages?.total || 0);
@@ -1999,7 +2047,17 @@ async function loadExecutiveDashboard(options = {}) {
 }
 
 async function navigateExecutive() {
-  await loadExecutiveDashboard({ openView: true });
+  if (!hasPanelAccess("executive-monitoring")) {
+    showPanelAccessDenied("executive-monitoring");
+    return;
+  }
+
+  await openViewWithLoading(
+    "executive",
+    () => loadExecutiveDashboard(),
+    startExecutiveRefresh,
+    "Загрузка диспетчерского мониторинга…"
+  );
 }
 
 function startExecutiveRefresh() {
@@ -2687,20 +2745,19 @@ function renderDispatcherDonutChart(
 
   chartElement
     .querySelectorAll(
-      ".dispatcher-donut-marker"
+      ".dispatcher-donut-marker, .donut-ring-label"
     )
     .forEach((item) => item.remove());
 
   const normalized = Array.isArray(segments)
     ? segments.map((segment) => ({
         ...segment,
-        value: Number(segment?.value || 0)
+        value: Math.max(0, Number(segment?.value || 0))
       }))
     : [];
 
   const statusTotal = normalized.reduce(
-    (sum, item) =>
-      sum + Math.max(0, item.value),
+    (sum, item) => sum + item.value,
     0
   );
 
@@ -2710,24 +2767,32 @@ function renderDispatcherDonutChart(
     return;
   }
 
+  /*
+    Значения выводятся прямо на кольце (в середине сектора), а не выносками:
+    так они не выходят за пределы диаграммы и не накладываются друг на друга.
+    Сектор, в который подпись не помещается, остаётся без цифры —
+    точное значение всегда есть в легенде и во всплывающей подсказке.
+    Позиция задаётся в процентах, поэтому не зависит от того,
+    был ли блок видим в момент отрисовки.
+  */
+  const RING_RADIUS_PERCENT = 39; // середина кольца: внутренний радиус 28%, внешний 50%
+  const chartSize = Math.max(
+    110,
+    Math.min(
+      chartElement.clientWidth || 150,
+      chartElement.clientHeight || chartElement.clientWidth || 150
+    )
+  );
+  const ringRadiusPx = chartSize * (RING_RADIUS_PERCENT / 100);
+  const labelSizePx = chartSize < 140 ? 20 : 24;
+  const labelGapPx = 3;
+
   let cursor = 0;
   const gradientParts = [];
-  const markerData = [];
-  const chartWidth = Math.max(110, chartElement.clientWidth || 150);
-  const chartHeight = Math.max(110, chartElement.clientHeight || chartWidth);
-  const chartSize = Math.max(110, Math.min(chartWidth, chartHeight));
-  const centerX = chartWidth / 2;
-  const centerY = chartHeight / 2;
-  const anchorRadius = chartSize * 0.31;
-  const labelRadius = chartSize * 0.35;
-  const sideOffset = chartSize * 0.025;
-  const verticalPadding = Math.max(15, chartHeight * 0.12);
-  const minVerticalGap = Math.max(18, chartSize * 0.105);
+  const labelCandidates = [];
 
   normalized.forEach((segment) => {
-    const safeValue = Math.max(0, segment.value);
-    const size =
-      (safeValue / statusTotal) * 100;
+    const size = (segment.value / statusTotal) * 100;
     const start = cursor;
     const end = cursor + size;
 
@@ -2735,99 +2800,58 @@ function renderDispatcherDonutChart(
       `${segment.color} ${start.toFixed(3)}% ${end.toFixed(3)}%`
     );
 
-    if (safeValue > 0) {
-      const angle =
-        ((start + end) / 2 / 100) *
-          Math.PI *
-          2 -
-        Math.PI / 2;
-      const cos = Math.cos(angle);
-      const sin = Math.sin(angle);
-      const side = cos >= 0 ? "right" : "left";
+    if (segment.value > 0) {
+      const text = String(segment.value);
+      const labelWidthPx = Math.max(labelSizePx, 8 + text.length * 7);
+      const arcPx = (size / 100) * Math.PI * 2 * ringRadiusPx;
 
-      markerData.push({
-        segment,
-        safeValue,
-        side,
-        anchorX: centerX + cos * anchorRadius,
-        anchorY: centerY + sin * anchorRadius,
-        labelX:
-          centerX +
-          cos * labelRadius +
-          (side === "right"
-            ? sideOffset
-            : -sideOffset),
-        labelY: centerY + sin * labelRadius
-      });
+      if (arcPx >= labelWidthPx + labelGapPx * 2) {
+        labelCandidates.push({
+          segment,
+          text,
+          mid: (start + end) / 2,
+          arcPx,
+          labelWidthPx
+        });
+      }
     }
 
     cursor = end;
   });
 
-  ["left", "right"].forEach((side) => {
-    const sideMarkers = markerData
-      .filter((item) => item.side === side)
-      .sort((a, b) => a.labelY - b.labelY);
+  // Крупные сектора в приоритете; подпись ставим, только если она
+  // не пересекается с уже размещёнными.
+  const placed = [];
+  labelCandidates
+    .sort((a, b) => b.segment.value - a.segment.value)
+    .forEach((item) => {
+      const fits = placed.every((other) => {
+        const deltaPercent = Math.min(
+          Math.abs(item.mid - other.mid),
+          100 - Math.abs(item.mid - other.mid)
+        );
+        const distancePx = (deltaPercent / 100) * Math.PI * 2 * ringRadiusPx;
+        return distancePx >= (item.labelWidthPx + other.labelWidthPx) / 2 + labelGapPx;
+      });
 
-    sideMarkers.forEach((item, index) => {
-      const minY =
-        verticalPadding +
-        index * minVerticalGap;
-      item.labelY = Math.max(
-        item.labelY,
-        minY
-      );
+      if (fits) {
+        placed.push(item);
+      }
     });
 
-    for (
-      let index = sideMarkers.length - 1;
-      index >= 0;
-      index -= 1
-    ) {
-      const item = sideMarkers[index];
-      const maxY =
-        chartHeight -
-        verticalPadding -
-        (sideMarkers.length - 1 - index) *
-          minVerticalGap;
-      item.labelY = Math.min(
-        item.labelY,
-        maxY
-      );
-    }
-  });
+  placed.forEach((item) => {
+    const angle = (item.mid / 100) * Math.PI * 2 - Math.PI / 2;
+    const label = document.createElement("div");
 
-  markerData.forEach((item) => {
-    item.labelX = Math.max(18, Math.min(chartWidth - 18, item.labelX));
-    item.labelY = Math.max(14, Math.min(chartHeight - 14, item.labelY));
-
-    const marker =
-      document.createElement("div");
-
-    marker.className =
-      `dispatcher-donut-marker is-${item.side}`;
-    marker.title = item.segment.label
-      ? `${item.segment.label}: ${item.safeValue}`
-      : String(item.safeValue);
-    marker.style.left = `${item.labelX}px`;
-    marker.style.top = `${item.labelY}px`;
-    marker.style.setProperty(
-      "--marker-color",
-      item.segment.color
-    );
-    marker.style.setProperty(
-      "--connector-width",
-      `${Math.max(14, Math.hypot(item.labelX - item.anchorX, item.labelY - item.anchorY) - 16)}px`
-    );
-    marker.style.setProperty(
-      "--connector-angle",
-      `${Math.atan2(item.anchorY - item.labelY, item.anchorX - item.labelX)}rad`
-    );
-
-    const value = document.createElement("span");
-    value.textContent = String(item.safeValue);
-    marker.appendChild(value);
-    chartElement.appendChild(marker);
+    label.className = "donut-ring-label";
+    label.title = item.segment.label
+      ? `${item.segment.label}: ${item.text}`
+      : item.text;
+    label.style.left = `${(50 + Math.cos(angle) * RING_RADIUS_PERCENT).toFixed(3)}%`;
+    label.style.top = `${(50 + Math.sin(angle) * RING_RADIUS_PERCENT).toFixed(3)}%`;
+    label.style.setProperty("--label-color", item.segment.color);
+    label.textContent = item.text;
+    chartElement.appendChild(label);
   });
 
   chartElement.style.background =
@@ -10319,6 +10343,141 @@ document.addEventListener("visibilitychange", () => {
     loadAdminDashboard();
   }
 });
+
+/*
+  Подтверждение выхода из мини-приложения.
+  - Кнопка «Назад» MAX и системный «назад» (Android/жест): в разделе —
+    возврат на главный экран, на главном экране — окно «Вы точно хотите
+    выйти из приложения?». Выход только по кнопке «Да»; крестик или клик
+    мимо окна просто закрывают его.
+  - Крестик/свайп закрытия самой шапки MAX обрабатывает клиент MAX:
+    страница не может показать там своё окно, поэтому для этого случая
+    включается штатное подтверждение закрытия MAX (enableClosingConfirmation).
+*/
+let appExitConfirmed = false;
+let maxExitHandlersAttached = false;
+
+function isExitConfirmOpen() {
+  return Boolean(exitConfirmModal?.classList.contains("is-open"));
+}
+
+function openExitConfirm() {
+  if (!exitConfirmModal) return;
+  exitConfirmModal.classList.add("is-open");
+  exitConfirmModal.setAttribute("aria-hidden", "false");
+}
+
+function closeExitConfirm() {
+  if (!exitConfirmModal) return;
+  exitConfirmModal.classList.remove("is-open");
+  exitConfirmModal.setAttribute("aria-hidden", "true");
+}
+
+function confirmAppExit() {
+  appExitConfirmed = true;
+  closeExitConfirm();
+
+  const webApp = window.WebApp;
+
+  try {
+    webApp?.disableClosingConfirmation?.();
+  } catch {
+    // Метод может отсутствовать в старых версиях MAX Bridge.
+  }
+
+  try {
+    if (typeof webApp?.close === "function") {
+      webApp.close();
+      return;
+    }
+  } catch {
+    // Переходим к запасному варианту ниже.
+  }
+
+  // Вне MAX (обычный браузер): закрываем вкладку или уходим со страницы
+  // назад по истории (2 шага: исходная запись + запись-«ловушка»).
+  window.close();
+  setTimeout(() => history.go(-2), 150);
+}
+
+function handleAppBackAction() {
+  if (isExitConfirmOpen()) {
+    closeExitConfirm();
+    return;
+  }
+
+  if (managementModal?.classList.contains("is-open")) {
+    closeManagementEditor();
+    return;
+  }
+
+  if (accessModal?.classList.contains("is-open")) {
+    closeModal();
+    return;
+  }
+
+  if (currentView !== "home" && document.body.classList.contains("authenticated")) {
+    navigateHome();
+    return;
+  }
+
+  openExitConfirm();
+}
+
+function armHistoryExitGuard() {
+  try {
+    history.pushState({ appExitGuard: true }, "");
+  } catch {
+    // История может быть недоступна во встроенном WebView.
+  }
+}
+
+function attachMaxExitHandlers(webApp = window.WebApp) {
+  if (!webApp || maxExitHandlersAttached) return;
+  maxExitHandlersAttached = true;
+
+  try {
+    webApp.enableClosingConfirmation?.();
+  } catch {
+    // Штатное подтверждение закрытия поддерживается не во всех версиях.
+  }
+
+  try {
+    webApp.BackButton?.onClick?.(handleAppBackAction);
+    webApp.BackButton?.show?.();
+  } catch {
+    // Без кнопки «Назад» остаётся системный «назад» через историю.
+  }
+}
+
+window.addEventListener("popstate", () => {
+  if (appExitConfirmed) return;
+  armHistoryExitGuard();
+  handleAppBackAction();
+});
+
+exitConfirmCloseButton?.addEventListener("click", closeExitConfirm);
+exitConfirmYesButton?.addEventListener("click", confirmAppExit);
+
+exitConfirmModal?.addEventListener("click", (event) => {
+  if (event.target === exitConfirmModal) {
+    closeExitConfirm();
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && isExitConfirmOpen()) {
+    closeExitConfirm();
+  }
+});
+
+armHistoryExitGuard();
+
+loadMaxBridge()
+  .then((webApp) => attachMaxExitHandlers(webApp))
+  .catch(() => {
+    // Повторим при успешном входе.
+  });
 
 checkSession();
 
