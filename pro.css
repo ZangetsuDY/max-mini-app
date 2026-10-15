@@ -3919,3 +3919,231 @@ html body .grid-loader-caption {
     animation: none !important;
   }
 }
+
+/* =========================================================
+   ЭНЕРГЕТИЧЕСКИЕ АНИМАЦИИ (ПК и мобильная версия)
+   ========================================================= */
+
+/* Импульс «тока» вдоль верхней кромки панелей и карточек */
+html body .energy-trace {
+  position: absolute;
+  top: 0;
+  left: 10px;
+  right: 10px;
+  height: 2px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+}
+
+html body .energy-trace::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 28%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(69,200,244,.0) 10%, rgba(69,200,244,.85) 70%, #e9fbff 92%, transparent);
+  box-shadow: 0 0 8px rgba(69,200,244,.65);
+  transform: translateX(-120%);
+  animation: energyTrace var(--trace-duration, 8s) cubic-bezier(.55,.05,.35,1) var(--trace-delay, 0s) infinite;
+  will-change: transform;
+}
+
+html body .topbar > .energy-trace {
+  top: auto;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+}
+
+html body .topbar > .energy-trace::before {
+  width: 18%;
+  background: linear-gradient(90deg, transparent, rgba(214,164,70,.8) 70%, #fff3d6 92%, transparent);
+  box-shadow: 0 0 8px rgba(214,164,70,.6);
+}
+
+@keyframes energyTrace {
+  0% { transform: translateX(-120%); opacity: 0; }
+  6% { opacity: 1; }
+  38% { transform: translateX(460%); opacity: 1; }
+  44%, 100% { transform: translateX(460%); opacity: 0; }
+}
+
+/* Токовое кольцо вокруг круговых диаграмм */
+html body .donut-orbit {
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  border: 1px dashed rgba(69,200,244,.22);
+  pointer-events: none;
+  z-index: 0;
+  animation: donutOrbit 14s linear infinite;
+}
+
+html body .donut-orbit::before {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  border-radius: 50%;
+  background: #45c8f4;
+  box-shadow: 0 0 8px 2px rgba(69,200,244,.75);
+}
+
+html body .donut-orbit::after {
+  content: "";
+  position: absolute;
+  bottom: -2.5px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: #d6a446;
+  box-shadow: 0 0 7px 2px rgba(214,164,70,.7);
+}
+
+@keyframes donutOrbit {
+  to { transform: rotate(360deg); }
+}
+
+/* Значки модулей: «прорисовка» и мягкое свечение */
+html body #homeView.is-active .module-icon svg path {
+  stroke-dasharray: 160;
+  stroke-dashoffset: 160;
+  animation: moduleIconDraw 1.4s cubic-bezier(.4,0,.2,1) .15s forwards;
+}
+
+html body .module-icon {
+  animation: moduleIconGlow 4.8s ease-in-out infinite;
+}
+
+html body .module-card:nth-child(2) .module-icon { animation-delay: -1.2s; }
+html body .module-card:nth-child(3) .module-icon { animation-delay: -2.4s; }
+html body .module-card:nth-child(4) .module-icon { animation-delay: -3.6s; }
+
+@keyframes moduleIconDraw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes moduleIconGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(214,164,70,0); }
+  50% { box-shadow: 0 0 16px 0 rgba(214,164,70,.22); }
+}
+
+/* Карточки заявок: каскадное появление, пульс у заканчивающихся */
+html body .request-card {
+  animation: requestCardIn .42s cubic-bezier(.16,.84,.32,1) both;
+  animation-delay: calc(min(var(--i, 0), 24) * 22ms);
+}
+
+html body .request-card.is-ending {
+  animation:
+    requestCardIn .42s cubic-bezier(.16,.84,.32,1) both,
+    requestEndingPulse 2.4s ease-in-out 1s infinite;
+  animation-delay: calc(min(var(--i, 0), 24) * 22ms), 1s;
+}
+
+@keyframes requestCardIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes requestEndingPulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px rgba(251,113,133,.18); }
+  50% { box-shadow: inset 0 0 0 1px rgba(251,113,133,.5), 0 0 14px rgba(251,113,133,.14); }
+}
+
+/* Выключение анимаций */
+@media (prefers-reduced-motion: reduce) {
+  html body .energy-trace,
+  html body .donut-orbit { display: none; }
+  html body .module-icon,
+  html body .request-card { animation: none !important; }
+  html body #homeView.is-active .module-icon svg path { animation: none !important; stroke-dashoffset: 0; }
+}
+
+body.low-bandwidth .energy-trace,
+body.low-bandwidth .donut-orbit { display: none !important; }
+body.low-bandwidth .module-icon,
+body.low-bandwidth .request-card { animation: none !important; }
+
+/* =========================================================
+   ЗАЯВКИ · одинаковые карточки на ПК
+   ========================================================= */
+html body .request-times div.is-empty dd {
+  color: #5f7486;
+}
+
+@media (min-width: 621px) {
+  html body .requests-list {
+    align-items: stretch;
+  }
+
+  html body .request-card {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  html body .request-card-head {
+    flex-wrap: nowrap;
+    min-height: 24px;
+    white-space: nowrap;
+  }
+
+  html body .request-ending {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  html body .request-object,
+  html body .request-equipment {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
+  html body .request-object { min-height: calc(2 * 1.3em); }
+  html body .request-equipment { min-height: calc(2 * 1.35em); }
+
+  /* Блок работ одной высоты: короткий текст получает тот же размер,
+     что и свёрнутый длинный (подпись + 4 строки + кнопка). */
+  html body .request-works {
+    min-height: calc(14px + 5.8em + 22px);
+  }
+
+  html body .request-works.is-collapsed p,
+  html body .request-works.is-collapsed ul {
+    max-height: 5.8em;
+  }
+
+  html body .request-works:not(.is-collapsible) p,
+  html body .request-works:not(.is-collapsible) ul {
+    max-height: 5.8em;
+    overflow: hidden;
+  }
+
+  html body .request-sources {
+    margin-top: auto;
+  }
+
+  html body .request-source-main {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  html body .request-source-also {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+    min-height: calc(2 * 1.35em);
+  }
+}

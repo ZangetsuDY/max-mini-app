@@ -2478,41 +2478,42 @@ function filteredRequests() {
   );
 }
 
-function renderRequestCard(item) {
+function renderRequestCard(item, index = 0) {
   const works = Array.isArray(item.works) ? item.works : [];
   const worksLength = works.join(" ").length;
   const also = Array.isArray(item.alsoSources) ? item.alsoSources : [];
+  // Всегда 4 ячейки, чтобы карточки в ряду были одной высоты.
   const times = [
     ["Начало", item.start],
     ["Конец", item.end],
     ["Открыта", item.openedAt],
     ["Закрыта", item.closedAt]
-  ].filter(([, value]) => value);
+  ];
 
   return `
-    <article class="request-card is-${escapeHtml(item.statusKey || "other")}${item.ending ? " is-ending" : ""}">
+    <article class="request-card is-${escapeHtml(item.statusKey || "other")}${item.ending ? " is-ending" : ""}" style="--i:${index % REQUESTS_PAGE_SIZE}">
       <header class="request-card-head">
         <span class="request-number"><small>№</small>${escapeHtml(item.id)}</span>
         <span class="request-status">${escapeHtml(item.status || "—")}</span>
         ${item.ending ? '<span class="request-ending">⏳ заканч. в смену</span>' : ""}
       </header>
 
-      <div class="request-object">${escapeHtml(item.object || "—")}</div>
-      ${item.equipment ? `<div class="request-equipment">${escapeHtml(item.equipment)}</div>` : ""}
+      <div class="request-object" title="${escapeHtml(item.object || "")}">${escapeHtml(item.object || "—")}</div>
+      <div class="request-equipment"${item.equipment ? ` title="${escapeHtml(item.equipment)}"` : ""}>${escapeHtml(item.equipment || "—")}</div>
 
       <dl class="request-times">
-        ${times.map(([label, value]) => `<div><dt>${label}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}
+        ${times.map(([label, value]) => `<div${value ? "" : ' class="is-empty"'}><dt>${label}</dt><dd>${escapeHtml(value || "—")}</dd></div>`).join("")}
       </dl>
 
       ${works.length ? `
-        <div class="request-works${worksLength > 220 ? " is-collapsible is-collapsed" : ""}">
+        <div class="request-works${worksLength > 150 ? " is-collapsible is-collapsed" : ""}">
           <span class="request-label">Работы</span>
           ${works.length > 1
             ? `<ul>${works.map((work) => `<li>${escapeHtml(work)}</li>`).join("")}</ul>`
             : `<p>${escapeHtml(works[0])}</p>`}
-          ${worksLength > 220 ? '<button class="request-works-toggle" type="button">Показать полностью</button>' : ""}
+          ${worksLength > 150 ? '<button class="request-works-toggle" type="button">Показать полностью</button>' : ""}
         </div>
-      ` : ""}
+      ` : '<div class="request-works is-empty"><span class="request-label">Работы</span><p>—</p></div>'}
 
       <footer class="request-sources">
         <span class="request-source-main" title="Основной РЭС">${escapeHtml(item.source || "—")}</span>
@@ -2541,6 +2542,19 @@ function renderRequestsList() {
   list.innerHTML = visible.length
     ? visible.map(renderRequestCard).join("")
     : `<div class="requests-empty">${requestsState.data?.requests?.length ? "Нет заявок по выбранному фильтру" : "Заявок нет"}</div>`;
+
+  // Если текст работ не поместился в фиксированный блок карточки (ПК),
+  // добавляем «Показать полностью», чтобы ничего не обрезалось молча.
+  list.querySelectorAll(".request-works:not(.is-collapsible):not(.is-empty)").forEach((works) => {
+    const body = works.querySelector("p, ul");
+    if (!body || body.scrollHeight <= body.clientHeight + 2) return;
+    works.classList.add("is-collapsible", "is-collapsed");
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "request-works-toggle";
+    toggle.textContent = "Показать полностью";
+    works.appendChild(toggle);
+  });
 
   if (more) {
     const rest = items.length - visible.length;
@@ -10956,6 +10970,64 @@ document.addEventListener(
     }
   }
 );
+
+
+/*
+  Энергетические анимации: импульс «тока» вдоль кромки панелей,
+  токовое кольцо вокруг круговых диаграмм. Элементы декоративные
+  (aria-hidden), всё движение — в CSS и выключается при
+  prefers-reduced-motion и в экономном режиме (low-bandwidth).
+*/
+(function setupEnergyAnimations() {
+  const TRACE_SELECTOR = [
+    ".topbar",
+    ".module-card",
+    ".glass-panel",
+    ".admin-panel",
+    ".active-outage-type-card",
+    ".division-card"
+  ].join(",");
+
+  const addTrace = (element, index) => {
+    if (!element || element.querySelector(":scope > .energy-trace")) return;
+    if (getComputedStyle(element).position === "static") {
+      element.style.position = "relative";
+    }
+    const trace = document.createElement("span");
+    trace.className = "energy-trace";
+    trace.setAttribute("aria-hidden", "true");
+    // Разные задержки и скорость, чтобы импульсы не шли синхронно.
+    trace.style.setProperty("--trace-delay", `${-((index * 1.7) % 9).toFixed(2)}s`);
+    trace.style.setProperty("--trace-duration", `${7 + (index % 4) * 1.3}s`);
+    element.appendChild(trace);
+  };
+
+  const addOrbit = (donut) => {
+    if (!donut || donut.querySelector(":scope > .donut-orbit")) return;
+    const orbit = document.createElement("span");
+    orbit.className = "donut-orbit";
+    orbit.setAttribute("aria-hidden", "true");
+    donut.appendChild(orbit);
+  };
+
+  const scan = (root = document) => {
+    root.querySelectorAll(TRACE_SELECTOR).forEach(addTrace);
+    root.querySelectorAll(".dispatcher-workorders-donut").forEach(addOrbit);
+  };
+
+  scan();
+
+  // Панели, которые дорисовываются позже (например, в Центре управления).
+  let scheduled = false;
+  new MutationObserver(() => {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => {
+      scheduled = false;
+      scan();
+    });
+  }).observe(document.body, { childList: true, subtree: true });
+})();
 
 
 /* Лента телеметрии: часы (МСК) */
