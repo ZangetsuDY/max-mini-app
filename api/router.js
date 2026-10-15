@@ -17,6 +17,7 @@ import adminUsers from "../handlers/admin/users.js";
 import adminDispatcherConfig from "../handlers/admin/dispatcher-config.js";
 import adminOutageConfig from "../handlers/admin/outage-config.js";
 import adminExcelExportConfig from "../handlers/admin/excel-export-config.js";
+import adminOutagesExport from "../handlers/admin/outages-export.js";
 
 const ROUTES = new Map([
   ["login", login],
@@ -36,7 +37,8 @@ const ROUTES = new Map([
   ["admin/users", adminUsers],
   ["admin/dispatcher-config", adminDispatcherConfig],
   ["admin/outage-config", adminOutageConfig],
-  ["admin/excel-export-config", adminExcelExportConfig]
+  ["admin/excel-export-config", adminExcelExportConfig],
+  ["admin/outages-export", adminOutagesExport]
 ]);
 
 function json(data, status = 200) {

@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261015-map1" />
-  <link rel="stylesheet" href="pro.css?v=20261015-map1" />
+  <link rel="stylesheet" href="style.css?v=20261015-xlsx1" />
+  <link rel="stylesheet" href="pro.css?v=20261015-xlsx1" />
 </head>
 
 <body class="auth-pending">
@@ -1452,6 +1452,39 @@
         </article>
       </div>
 
+      <article class="admin-panel outages-export-panel">
+        <div class="admin-panel-heading">
+          <div>
+            <span class="micro-label">ВЫГРУЗКА ДАННЫХ · EXCEL</span>
+            <h2>Все аварийные и плановые отключения</h2>
+          </div>
+        </div>
+
+        <div class="outages-export-body">
+          <p class="outages-export-copy">
+            Одна книга Excel по последним сводкам СК-11 OMS: лист «Сводка» с итогами по подразделениям
+            и листы «Аварийные» и «Плановые» со всеми отключениями — номер, подразделение, РЭС, время создания,
+            сколько прошло, кто создал, оборудование, энергообъект, обесточенные объекты и обращения.
+          </p>
+
+          <ul class="outages-export-sheets" aria-label="Листы книги">
+            <li><i class="is-summary"></i>Сводка</li>
+            <li><i class="is-emergency"></i>Аварийные</li>
+            <li><i class="is-planned"></i>Плановые</li>
+          </ul>
+
+          <div class="outages-export-footer">
+            <span id="outagesExportStatus" class="outages-export-status">Файл формируется по актуальным данным в момент скачивания.</span>
+            <button id="outagesExportButton" class="primary-action admin-save-button" type="button">
+              <span>Скачать Excel</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </article>
+
       <article
         id="accessManagementPanel"
         class="admin-panel access-management-panel"
@@ -1855,6 +1888,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261015-map1"></script>
+  <script src="app.js?v=20261015-xlsx1"></script>
 </body>
 </html>
