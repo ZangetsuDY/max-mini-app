@@ -5,6 +5,7 @@ import outages from "../handlers/outages.js";
 import dispatcher from "../handlers/dispatcher.js";
 import executiveMonitoring from "../handlers/executive-monitoring.js";
 import excelExports from "../handlers/excel-exports.js";
+import requestsDetails from "../handlers/requests-details.js";
 import heartbeat from "../handlers/heartbeat.js";
 import system from "../handlers/system.js";
 
@@ -27,6 +28,7 @@ const ROUTES = new Map([
   ["dispatcher", dispatcher],
   ["executive-monitoring", executiveMonitoring],
   ["excel-exports", excelExports],
+  ["requests-details", requestsDetails],
   ["heartbeat", heartbeat],
   ["system", system],
   ["admin/dashboard", adminDashboard],

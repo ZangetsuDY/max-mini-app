@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261015-xlsx1" />
-  <link rel="stylesheet" href="pro.css?v=20261015-xlsx1" />
+  <link rel="stylesheet" href="style.css?v=20261015-req1" />
+  <link rel="stylesheet" href="pro.css?v=20261015-req1" />
 </head>
 
 <body class="auth-pending">
@@ -627,12 +627,13 @@
             <div id="executiveOutageRanking" class="executive-ranking-list"></div>
           </article>
 
-          <article class="glass-panel executive-panel executive-chart-panel">
+          <article id="executiveRequestsPanel" class="glass-panel executive-panel executive-chart-panel requests-open-panel" data-requests-scope="executive" tabindex="0" role="button" aria-label="Открыть все заявки">
             <div class="executive-panel-head">
               <div>
                 <span class="micro-label">ЗАЯВКИ</span>
                 <h2>Статус по Заявкам</h2>
               </div>
+              <span class="requests-open-link">Все заявки <b aria-hidden="true">→</b></span>
             </div>
             <div class="dispatcher-workorders-chart-layout executive-chart-layout">
               <div id="executiveRequestsChart" class="dispatcher-workorders-donut executive-donut" role="img" aria-label="Распределение заявок по статусам">
@@ -808,6 +809,51 @@
             </div>
           </article>
         </div>
+      </div>
+    </section>
+
+    <!-- REQUESTS DETAILS -->
+    <section id="requestsView" class="app-view">
+      <div class="view-toolbar">
+        <button id="backFromRequestsButton" class="back-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 12H5M11 18l-6-6 6-6"></path>
+          </svg>
+          <span id="requestsBackLabel">Назад</span>
+        </button>
+
+        <div class="toolbar-status">
+          <span class="system-pulse"></span>
+          <span id="requestsUpdatedAt">Сформировано: —</span>
+        </div>
+      </div>
+
+      <div class="requests-shell">
+        <div class="requests-hero glass-panel">
+          <div>
+            <span class="micro-label">СК-11 · ЗАЯВКИ ПО РЭС</span>
+            <h1 id="requestsScopeTitle">Заявки</h1>
+            <p id="requestsShiftLine" class="requests-shift-line">Смена: —</p>
+          </div>
+          <div class="requests-hero-total">
+            <strong id="requestsTotal">0</strong>
+            <span>заявок</span>
+          </div>
+        </div>
+
+        <div id="requestsNotice" class="requests-notice" hidden></div>
+
+        <div class="requests-toolbar glass-panel">
+          <div id="requestsStatusFilters" class="requests-status-filters" role="tablist" aria-label="Фильтр по статусу"></div>
+          <label class="requests-search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+            <input id="requestsSearchInput" type="search" placeholder="Поиск: номер, объект, оборудование, работы, РЭС" autocomplete="off" />
+          </label>
+        </div>
+
+        <div id="requestsResultLine" class="requests-result-line"></div>
+        <div id="requestsList" class="requests-list"></div>
+        <button id="requestsMoreButton" class="secondary-action requests-more-button" type="button" hidden>Показать ещё</button>
       </div>
     </section>
 
@@ -989,15 +1035,18 @@
         </article>
 
         <div class="dispatcher-grid">
-          <article class="dispatcher-panel glass-panel">
+          <article id="dispatcherRequestsPanel" class="dispatcher-panel glass-panel requests-open-panel" data-requests-scope="dispatcher" tabindex="0" role="button" aria-label="Открыть все заявки">
             <div class="dispatcher-panel-head">
               <div>
                 <span class="micro-label">ЗАЯВКИ</span>
                 <h2 id="dispatcherUnitTitle">Оперативный счётчик</h2>
               </div>
-              <div id="dispatcherLiveBadge" class="dispatcher-live-badge">
-                <i></i>
-                LIVE
+              <div class="requests-open-head">
+                <span class="requests-open-link">Все заявки <b aria-hidden="true">→</b></span>
+                <div id="dispatcherLiveBadge" class="dispatcher-live-badge">
+                  <i></i>
+                  LIVE
+                </div>
               </div>
             </div>
 
@@ -1888,6 +1937,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261015-xlsx1"></script>
+  <script src="app.js?v=20261015-req1"></script>
 </body>
 </html>
