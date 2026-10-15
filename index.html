@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261015-req1" />
-  <link rel="stylesheet" href="pro.css?v=20261015-req1" />
+  <link rel="stylesheet" href="style.css?v=20261015-load1" />
+  <link rel="stylesheet" href="pro.css?v=20261015-load1" />
 </head>
 
 <body class="auth-pending">
@@ -1908,8 +1908,40 @@
 
   <!-- VIEW LOADING -->
   <div id="viewLoadingOverlay" class="view-loading-overlay" role="status" aria-live="polite" hidden>
-    <div class="view-loading-spinner" aria-hidden="true"></div>
+    <svg class="grid-loader" viewBox="0 0 200 120" aria-hidden="true">
+      <defs>
+        <clipPath id="gridLoaderWaveClip"><rect x="20" y="96" width="160" height="22"></rect></clipPath>
+      </defs>
+      <!-- провода: основа и бегущие импульсы тока -->
+      <g class="gl-wires">
+        <path d="M0 40 Q38 52 70 34 Q102 52 130 34 Q166 52 200 40"></path>
+        <path d="M0 56 Q38 68 74 48 Q100 64 126 48 Q166 68 200 56"></path>
+      </g>
+      <g class="gl-current">
+        <path d="M0 40 Q38 52 70 34 Q102 52 130 34 Q166 52 200 40"></path>
+        <path class="gl-current-2" d="M0 56 Q38 68 74 48 Q100 64 126 48 Q166 68 200 56"></path>
+      </g>
+      <!-- опора ЛЭП -->
+      <g class="gl-tower">
+        <path d="M100 10 L84 92 M100 10 L116 92"></path>
+        <path d="M66 34 H134 M72 48 H128"></path>
+        <path d="M100 10 L70 34 M100 10 L130 34"></path>
+        <path d="M95 34 L105 48 M105 34 L95 48 M93 48 L107 64 M107 48 L93 64 M91 64 L109 80 M109 64 L91 80 M89 80 L113 92 M111 80 L87 92"></path>
+        <path d="M86 92 H114"></path>
+      </g>
+      <g class="gl-insulators">
+        <circle cx="70" cy="34" r="2.6"></circle>
+        <circle cx="130" cy="34" r="2.6"></circle>
+        <circle cx="74" cy="48" r="2.6"></circle>
+        <circle cx="126" cy="48" r="2.6"></circle>
+      </g>
+      <!-- синусоида 50 Гц -->
+      <g clip-path="url(#gridLoaderWaveClip)">
+        <path class="gl-wave" d="M-20 107 q10 -9 20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0 t20 0"></path>
+      </g>
+    </svg>
     <span id="viewLoadingText">Загрузка данных…</span>
+    <small class="grid-loader-caption">СЕТЬ · 50 Hz</small>
   </div>
 
   <!-- EXIT CONFIRMATION -->
@@ -1937,6 +1969,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261015-req1"></script>
+  <script src="app.js?v=20261015-load1"></script>
 </body>
 </html>
