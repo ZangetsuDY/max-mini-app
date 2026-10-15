@@ -73,6 +73,10 @@
     {
       "source": "/api/admin/excel-export-config",
       "destination": "/api/router?route=admin/excel-export-config"
+    },
+    {
+      "source": "/api/admin/outages-export",
+      "destination": "/api/router?route=admin/outages-export"
     }
   ]
 }

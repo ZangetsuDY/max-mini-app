@@ -20,6 +20,7 @@ const API_ADMIN_USERS = "/api/admin/users";
 const API_ADMIN_DISPATCHER_CONFIG = "/api/admin/dispatcher-config";
 const API_ADMIN_OUTAGE_CONFIG = "/api/admin/outage-config";
 const API_EXCEL_EXPORTS = "/api/excel-exports";
+const API_ADMIN_OUTAGES_EXPORT = "/api/admin/outages-export";
 const API_ADMIN_EXCEL_EXPORT_CONFIG = "/api/admin/excel-export-config";
 
 const REFRESH_INTERVAL_MS = 120_000;
@@ -2310,6 +2311,75 @@ async function downloadEmergencyExcel() {
     }
   }
 }
+
+const outagesExportButton = document.getElementById("outagesExportButton");
+const outagesExportStatus = document.getElementById("outagesExportStatus");
+
+async function downloadOutagesWorkbook() {
+  if (!outagesExportButton || outagesExportButton.disabled) return;
+
+  const label = outagesExportButton.querySelector("span");
+  const oldText = label?.textContent || "Скачать Excel";
+  outagesExportButton.disabled = true;
+  outagesExportButton.classList.add("is-loading");
+  if (label) label.textContent = "Формирование…";
+  if (outagesExportStatus) {
+    outagesExportStatus.classList.remove("is-error");
+    outagesExportStatus.textContent = "Получаем последние сводки аварийных и плановых отключений…";
+  }
+
+  try {
+    const response = await fetch(API_ADMIN_OUTAGES_EXPORT, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "include",
+      headers: getSessionHeaders()
+    });
+
+    if (response.status === 401) {
+      setAppSessionToken("");
+      showLoginScreen();
+      return;
+    }
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new Error(payload?.error || "Не удалось сформировать Excel");
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get("content-disposition") || "";
+    const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1] || "";
+    const fileName = encoded ? decodeURIComponent(encoded) : "Отключения_аварийные_и_плановые.xlsx";
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+    const emergency = response.headers.get("x-outages-emergency");
+    const planned = response.headers.get("x-outages-planned");
+    if (outagesExportStatus) {
+      outagesExportStatus.textContent = emergency !== null && planned !== null
+        ? `Готово: аварийных — ${emergency}, плановых — ${planned}. ${formatDateTime(new Date().toISOString())}`
+        : "Файл сформирован.";
+    }
+  } catch (error) {
+    if (outagesExportStatus) {
+      outagesExportStatus.classList.add("is-error");
+      outagesExportStatus.textContent = error instanceof Error ? error.message : "Не удалось сформировать Excel";
+    }
+  } finally {
+    outagesExportButton.disabled = false;
+    outagesExportButton.classList.remove("is-loading");
+    if (label) label.textContent = oldText;
+  }
+}
+
+outagesExportButton?.addEventListener("click", downloadOutagesWorkbook);
 
 function markExcelTemplateDirty() {
   if (excelTemplateDirty) return;

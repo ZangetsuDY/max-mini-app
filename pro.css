@@ -3340,3 +3340,88 @@ html body .executive-map-footer a {
   text-decoration: underline;
   text-decoration-color: rgba(122,150,166,.4);
 }
+
+/* =========================================================
+   ЦЕНТР УПРАВЛЕНИЯ · выгрузка отключений в Excel
+   ========================================================= */
+html body .outages-export-panel {
+  margin-top: 16px;
+}
+
+html body .outages-export-body {
+  display: grid;
+  gap: 14px;
+}
+
+html body .outages-export-copy {
+  margin: 0;
+  max-width: 900px;
+  color: #a9bccb;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+html body .outages-export-sheets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+html body .outages-export-sheets li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(255,255,255,.025);
+  color: #dbe8f4;
+  font: 700 11px var(--mono, ui-monospace, monospace);
+  letter-spacing: .04em;
+}
+
+html body .outages-export-sheets i {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: #d6a446;
+}
+
+html body .outages-export-sheets i.is-emergency { background: #e0565b; }
+html body .outages-export-sheets i.is-planned { background: #4f8fca; }
+
+html body .outages-export-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+html body .outages-export-status {
+  color: #7f9ab0;
+  font-size: 12px;
+}
+
+html body .outages-export-status.is-error {
+  color: #ff8a8f;
+}
+
+html body #outagesExportButton.is-loading {
+  opacity: .7;
+  cursor: progress;
+}
+
+@media (max-width: 620px) {
+  html body .outages-export-footer {
+    display: grid;
+  }
+
+  html body #outagesExportButton {
+    width: 100%;
+    justify-content: center;
+  }
+}
