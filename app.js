@@ -21,6 +21,7 @@ const API_ADMIN_DISPATCHER_CONFIG = "/api/admin/dispatcher-config";
 const API_ADMIN_OUTAGE_CONFIG = "/api/admin/outage-config";
 const API_EXCEL_EXPORTS = "/api/excel-exports";
 const API_ADMIN_OUTAGES_EXPORT = "/api/admin/outages-export";
+const API_REQUESTS_DETAILS = "/api/requests-details";
 const API_ADMIN_EXCEL_EXPORT_CONFIG = "/api/admin/excel-export-config";
 
 const REFRESH_INTERVAL_MS = 120_000;
@@ -52,6 +53,7 @@ const homeView = document.getElementById("homeView");
 const monitoringView = document.getElementById("monitoringView");
 const dispatcherView = document.getElementById("dispatcherView");
 const executiveView = document.getElementById("executiveView");
+const requestsView = document.getElementById("requestsView");
 const excelExportsView = document.getElementById("excelExportsView");
 const adminView = document.getElementById("adminView");
 
@@ -309,6 +311,31 @@ const exitConfirmModal = document.getElementById("exitConfirmModal");
 const exitConfirmCloseButton = document.getElementById("exitConfirmCloseButton");
 const exitConfirmYesButton = document.getElementById("exitConfirmYesButton");
 let viewLoadingToken = 0;
+const REQUESTS_PAGE_SIZE = 60;
+const REQUESTS_REFRESH_INTERVAL_MS = 60000;
+const REQUEST_STATUS_FILTERS = [
+  { key: "all", label: "Все" },
+  { key: "review", label: "В рассмотрении" },
+  { key: "approved", label: "Разрешена" },
+  { key: "open", label: "Открыта" },
+  { key: "closed", label: "Закрыта" },
+  { key: "acknowledged", label: "Принята к сведению" },
+  { key: "ending", label: "Заканчиваются в смену" }
+];
+
+const requestsState = {
+  scope: "dispatcher",
+  groupId: "",
+  unitId: "",
+  returnView: "home",
+  data: null,
+  filter: "all",
+  query: "",
+  shown: REQUESTS_PAGE_SIZE,
+  refreshTimer: null,
+  loadToken: 0
+};
+
 const modalIcon = document.getElementById("modalIcon");
 const modalEyebrow = document.getElementById("modalEyebrow");
 const modalTitle = document.getElementById("modalTitle");
@@ -1144,6 +1171,7 @@ function showLoginScreen() {
   monitoringView.classList.remove("is-active");
   dispatcherView.classList.remove("is-active");
   executiveView.classList.remove("is-active");
+  requestsView?.classList.remove("is-active");
   excelExportsView.classList.remove("is-active");
   adminView.classList.remove("is-active");
 
@@ -1190,6 +1218,11 @@ function setView(view) {
     view === "executive"
   );
 
+  requestsView?.classList.toggle(
+    "is-active",
+    view === "requests"
+  );
+
   excelExportsView.classList.toggle(
     "is-active",
     view === "excel-exports"
@@ -1214,6 +1247,10 @@ function setView(view) {
 
   if (view !== "executive") {
     stopExecutiveRefresh();
+  }
+
+  if (view !== "requests") {
+    stopRequestsRefresh();
   }
 
   window.scrollTo({
@@ -2380,6 +2417,326 @@ async function downloadOutagesWorkbook() {
 }
 
 outagesExportButton?.addEventListener("click", downloadOutagesWorkbook);
+
+
+/* =========================================================
+   ЗАЯВКИ · отдельное окно со всеми заявками из txt-файла СК-11
+   ========================================================= */
+function requestsEl(id) {
+  return document.getElementById(id);
+}
+
+function stopRequestsRefresh() {
+  if (requestsState.refreshTimer) {
+    clearInterval(requestsState.refreshTimer);
+    requestsState.refreshTimer = null;
+  }
+}
+
+function startRequestsRefresh() {
+  stopRequestsRefresh();
+  requestsState.refreshTimer = setInterval(() => {
+    if (currentView === "requests" && isAppVisible()) {
+      loadRequestsDetails({ quiet: true });
+    }
+  }, REQUESTS_REFRESH_INTERVAL_MS);
+}
+
+function requestMatchesFilter(item, filter) {
+  if (filter === "all") return true;
+  if (filter === "ending") return Boolean(item.ending);
+  return item.statusKey === filter;
+}
+
+function requestSearchText(item) {
+  if (!item._search) {
+    item._search = [
+      item.id,
+      `№${item.id}`,
+      item.status,
+      item.object,
+      item.equipment,
+      ...(item.works || []),
+      item.source,
+      ...(item.alsoSources || [])
+    ].join(" ").toLowerCase().replace(/ё/g, "е");
+  }
+  return item._search;
+}
+
+function filteredRequests() {
+  const list = Array.isArray(requestsState.data?.requests) ? requestsState.data.requests : [];
+  const words = requestsState.query
+    .toLowerCase()
+    .replace(/ё/g, "е")
+    .split(/\s+/)
+    .filter(Boolean);
+
+  return list.filter((item) =>
+    requestMatchesFilter(item, requestsState.filter) &&
+    words.every((word) => requestSearchText(item).includes(word))
+  );
+}
+
+function renderRequestCard(item) {
+  const works = Array.isArray(item.works) ? item.works : [];
+  const worksLength = works.join(" ").length;
+  const also = Array.isArray(item.alsoSources) ? item.alsoSources : [];
+  const times = [
+    ["Начало", item.start],
+    ["Конец", item.end],
+    ["Открыта", item.openedAt],
+    ["Закрыта", item.closedAt]
+  ].filter(([, value]) => value);
+
+  return `
+    <article class="request-card is-${escapeHtml(item.statusKey || "other")}${item.ending ? " is-ending" : ""}">
+      <header class="request-card-head">
+        <span class="request-number"><small>№</small>${escapeHtml(item.id)}</span>
+        <span class="request-status">${escapeHtml(item.status || "—")}</span>
+        ${item.ending ? '<span class="request-ending">⏳ заканч. в смену</span>' : ""}
+      </header>
+
+      <div class="request-object">${escapeHtml(item.object || "—")}</div>
+      ${item.equipment ? `<div class="request-equipment">${escapeHtml(item.equipment)}</div>` : ""}
+
+      <dl class="request-times">
+        ${times.map(([label, value]) => `<div><dt>${label}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}
+      </dl>
+
+      ${works.length ? `
+        <div class="request-works${worksLength > 220 ? " is-collapsible is-collapsed" : ""}">
+          <span class="request-label">Работы</span>
+          ${works.length > 1
+            ? `<ul>${works.map((work) => `<li>${escapeHtml(work)}</li>`).join("")}</ul>`
+            : `<p>${escapeHtml(works[0])}</p>`}
+          ${worksLength > 220 ? '<button class="request-works-toggle" type="button">Показать полностью</button>' : ""}
+        </div>
+      ` : ""}
+
+      <footer class="request-sources">
+        <span class="request-source-main" title="Основной РЭС">${escapeHtml(item.source || "—")}</span>
+        ${also.length ? `<span class="request-source-also">Также: ${also.map((label) => escapeHtml(label)).join(", ")}</span>` : ""}
+      </footer>
+    </article>
+  `;
+}
+
+function renderRequestsList() {
+  const list = requestsEl("requestsList");
+  const more = requestsEl("requestsMoreButton");
+  const resultLine = requestsEl("requestsResultLine");
+  if (!list) return;
+
+  const items = filteredRequests();
+  const visible = items.slice(0, requestsState.shown);
+
+  if (resultLine) {
+    const total = Number(requestsState.data?.requests?.length || 0);
+    resultLine.textContent = items.length === total
+      ? `Показано ${visible.length} из ${items.length}`
+      : `Найдено ${items.length} из ${total} · показано ${visible.length}`;
+  }
+
+  list.innerHTML = visible.length
+    ? visible.map(renderRequestCard).join("")
+    : `<div class="requests-empty">${requestsState.data?.requests?.length ? "Нет заявок по выбранному фильтру" : "Заявок нет"}</div>`;
+
+  if (more) {
+    const rest = items.length - visible.length;
+    more.hidden = rest <= 0;
+    more.textContent = `Показать ещё ${Math.min(rest, REQUESTS_PAGE_SIZE)} из ${rest}`;
+  }
+}
+
+function renderRequestsFilters() {
+  const container = requestsEl("requestsStatusFilters");
+  if (!container) return;
+  const counts = requestsState.data?.counts || {};
+
+  container.innerHTML = REQUEST_STATUS_FILTERS.map((filter) => {
+    const count = filter.key === "all" ? Number(counts.total || 0) : Number(counts[filter.key] || 0);
+    const active = requestsState.filter === filter.key;
+    return `
+      <button class="requests-filter is-${filter.key}${active ? " is-active" : ""}" type="button" role="tab" aria-selected="${active}" data-requests-filter="${filter.key}"${count || filter.key === "all" ? "" : " disabled"}>
+        <i></i><span>${filter.label}</span><b>${count}</b>
+      </button>
+    `;
+  }).join("");
+}
+
+function renderRequestsView() {
+  const data = requestsState.data || {};
+  requestsEl("requestsScopeTitle").textContent = `Заявки · ${data.scopeLabel || "—"}`;
+  requestsEl("requestsTotal").textContent = Number(data.counts?.total || 0);
+  requestsEl("requestsShiftLine").textContent = [
+    data.shift ? `Смена ${String(data.shift).toLowerCase()}` : "",
+    data.period || ""
+  ].filter(Boolean).join(": ") || "Смена: —";
+  requestsEl("requestsUpdatedAt").textContent = data.generatedAt
+    ? `Сформировано: ${data.generatedAt}`
+    : "Сформировано: —";
+
+  const notice = requestsEl("requestsNotice");
+  if (notice) {
+    const text = data.status && data.status !== "ok" ? data.message : "";
+    notice.hidden = !text;
+    notice.textContent = text || "";
+    notice.classList.toggle("is-warning", data.status === "stale");
+  }
+
+  renderRequestsFilters();
+  renderRequestsList();
+}
+
+async function loadRequestsDetails({ quiet = false } = {}) {
+  const token = ++requestsState.loadToken;
+  const params = new URLSearchParams({ scope: requestsState.scope });
+  if (requestsState.groupId) params.set("group", requestsState.groupId);
+  if (requestsState.unitId) params.set("unit", requestsState.unitId);
+
+  try {
+    const response = await fetch(`${API_REQUESTS_DETAILS}?${params.toString()}`, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "include",
+      headers: getSessionHeaders()
+    });
+
+    if (response.status === 401) {
+      setAppSessionToken("");
+      showLoginScreen();
+      return false;
+    }
+
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(payload?.error || payload?.message || `Сервер вернул ошибку ${response.status}`);
+    }
+
+    // Ответ на устаревший запрос (пользователь уже открыл другое подразделение).
+    if (token !== requestsState.loadToken) return true;
+
+    requestsState.data = payload;
+    renderRequestsView();
+    return true;
+  } catch (error) {
+    if (!quiet) {
+      openModal({
+        type: "denied",
+        eyebrow: "ЗАЯВКИ",
+        title: "Не удалось загрузить заявки",
+        message: error instanceof Error ? error.message : "Попробуйте ещё раз."
+      });
+    }
+    return false;
+  }
+}
+
+async function openRequestsView(scope) {
+  const isExecutive = scope === "executive";
+  const panel = isExecutive ? "executive-monitoring" : "dispatcher";
+  if (!hasPanelAccess(panel)) {
+    showPanelAccessDenied(panel);
+    return;
+  }
+
+  Object.assign(requestsState, {
+    scope: isExecutive ? "executive" : "dispatcher",
+    groupId: isExecutive ? selectedExecutiveGroupId : selectedDispatcherGroupId,
+    unitId: isExecutive ? selectedExecutiveUnitId : selectedDispatcherUnitId,
+    returnView: isExecutive ? "executive" : "dispatcher",
+    data: null,
+    filter: "all",
+    query: "",
+    shown: REQUESTS_PAGE_SIZE
+  });
+
+  const search = requestsEl("requestsSearchInput");
+  if (search) search.value = "";
+  const backLabel = requestsEl("requestsBackLabel");
+  if (backLabel) backLabel.textContent = isExecutive ? "Диспетчерский мониторинг" : "Интерфейс диспетчера";
+  requestsEl("requestsList").innerHTML = "";
+  requestsEl("requestsResultLine").textContent = "";
+  requestsEl("requestsMoreButton").hidden = true;
+
+  setView("requests");
+  const token = showViewLoading("Загрузка заявок…");
+
+  try {
+    const ok = await loadRequestsDetails();
+    if (currentView !== "requests") return;
+    if (ok) {
+      startRequestsRefresh();
+    } else {
+      closeRequestsView();
+    }
+  } finally {
+    hideViewLoading(token);
+  }
+}
+
+function closeRequestsView() {
+  stopRequestsRefresh();
+  hideViewLoading();
+
+  if (requestsState.returnView === "dispatcher" && hasPanelAccess("dispatcher")) {
+    setView("dispatcher");
+    startDispatcherRefresh();
+    loadDispatcherDashboard({ quiet: true });
+  } else if (requestsState.returnView === "executive" && hasPanelAccess("executive-monitoring")) {
+    setView("executive");
+    startExecutiveRefresh();
+    loadExecutiveDashboard({ quiet: true });
+  } else {
+    navigateHome();
+  }
+}
+
+document.querySelectorAll(".requests-open-panel").forEach((panel) => {
+  const open = () => openRequestsView(panel.dataset.requestsScope);
+  panel.addEventListener("click", open);
+  panel.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      open();
+    }
+  });
+});
+
+requestsEl("backFromRequestsButton")?.addEventListener("click", closeRequestsView);
+
+requestsEl("requestsStatusFilters")?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-requests-filter]");
+  if (!button || button.disabled) return;
+  requestsState.filter = button.dataset.requestsFilter;
+  requestsState.shown = REQUESTS_PAGE_SIZE;
+  renderRequestsFilters();
+  renderRequestsList();
+});
+
+let requestsSearchTimer = null;
+requestsEl("requestsSearchInput")?.addEventListener("input", (event) => {
+  clearTimeout(requestsSearchTimer);
+  requestsSearchTimer = setTimeout(() => {
+    requestsState.query = String(event.target.value || "").trim();
+    requestsState.shown = REQUESTS_PAGE_SIZE;
+    renderRequestsList();
+  }, 160);
+});
+
+requestsEl("requestsMoreButton")?.addEventListener("click", () => {
+  requestsState.shown += REQUESTS_PAGE_SIZE;
+  renderRequestsList();
+});
+
+requestsEl("requestsList")?.addEventListener("click", (event) => {
+  const toggle = event.target.closest(".request-works-toggle");
+  if (!toggle) return;
+  const works = toggle.closest(".request-works");
+  const collapsed = works.classList.toggle("is-collapsed");
+  toggle.textContent = collapsed ? "Показать полностью" : "Свернуть";
+});
 
 function markExcelTemplateDirty() {
   if (excelTemplateDirty) return;
@@ -10512,6 +10869,11 @@ function handleAppBackAction() {
 
   if (accessModal?.classList.contains("is-open")) {
     closeModal();
+    return;
+  }
+
+  if (currentView === "requests") {
+    closeRequestsView();
     return;
   }
 
