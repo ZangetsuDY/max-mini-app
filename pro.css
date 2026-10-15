@@ -1632,7 +1632,7 @@ html body .executive-map-grid path {
   vector-effect: non-scaling-stroke;
 }
 
-html body .executive-map-zone polygon {
+html body .executive-map-zone .executive-map-shape {
   vector-effect: non-scaling-stroke;
   fill: rgba(60,195,232,.035);
   stroke: rgba(121,166,190,.34);
@@ -1640,19 +1640,18 @@ html body .executive-map-zone polygon {
   transition: fill .35s ease, stroke .35s ease, filter .35s ease;
 }
 
-html body .executive-map-zone.is-enabled:hover polygon {
-  fill: rgba(60,195,232,.08);
+html body .executive-map-zone.is-enabled:hover .executive-map-shape {
   stroke: rgba(122,220,245,.68);
 }
 
-html body .executive-map-zone.has-outages polygon {
+html body .executive-map-zone.has-outages .executive-map-shape {
   fill: rgba(240,84,95,var(--zone-alert-alpha,.20));
   stroke: rgba(255,102,115,.78);
   filter: drop-shadow(0 0 4px rgba(240,84,95,.14));
   animation: executiveMapZoneAlert 5.8s ease-in-out infinite;
 }
 
-html body .executive-map-zone.is-disabled polygon {
+html body .executive-map-zone.is-disabled .executive-map-shape {
   fill: rgba(255,255,255,.012);
   stroke: rgba(122,150,166,.12);
   stroke-dasharray: 3 4;
@@ -1910,7 +1909,7 @@ html body .executive-map-enabled-option {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html body .executive-map-zone.has-outages polygon,
+  html body .executive-map-zone.has-outages .executive-map-shape,
   html body .executive-map-pulse {
     animation: none !important;
   }
@@ -3272,4 +3271,72 @@ html body .modal-icon.is-denied {
   max-width: 100%;
   white-space: nowrap;
   justify-self: start;
+}
+
+/* =========================================================
+   EXECUTIVE MAP · реальные контуры районов
+   ========================================================= */
+html body .executive-map-sea {
+  fill: #0a1c29;
+}
+
+html body .executive-map-neighbors {
+  fill: #0c1218;
+  stroke: rgba(122,150,166,.16);
+  stroke-width: .8;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+html body .executive-map-water,
+html body .executive-map-ladoga {
+  fill: #0a1c29;
+  stroke: rgba(60,195,232,.16);
+  stroke-width: .9;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+html body .executive-map-context-label {
+  fill: rgba(122,150,166,.30);
+  font: 600 9px var(--mono);
+  letter-spacing: .16em;
+  pointer-events: none;
+}
+
+html body .executive-map-zone .executive-map-shape {
+  fill: #0f1c26;
+  stroke-linejoin: round;
+}
+
+html body .executive-map-zone.is-enabled.is-clear:hover .executive-map-shape {
+  fill: #13283a;
+}
+
+html body .executive-map-label {
+  pointer-events: none;
+}
+
+html body .executive-map-leader {
+  fill: none;
+  stroke: rgba(217,228,236,.45);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+html body .executive-map-leader-dot {
+  fill: #d9e4ec;
+}
+
+@media (min-width: 701px) {
+  html body .executive-map-svg {
+    min-height: 0;
+    max-height: none;
+  }
+}
+
+html body .executive-map-footer a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(122,150,166,.4);
 }
