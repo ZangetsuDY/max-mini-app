@@ -5067,3 +5067,12 @@ html body .wo-panel > * {
 
   html body .wo-panel-head h2 { font-size: 16px; }
 }
+
+html body .wo-funnel-name small {
+  display: block;
+  overflow: hidden;
+  color: #6f879a;
+  font-size: 10.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+}

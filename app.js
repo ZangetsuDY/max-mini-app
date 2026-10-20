@@ -333,7 +333,7 @@ const workordersState = {
   returnView: "home",
   data: null,
   tab: "dashboard",
-  funnelMode: "organization",
+  funnelMode: "branch",
   filter: "all",
   query: "",
   shown: WO_PAGE_SIZE,
@@ -3014,14 +3014,33 @@ function renderWoDays(analytics) {
   `;
 }
 
+const WO_BRANCH_NAMES = {
+  "ВЭС": "Выборгские электрические сети",
+  "ГтЭС": "Гатчинские электрические сети",
+  "КнЭС": "Кингисеппские электрические сети",
+  "НлЭС": "Новоладожские электрические сети",
+  "СПбВС": "Санкт-Петербургские высоковольтные сети",
+  "СЭС": "Северные электрические сети",
+  "ТхЭС": "Тихвинские электрические сети",
+  "ЮЭС": "Южные электрические сети",
+  "КС": "Кабельная сеть",
+  "СИиЗП": "Служба изоляции и защиты от перенапряжений",
+  "ЦУС": "Центр управления сетями"
+};
+
+const WO_FUNNEL_MODES = {
+  branch: { title: "Воронка по филиалам", empty: "Без филиала", key: (order) => order.branch || order.organization },
+  organization: { title: "Воронка по исполнителям", empty: "Без организации", key: (order) => order.organization },
+  journal: { title: "Воронка по журналам", empty: "Без журнала", key: (order) => order.journal }
+};
+
 function renderWoFunnel(orders) {
-  const mode = workordersState.funnelMode;
-  const key = mode === "journal" ? "journal" : "organization";
-  woEl("woFunnelTitle").textContent = mode === "journal" ? "Воронка по журналам" : "Воронка по подразделениям";
+  const mode = WO_FUNNEL_MODES[workordersState.funnelMode] || WO_FUNNEL_MODES.branch;
+  woEl("woFunnelTitle").textContent = mode.title;
 
   const map = new Map();
   for (const order of orders) {
-    const name = order[key] || (mode === "journal" ? "Без журнала" : "Без организации");
+    const name = mode.key(order) || mode.empty;
     if (!map.has(name)) map.set(name, []);
     map.get(name).push(order);
   }
@@ -3039,7 +3058,10 @@ function renderWoFunnel(orders) {
   const smallRows = rows.length > 6 ? rows.filter((row) => row.counts.total <= SMALL_LIMIT) : [];
   const renderRow = (row, index) => `
         <div class="wo-funnel-row" style="--i:${Math.min(index, 20)}">
-          <div class="wo-funnel-name" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</div>
+          <div class="wo-funnel-name" title="${escapeHtml(WO_BRANCH_NAMES[row.name] ? `${row.name} — ${WO_BRANCH_NAMES[row.name]}` : row.name)}">
+            ${escapeHtml(row.name)}
+            ${WO_BRANCH_NAMES[row.name] ? `<small>${escapeHtml(WO_BRANCH_NAMES[row.name])}</small>` : ""}
+          </div>
           <div class="wo-funnel-bar">${woStackBar(row.counts)}</div>
           <div class="wo-funnel-numbers">
             ${WO_GROUPS.map((group) => `<span title="${group.label}" style="--c:${group.color}">${row.counts[group.key] || 0}</span>`).join("")}
@@ -3143,7 +3165,7 @@ function woMatchesFilter(order, filter) {
 function woSearchText(order) {
   if (!order._search) {
     order._search = [
-      order.number, order.status, order.groupLabel, order.organization, order.journal,
+      order.number, order.status, order.groupLabel, order.organization, order.organizationCode, order.branch, order.journal,
       order.object, order.places, order.works, order.issuer, order.responsible,
       order.producer, ...(order.brigade || []), order.stageBy, order.uid
     ].join(" ").toLowerCase().replace(/ё/g, "е");
