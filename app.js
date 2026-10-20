@@ -6419,9 +6419,15 @@ function renderAdminStorageInfo(storage) {
     return;
   }
   box.hidden = false;
+  const health = storage.health;
+  const healthText = health
+    ? health.ok
+      ? `проверка: OK (${health.latencyMs} мс)`
+      : `проверка: ОШИБКА — ${health.error}`
+    : "";
   if (storage.backend === "redis") {
-    box.textContent = "Хранилище: внешний Redis";
-    box.classList.remove("is-warning");
+    box.textContent = ["Хранилище: внешний Redis (Upstash)", healthText].filter(Boolean).join(" · ");
+    box.classList.toggle("is-warning", Boolean(health && !health.ok));
     return;
   }
   const parts = [`Хранилище: сервер (${Number(storage.keys || 0)} записей)`];
@@ -6432,8 +6438,9 @@ function renderAdminStorageInfo(storage) {
     parts.push("копия в S3 не настроена — данные могут пропасть при новом деплое");
   }
   if (storage.lastS3Error) parts.push(`ошибка S3: ${storage.lastS3Error}`);
+  if (healthText) parts.push(healthText);
   box.textContent = parts.join(" · ");
-  box.classList.toggle("is-warning", !storage.s3Backup || Boolean(storage.lastS3Error));
+  box.classList.toggle("is-warning", !storage.s3Backup || Boolean(storage.lastS3Error) || Boolean(health && !health.ok));
 }
 
 async function loadAdminDashboard() {

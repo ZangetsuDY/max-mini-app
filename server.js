@@ -706,8 +706,15 @@ if (runtimeStoreBackend() === "local") {
   } catch (error) {
     log("Хранилище: ошибка загрузки", error instanceof Error ? error.message : String(error));
   }
-} else {
-  log("Хранилище: внешний Redis");
+}
+
+// Проверка хранилища при запуске — результат виден в логах приложения Timeweb.
+{
+  const { checkRuntimeStore } = await import("./lib/runtime-store.js");
+  const health = await checkRuntimeStore();
+  log(
+    `Хранилище: ${health.backend === "redis" ? "внешний Redis" : "собственное"} — ${health.ok ? `OK (${health.latencyMs} мс)` : `ОШИБКА: ${health.error}`}`
+  );
 }
 
 server.listen(

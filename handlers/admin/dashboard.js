@@ -1,5 +1,6 @@
 import {
-  runtimeStoreBackend
+  runtimeStoreBackend,
+  checkRuntimeStore
 } from "../../lib/runtime-store.js";
 
 import {
@@ -109,10 +110,12 @@ export default {
       return json({
         storageConfigured:
           isRuntimeStoreConfigured(),
-        storage:
-          runtimeStoreBackend() === "local"
+        storage: {
+          ...(runtimeStoreBackend() === "local"
             ? { backend: "local", ...localStoreInfo() }
-            : { backend: "redis" },
+            : { backend: "redis" }),
+          health: await checkRuntimeStore()
+        },
         system,
         onlineCount:
           presence.onlineCount,
