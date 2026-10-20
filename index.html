@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261020-store2" />
-  <link rel="stylesheet" href="pro.css?v=20261020-store2" />
+  <link rel="stylesheet" href="style.css?v=20261020-scope1" />
+  <link rel="stylesheet" href="pro.css?v=20261020-scope1" />
 </head>
 
 <body class="auth-pending">
@@ -835,6 +835,16 @@
             <span class="micro-label">СК-11 · ЗАЯВКИ ПО РЭС</span>
             <h1 id="requestsScopeTitle">Заявки</h1>
             <p id="requestsShiftLine" class="requests-shift-line">Смена: —</p>
+            <div class="scope-switch">
+              <label class="scope-switch-field">
+                <span>Подразделение</span>
+                <select id="requestsGroupSelect" aria-label="Подразделение"></select>
+              </label>
+              <label class="scope-switch-field">
+                <span>РЭС / район</span>
+                <select id="requestsUnitSelect" aria-label="РЭС / район"></select>
+              </label>
+            </div>
           </div>
           <div class="requests-hero-total">
             <strong id="requestsTotal">0</strong>
@@ -880,6 +890,16 @@
             <span class="micro-label">СК-11 · НАРЯДЫ / РАСПОРЯЖЕНИЯ</span>
             <h1 id="woScopeTitle">НДР</h1>
             <p id="woShiftLine" class="requests-shift-line">Смена: —</p>
+            <div class="scope-switch">
+              <label class="scope-switch-field">
+                <span>Подразделение</span>
+                <select id="woGroupSelect" aria-label="Подразделение"></select>
+              </label>
+              <label class="scope-switch-field">
+                <span>РЭС / район</span>
+                <select id="woUnitSelect" aria-label="РЭС / район"></select>
+              </label>
+            </div>
             <div class="wo-archive-bar">
               <label class="wo-archive-select">
                 <span>Сводка</span>
@@ -2161,6 +2181,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261020-store2"></script>
+  <script src="app.js?v=20261020-scope1"></script>
 </body>
 </html>

@@ -2663,6 +2663,10 @@ async function loadRequestsDetails({ quiet = false } = {}) {
     if (token !== requestsState.loadToken) return true;
 
     requestsState.data = payload;
+    // Сервер мог выбрать РЭС по умолчанию (интерфейс диспетчера).
+    requestsState.groupId = payload?.groupId ?? requestsState.groupId;
+    requestsState.unitId = payload?.unitId ?? requestsState.unitId;
+    renderScopeSwitch("requests", payload, requestsState);
     renderRequestsView();
     return true;
   } catch (error) {
@@ -2768,6 +2772,12 @@ requestsEl("requestsSearchInput")?.addEventListener("input", (event) => {
     requestsState.shown = REQUESTS_PAGE_SIZE;
     renderRequestsList();
   }, 160);
+});
+
+bindScopeSwitch("requests", requestsState, () => {
+  requestsState.filter = "all";
+  requestsState.shown = REQUESTS_PAGE_SIZE;
+  reloadScopedView(() => loadRequestsDetails(), "Загрузка заявок…");
 });
 
 requestsEl("requestsMoreButton")?.addEventListener("click", () => {
@@ -3399,6 +3409,9 @@ async function loadWorkordersDetails({ quiet = false } = {}) {
     if (token !== workordersState.loadToken) return true;
 
     workordersState.data = payload;
+    workordersState.groupId = payload?.groupId ?? workordersState.groupId;
+    workordersState.unitId = payload?.unitId ?? workordersState.unitId;
+    renderScopeSwitch("wo", payload, workordersState);
     renderWorkordersView();
     return true;
   } catch (error) {
@@ -3530,6 +3543,12 @@ woEl("woSearchInput")?.addEventListener("input", (event) => {
     workordersState.shown = WO_PAGE_SIZE;
     renderWoCards();
   }, 160);
+});
+
+bindScopeSwitch("wo", workordersState, () => {
+  workordersState.filter = "all";
+  workordersState.shown = WO_PAGE_SIZE;
+  reloadScopedView(() => loadWorkordersDetails(), "Загрузка НДР…");
 });
 
 woEl("woMoreButton")?.addEventListener("click", () => {
@@ -3817,6 +3836,58 @@ document.addEventListener("keydown", (event) => {
     closeWoHistoryModal();
   }
 });
+
+/* =========================================================
+   Переключатель подразделения / РЭС внутри окон «Заявки» и «НДР».
+   Список приходит с сервера — только то, что доступно роли.
+   ========================================================= */
+function renderScopeSwitch(prefix, data, state) {
+  const groupSelect = document.getElementById(`${prefix}GroupSelect`);
+  const unitSelect = document.getElementById(`${prefix}UnitSelect`);
+  if (!groupSelect || !unitSelect) return;
+
+  const filters = data?.filters || {};
+  const groups = Array.isArray(filters.groups) ? filters.groups : [];
+  const units = Array.isArray(filters.units) ? filters.units : [];
+  const option = (value, label) => `<option value="${escapeHtml(value)}">${escapeHtml(label)}</option>`;
+
+  groupSelect.innerHTML =
+    (filters.allowAllGroups ? option("", "Все подразделения") : "") +
+    groups.map((item) => option(item.id, item.name)).join("");
+  groupSelect.value = state.groupId || (filters.allowAllGroups ? "" : groups[0]?.id || "");
+  groupSelect.disabled = groups.length + (filters.allowAllGroups ? 1 : 0) <= 1;
+
+  unitSelect.innerHTML =
+    (filters.allowAllUnits || !units.length ? option("", units.length ? "Все РЭС / районы" : "—") : "") +
+    units.map((item) => option(item.id, item.name)).join("");
+  unitSelect.value = state.unitId || "";
+  unitSelect.disabled = units.length + (filters.allowAllUnits ? 1 : 0) <= 1;
+}
+
+function bindScopeSwitch(prefix, state, reload) {
+  const groupSelect = document.getElementById(`${prefix}GroupSelect`);
+  const unitSelect = document.getElementById(`${prefix}UnitSelect`);
+
+  groupSelect?.addEventListener("change", () => {
+    state.groupId = groupSelect.value;
+    state.unitId = "";
+    reload();
+  });
+
+  unitSelect?.addEventListener("change", () => {
+    state.unitId = unitSelect.value;
+    reload();
+  });
+}
+
+async function reloadScopedView(load, loadingText) {
+  const token = showViewLoading(loadingText);
+  try {
+    await load();
+  } finally {
+    hideViewLoading(token);
+  }
+}
 
 function markExcelTemplateDirty() {
   if (excelTemplateDirty) return;

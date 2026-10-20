@@ -53,6 +53,7 @@ export default {
       scopeLabel: scope.scopeLabel,
       groupId: scope.groupId,
       unitId: scope.unitId,
+      filters: scope.filters,
       status: sourceState.status,
       message: sourceState.message || "",
       stale: Boolean(sourceState.stale),

@@ -5430,3 +5430,55 @@ html body .admin-storage-info {
 html body .admin-storage-info.is-warning {
   color: #fbbf5a;
 }
+
+/* =========================================================
+   Переключатель подразделения / РЭС в окнах «Заявки» и «НДР»
+   ========================================================= */
+html body .scope-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 260px));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+html body .scope-switch-field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+html body .scope-switch-field span {
+  color: #7f9ab0;
+  font: 700 10px var(--mono, ui-monospace, monospace);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+html body .scope-switch-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(0,0,0,.25);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+
+html body .scope-switch-field select:disabled {
+  opacity: .55;
+}
+
+html body .scope-switch-field select option {
+  background: #0b121a;
+  color: #e6eef5;
+}
+
+@media (max-width: 620px) {
+  html body .scope-switch {
+    grid-template-columns: 1fr;
+  }
+}
