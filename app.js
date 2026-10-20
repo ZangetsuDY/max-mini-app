@@ -23,6 +23,7 @@ const API_EXCEL_EXPORTS = "/api/excel-exports";
 const API_ADMIN_OUTAGES_EXPORT = "/api/admin/outages-export";
 const API_REQUESTS_DETAILS = "/api/requests-details";
 const API_WORKORDERS_DETAILS = "/api/workorders-details";
+const API_WORKORDERS_HISTORY = "/api/workorders-history";
 const API_ADMIN_EXCEL_EXPORT_CONFIG = "/api/admin/excel-export-config";
 
 const REFRESH_INTERVAL_MS = 120_000;
@@ -334,6 +335,8 @@ const workordersState = {
   data: null,
   tab: "dashboard",
   funnelMode: "branch",
+  snapshotId: "",
+  snapshots: [],
   filter: "all",
   query: "",
   shown: WO_PAGE_SIZE,
@@ -2795,7 +2798,7 @@ const WO_GROUPS = [
   { key: "other", label: "Прочие", short: "Прочие", color: "#64748b" }
 ];
 const WO_WEEKDAYS = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
-const WO_LONG_ADMISSION_MIN = 50;
+const WO_LONG_ADMISSION_MIN = 40;
 
 function woEl(id) {
   return document.getElementById(id);
@@ -2879,7 +2882,8 @@ function woAnalytics(orders) {
       min: minutes.length ? Math.min(...minutes) : null,
       max: minutes.length ? Math.max(...minutes) : null
     },
-    inShift: orders.filter((order) => order.startsInShift).length
+    inShift: orders.filter((order) => order.startsInShift).length,
+    longAdmissions: admissions.filter((order) => order.admissionMinutes > WO_LONG_ADMISSION_MIN).length
   };
 }
 
@@ -2904,7 +2908,7 @@ function renderWoKpis(analytics) {
     { label: "Не проверены", value: counts.notChecked, hint: "создан", tone: "notChecked" },
     { label: "Допуск не производился", value: counts.notAdmitted, hint: "по статусу СК-11", tone: "notAdmitted" },
     { label: "Прочие", value: counts.other, hint: "закрыт, отменён и т. п.", tone: "other" },
-    { label: "Медиана допуска", value: admissionStats.median === null ? "—" : `${Math.round(admissionStats.median)} мин`, hint: `рассчитано: ${admissionStats.count}`, tone: "admission" }
+    { label: "Медиана допуска", value: admissionStats.median === null ? "—" : `${Math.round(admissionStats.median)} мин`, hint: `рассчитано ${admissionStats.count} · > ${WO_LONG_ADMISSION_MIN} мин: ${analytics.longAdmissions}`, tone: "admission" }
   ];
 
   woEl("woKpis").innerHTML = tiles.map((tile, index) => `
@@ -3102,16 +3106,18 @@ function renderWoAdmission(analytics) {
     <div class="wo-stat"><span>${label}</span><strong>${value}<small>${unit}</small></strong></div>
   `).join("");
 
+  // «Долгий» допуск — строго больше WO_LONG_ADMISSION_MIN минут.
+  const LONG = WO_LONG_ADMISSION_MIN;
   const buckets = [
-    { label: "0–10", from: 0, to: 10 },
-    { label: "10–20", from: 10, to: 20 },
-    { label: "20–30", from: 20, to: 30 },
-    { label: "30–50", from: 30, to: 50 },
-    { label: "50–90", from: 50, to: 90, long: true },
-    { label: "90+", from: 90, to: Infinity, long: true }
+    { label: "0–10", test: (m) => m < 10 },
+    { label: "10–20", test: (m) => m >= 10 && m < 20 },
+    { label: "20–30", test: (m) => m >= 20 && m < 30 },
+    { label: `30–${LONG}`, test: (m) => m >= 30 && m <= LONG },
+    { label: `${LONG}–60`, test: (m) => m > LONG && m < 60, long: true },
+    { label: "60+", test: (m) => m >= 60, long: true }
   ].map((bucket) => ({
     ...bucket,
-    count: admissions.filter((order) => order.admissionMinutes >= bucket.from && order.admissionMinutes < bucket.to).length
+    count: admissions.filter((order) => bucket.test(order.admissionMinutes)).length
   }));
   const maxCount = Math.max(...buckets.map((bucket) => bucket.count), 1);
 
@@ -3131,7 +3137,7 @@ function renderWoAdmission(analytics) {
   const top = admissions.slice(0, 8);
   woEl("woAdmissionTop").innerHTML = top.length
     ? top.map((order) => `
-        <div class="wo-top-row${order.admissionMinutes > WO_LONG_ADMISSION_MIN ? " is-long" : ""}">
+        <div class="wo-top-row${order.admissionMinutes > WO_LONG_ADMISSION_MIN ? " is-long" : ""}"${order.uid ? ` data-wo-history="${escapeHtml(order.uid)}" role="button" tabindex="0" title="История наряда"` : ""}>
           <div>
             <strong>${order.number ? `№${escapeHtml(order.number)}` : "Без номера"}</strong>
             <span>${escapeHtml(order.organization || "—")} · ${escapeHtml(order.status || "")}</span>
@@ -3215,6 +3221,7 @@ function renderWoCard(order, index) {
         <span class="request-number">${order.number ? `<small>№</small>${escapeHtml(order.number)}` : '<small>№</small>—'}</span>
         <span class="request-status">${escapeHtml(order.status || "—")}</span>
         <span class="wo-group-chip">${group.label}</span>
+        ${order.uid ? `<button class="wo-history-button" type="button" data-wo-history="${escapeHtml(order.uid)}" title="Как менялся наряд">История</button>` : ""}
       </header>
 
       <div class="wo-card-meta" title="${escapeHtml(order.journal || "")}">
@@ -3226,7 +3233,7 @@ function renderWoCard(order, index) {
 
       <div class="wo-badges">
         ${order.startsInShift ? '<span class="wo-badge is-shift">Начало в смену</span>' : ""}
-        ${order.admissionMinutes !== null && order.admissionMinutes !== undefined ? `<span class="wo-badge${longAdmission ? " is-long" : ""}">Допуск ${order.admissionMinutes} мин</span>` : ""}
+        ${order.admissionMinutes !== null && order.admissionMinutes !== undefined ? `<span class="wo-badge${longAdmission ? " is-long" : ""}">${longAdmission ? "⚠ " : ""}Допуск → начало ${order.admissionMinutes} мин</span>` : ""}
       </div>
 
       <dl class="request-times wo-times">
@@ -3304,6 +3311,13 @@ function renderWorkordersView() {
   const percent = woPercent(analytics.counts.started, analytics.counts.total);
 
   woEl("woScopeTitle").textContent = `НДР · ${data.scopeLabel || "—"}`;
+  const banner = woEl("woArchiveBanner");
+  banner.hidden = !data.isArchive;
+  if (data.isArchive) {
+    woEl("woArchiveBannerText").textContent =
+      `Архив: сводка от ${data.generatedAt || "—"} · данные на тот момент, не обновляются`;
+  }
+  workordersView.classList.toggle("is-archive", Boolean(data.isArchive));
   woEl("woShiftLine").textContent = [
     data.shift ? `Смена ${String(data.shift).toLowerCase()}` : "",
     data.period || ""
@@ -3334,6 +3348,13 @@ function renderWorkordersView() {
   renderWoTabs();
 }
 
+function woScopeParams() {
+  const params = new URLSearchParams({ scope: workordersState.scope });
+  if (workordersState.groupId) params.set("group", workordersState.groupId);
+  if (workordersState.unitId) params.set("unit", workordersState.unitId);
+  return params;
+}
+
 function stopWorkordersRefresh() {
   if (workordersState.refreshTimer) {
     clearInterval(workordersState.refreshTimer);
@@ -3344,7 +3365,8 @@ function stopWorkordersRefresh() {
 function startWorkordersRefresh() {
   stopWorkordersRefresh();
   workordersState.refreshTimer = setInterval(() => {
-    if (currentView === "workorders" && isAppVisible()) {
+    // Архивная сводка не меняется — обновляем только текущую.
+    if (currentView === "workorders" && isAppVisible() && !workordersState.snapshotId) {
       loadWorkordersDetails({ quiet: true });
     }
   }, WO_REFRESH_INTERVAL_MS);
@@ -3352,9 +3374,8 @@ function startWorkordersRefresh() {
 
 async function loadWorkordersDetails({ quiet = false } = {}) {
   const token = ++workordersState.loadToken;
-  const params = new URLSearchParams({ scope: workordersState.scope });
-  if (workordersState.groupId) params.set("group", workordersState.groupId);
-  if (workordersState.unitId) params.set("unit", workordersState.unitId);
+  const params = woScopeParams();
+  if (workordersState.snapshotId) params.set("snapshot", workordersState.snapshotId);
 
   try {
     const response = await fetch(`${API_WORKORDERS_DETAILS}?${params.toString()}`, {
@@ -3410,10 +3431,14 @@ async function openWorkordersView(scope) {
     tab: "dashboard",
     filter: "all",
     query: "",
-    shown: WO_PAGE_SIZE
+    shown: WO_PAGE_SIZE,
+    snapshotId: "",
+    snapshots: []
   });
 
   woEl("woSearchInput").value = "";
+  renderWoSnapshotSelect();
+  loadWoSnapshots();
   woEl("woBackLabel").textContent = isExecutive ? "Диспетчерский мониторинг" : "Интерфейс диспетчера";
   renderWoTabs();
 
@@ -3518,6 +3543,279 @@ woEl("woCards")?.addEventListener("click", (event) => {
   const works = toggle.closest(".request-works");
   const collapsed = works.classList.toggle("is-collapsed");
   toggle.textContent = collapsed ? "Показать полностью" : "Свернуть";
+});
+
+/* ---------- архив НДР: выбор сводки ---------- */
+function woFormatTs(ts) {
+  if (!ts) return "";
+  return new Date(ts).toLocaleString("ru-RU", {
+    timeZone: "Europe/Moscow",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+function renderWoSnapshotSelect() {
+  const select = woEl("woSnapshotSelect");
+  if (!select) return;
+  const list = workordersState.snapshots || [];
+
+  // Группируем по дате сводки.
+  const groups = new Map();
+  for (const item of list) {
+    const label = String(item.generatedAt || woFormatTs(item.ts)).split(/\s+/)[0] || "—";
+    if (!groups.has(label)) groups.set(label, []);
+    groups.get(label).push(item);
+  }
+
+  select.innerHTML = `
+    <option value="">Текущая (онлайн)</option>
+    ${[...groups.entries()].map(([date, items]) => `
+      <optgroup label="${escapeHtml(date)}">
+        ${items.map((item) => {
+          const time = String(item.generatedAt || woFormatTs(item.ts)).split(/\s+/)[1] || "";
+          const percent = item.total ? Math.round((item.started / item.total) * 1000) / 10 : 0;
+          const shift = item.shift ? ` · ${String(item.shift).toLowerCase()}` : "";
+          return `<option value="${escapeHtml(item.id)}">${escapeHtml(time)}${escapeHtml(shift)} · ${item.total} НДР · начаты ${percent}%</option>`;
+        }).join("")}
+      </optgroup>
+    `).join("")}
+  `;
+  select.value = workordersState.snapshotId || "";
+  select.disabled = !list.length;
+  document.querySelectorAll("[data-wo-jump]").forEach((button) => {
+    const days = Number(button.dataset.woJump);
+    button.disabled = days > 0 && !list.length;
+    button.classList.toggle("is-active", days === 0 ? !workordersState.snapshotId : false);
+  });
+}
+
+async function loadWoSnapshots() {
+  try {
+    const response = await fetch(`${API_WORKORDERS_HISTORY}?${woScopeParams().toString()}&list=1`, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "include",
+      headers: getSessionHeaders()
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+    workordersState.snapshots = Array.isArray(payload?.snapshots) ? payload.snapshots : [];
+  } catch {
+    workordersState.snapshots = [];
+  }
+  renderWoSnapshotSelect();
+}
+
+async function selectWoSnapshot(id) {
+  workordersState.snapshotId = id || "";
+  workordersState.shown = WO_PAGE_SIZE;
+  renderWoSnapshotSelect();
+  const token = showViewLoading(id ? "Загрузка архивной сводки…" : "Загрузка НДР…");
+  try {
+    const ok = await loadWorkordersDetails();
+    if (!ok && id) {
+      workordersState.snapshotId = "";
+      renderWoSnapshotSelect();
+    }
+  } finally {
+    hideViewLoading(token);
+  }
+}
+
+// Ближайшая сводка к моменту «N суток назад».
+function woSnapshotDaysAgo(days) {
+  const list = workordersState.snapshots || [];
+  if (!days || !list.length) return "";
+  const target = Date.now() - days * 24 * 60 * 60 * 1000;
+  let best = null;
+  for (const item of list) {
+    if (!best || Math.abs(item.ts - target) < Math.abs(best.ts - target)) best = item;
+  }
+  return best?.id || "";
+}
+
+woEl("woSnapshotSelect")?.addEventListener("change", (event) => {
+  selectWoSnapshot(event.target.value);
+});
+
+document.querySelectorAll("[data-wo-jump]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const days = Number(button.dataset.woJump);
+    selectWoSnapshot(days ? woSnapshotDaysAgo(days) : "");
+  });
+});
+
+woEl("woArchiveBackButton")?.addEventListener("click", () => selectWoSnapshot(""));
+
+/* ---------- архив НДР: жизнь наряда ---------- */
+const WO_HISTORY_FIELDS = [
+  ["number", "Номер"],
+  ["status", "Статус"],
+  ["groupLabel", "Группа"],
+  ["organization", "Исполнитель"],
+  ["branch", "Филиал"],
+  ["journal", "Журнал"],
+  ["object", "Объект"],
+  ["places", "Места"],
+  ["works", "Работы"],
+  ["planStart", "План начало"],
+  ["planEnd", "План конец"],
+  ["issuedAt", "Выдан"],
+  ["checkedAt", "Проверка р.м."],
+  ["admittedAt", "Допуск"],
+  ["actualStartAt", "Факт. начало"],
+  ["admissionMinutes", "Допуск → начало, мин"],
+  ["stageSince", "Текущий этап с"],
+  ["stageBy", "Этап — кто"],
+  ["issuer", "Выдающий"],
+  ["responsible", "Отв. руководитель"],
+  ["producer", "Производитель работ"],
+  ["brigade", "Бригада"],
+  ["preparation", "Подготовка р.м."],
+  ["result", "Результат"],
+  ["notes", "Доп. указания"],
+  ["otherDates", "Прочие даты"],
+  ["uid", "UID"]
+];
+
+function woHistoryValue(value) {
+  if (Array.isArray(value)) return value.join(", ");
+  if (value === null || value === undefined || value === "") return "—";
+  return String(value);
+}
+
+function openWoHistoryModal() {
+  const modal = woEl("woHistoryModal");
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function closeWoHistoryModal() {
+  const modal = woEl("woHistoryModal");
+  modal.classList.remove("is-open");
+  modal.setAttribute("aria-hidden", "true");
+}
+
+function renderWoHistory(history) {
+  const events = Array.isArray(history?.events) ? history.events : [];
+  const versions = events.filter((event) => event.type === "version");
+  const last = [...versions].reverse().find((event) => event.state)?.state || {};
+
+  woEl("woHistoryTitle").textContent = history.number ? `Наряд №${history.number}` : "Наряд без номера";
+  woEl("woHistorySubtitle").innerHTML = `
+    ${escapeHtml(last.object || "—")}<br>
+    <span>${escapeHtml(last.organization || "")}${last.journal ? ` · ${escapeHtml(last.journal)}` : ""}</span>
+    <span class="wo-history-meta">
+      <b>${versions.length}</b> ${versions.length === 1 ? "состояние" : versions.length < 5 ? "состояния" : "состояний"} ·
+      ${history.inLatestSnapshot ? "есть в текущей выгрузке" : "в текущей выгрузке нет"} ·
+      UID ${escapeHtml(history.uid || "")}
+    </span>
+  `;
+
+  let wasGone = false;
+  woEl("woHistoryBody").innerHTML = `
+    <ol class="wo-timeline">
+      ${events.map((event, index) => {
+        const when = event.generatedAt || woFormatTs(event.ts);
+        if (event.type === "gone") {
+          wasGone = true;
+          return `
+            <li class="wo-tl-item is-gone">
+              <div class="wo-tl-dot"></div>
+              <div class="wo-tl-content">
+                <div class="wo-tl-head"><b>${escapeHtml(when)}</b><span class="wo-tl-tag">Пропал из выгрузки</span></div>
+                <p class="wo-tl-note">Наряд больше не попадает в сводку СК-11 (закрыт, отменён или вне периода смены).</p>
+              </div>
+            </li>
+          `;
+        }
+
+        const state = event.state || {};
+        const tag = event.first ? (wasGone ? "Снова в выгрузке" : "Появился в выгрузке") : "Изменение";
+        wasGone = false;
+        const group = WO_GROUPS.find((item) => item.key === state.group) || WO_GROUPS[4];
+
+        return `
+          <li class="wo-tl-item${event.first ? " is-first" : ""}${event.longAdmission ? " is-long" : ""}" style="--chip:${group.color};--i:${Math.min(index, 20)}">
+            <div class="wo-tl-dot"></div>
+            <div class="wo-tl-content">
+              <div class="wo-tl-head">
+                <b>${escapeHtml(when)}</b>
+                <span class="wo-tl-tag">${tag}</span>
+                <span class="request-status">${escapeHtml(state.status || "—")}</span>
+                <span class="wo-group-chip">${escapeHtml(group.label)}</span>
+              </div>
+              ${event.longAdmission ? `<div class="wo-tl-alert">⚠ Между допуском и началом работ ${escapeHtml(String(state.admissionMinutes))} мин — больше ${WO_LONG_ADMISSION_MIN} мин</div>` : ""}
+              ${event.changes?.length ? `
+                <ul class="wo-tl-changes">
+                  ${event.changes.map((change) => `
+                    <li>
+                      <span>${escapeHtml(change.label)}</span>
+                      <s>${escapeHtml(change.from || "—")}</s>
+                      <b>${escapeHtml(change.to || "—")}</b>
+                    </li>
+                  `).join("")}
+                </ul>
+              ` : event.first ? "" : '<p class="wo-tl-note">Без изменений в отслеживаемых полях.</p>'}
+              <details class="wo-more">
+                <summary>Все поля на этот момент</summary>
+                <dl>${WO_HISTORY_FIELDS.map(([key, label]) => `<div><dt>${label}</dt><dd>${escapeHtml(woHistoryValue(state[key]))}</dd></div>`).join("")}</dl>
+              </details>
+            </div>
+          </li>
+        `;
+      }).join("")}
+    </ol>
+  `;
+}
+
+async function showWoHistory(uid) {
+  woEl("woHistoryTitle").textContent = "История наряда";
+  woEl("woHistorySubtitle").textContent = "";
+  woEl("woHistoryBody").innerHTML = '<div class="requests-empty">Загрузка истории…</div>';
+  openWoHistoryModal();
+
+  try {
+    const params = woScopeParams();
+    params.set("uid", uid);
+    const response = await fetch(`${API_WORKORDERS_HISTORY}?${params.toString()}`, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "include",
+      headers: getSessionHeaders()
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+    renderWoHistory(payload);
+  } catch (error) {
+    woEl("woHistoryBody").innerHTML = `<div class="requests-empty">${escapeHtml(error instanceof Error ? error.message : "Не удалось загрузить историю")}</div>`;
+  }
+}
+
+woEl("woCards")?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-wo-history]");
+  if (!button) return;
+  event.stopPropagation();
+  showWoHistory(button.dataset.woHistory);
+});
+
+woEl("woAdmissionTop")?.addEventListener("click", (event) => {
+  const row = event.target.closest("[data-wo-history]");
+  if (row) showWoHistory(row.dataset.woHistory);
+});
+
+woEl("woHistoryClose")?.addEventListener("click", closeWoHistoryModal);
+woEl("woHistoryModal")?.addEventListener("click", (event) => {
+  if (event.target === woEl("woHistoryModal")) closeWoHistoryModal();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && woEl("woHistoryModal")?.classList.contains("is-open")) {
+    closeWoHistoryModal();
+  }
 });
 
 function markExcelTemplateDirty() {
@@ -5994,6 +6292,8 @@ function selectMode(mode) {
 function renderAdminDashboard(
   payload
 ) {
+  renderAdminStorageInfo(payload?.storage);
+
   storageWarning.hidden =
     Boolean(
       payload.storageConfigured
@@ -6109,6 +6409,39 @@ function renderAdminDashboard(
         minute: "2-digit"
       }
     )}`;
+}
+
+function renderAdminStorageInfo(storage) {
+  const box = document.getElementById("adminStorageInfo");
+  if (!box) return;
+  if (!storage) {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  const health = storage.health;
+  const healthText = health
+    ? health.ok
+      ? `проверка: OK (${health.latencyMs} мс)`
+      : `проверка: ОШИБКА — ${health.error}`
+    : "";
+  if (storage.backend === "redis") {
+    box.textContent = ["Хранилище: внешний Redis (Upstash)", healthText].filter(Boolean).join(" · ");
+    box.classList.toggle("is-warning", Boolean(health && !health.ok));
+    return;
+  }
+  const parts = [`Хранилище: сервер (${Number(storage.keys || 0)} записей)`];
+  if (storage.migratedFromRedis) parts.push(`перенесено из Upstash: ${String(storage.migratedFromRedis).slice(0, 10)}`);
+  if (storage.restoredFrom) parts.push(`загружено: ${String(storage.restoredFrom).startsWith("s3") ? "из S3" : "с диска"}`);
+  if (storage.s3Backup) {
+    parts.push(storage.lastS3Upload ? `копия в S3: ${formatDateTime(storage.lastS3Upload)}` : "копия в S3: ожидается");
+  } else {
+    parts.push("копия в S3 не настроена — данные могут пропасть при новом деплое");
+  }
+  if (storage.lastS3Error) parts.push(`ошибка S3: ${storage.lastS3Error}`);
+  if (healthText) parts.push(healthText);
+  box.textContent = parts.join(" · ");
+  box.classList.toggle("is-warning", !storage.s3Backup || Boolean(storage.lastS3Error) || Boolean(health && !health.ok));
 }
 
 async function loadAdminDashboard() {
@@ -11656,6 +11989,11 @@ function handleAppBackAction() {
 
   if (currentView === "requests") {
     closeRequestsView();
+    return;
+  }
+
+  if (document.getElementById("woHistoryModal")?.classList.contains("is-open")) {
+    closeWoHistoryModal();
     return;
   }
 

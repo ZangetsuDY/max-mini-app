@@ -5076,3 +5076,357 @@ html body .wo-funnel-name small {
   font-weight: 500;
   text-overflow: ellipsis;
 }
+
+/* =========================================================
+   НДР · АРХИВ (32 дня): выбор сводки и жизнь наряда
+   ========================================================= */
+html body .wo-archive-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+html body .wo-archive-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 0 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(0,0,0,.25);
+}
+
+html body .wo-archive-select span {
+  color: #7f9ab0;
+  font: 700 10px var(--mono, ui-monospace, monospace);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+html body .wo-archive-select select {
+  min-width: 0;
+  max-width: 340px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: transparent;
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+html body .wo-archive-select select option,
+html body .wo-archive-select select optgroup {
+  background: #0b121a;
+  color: #e6eef5;
+}
+
+html body .wo-archive-quick {
+  display: inline-flex;
+  gap: 4px;
+}
+
+html body .wo-archive-quick button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(255,255,255,.02);
+  color: #c6d5e1;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+html body .wo-archive-quick button.is-active {
+  border-color: rgba(53,214,151,.5);
+  color: #6ee7b7;
+}
+
+html body .wo-archive-quick button:disabled {
+  opacity: .4;
+  cursor: default;
+}
+
+html body .wo-archive-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid rgba(167,139,250,.45);
+  border-left: 3px solid #a78bfa;
+  border-radius: 5px;
+  background: rgba(167,139,250,.08);
+  color: #ddd6fe;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+html body .wo-archive-banner[hidden] { display: none; }
+
+html body .wo-archive-banner button {
+  padding: 6px 12px;
+  border: 1px solid rgba(167,139,250,.55);
+  border-radius: 4px;
+  background: transparent;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+html body #workordersView.is-archive .wo-hero {
+  border-color: rgba(167,139,250,.35) !important;
+}
+
+/* Кнопка «История» в карточке */
+html body .wo-history-button {
+  margin-left: auto;
+  flex: 0 0 auto;
+  padding: 3px 9px;
+  border: 1px solid rgba(69,200,244,.4);
+  border-radius: 3px;
+  background: rgba(69,200,244,.08);
+  color: #8fe0f7;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+html body .wo-history-button:hover {
+  background: rgba(69,200,244,.18);
+}
+
+html body .wo-top-row[data-wo-history] {
+  cursor: pointer;
+}
+
+html body .wo-top-row[data-wo-history]:hover {
+  border-color: rgba(69,200,244,.4);
+}
+
+/* Окно истории */
+html body .wo-history-backdrop { z-index: 240; }
+
+html body .wo-history-card {
+  width: min(100%, 860px) !important;
+  max-height: min(88vh, 900px);
+  overflow-y: auto;
+  text-align: left;
+}
+
+html body .wo-history-card h2 {
+  margin: 6px 0 4px;
+  padding-right: 40px;
+}
+
+html body .wo-history-subtitle {
+  margin: 0 0 16px;
+  color: #dbe8f4;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+html body .wo-history-subtitle span {
+  color: #8ea5b6;
+  font-size: 12px;
+}
+
+html body .wo-history-meta {
+  display: block;
+  margin-top: 6px;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 11px !important;
+}
+
+html body .wo-history-meta b { color: #fff; }
+
+html body .wo-timeline {
+  position: relative;
+  margin: 0;
+  padding: 0 0 0 22px;
+  list-style: none;
+}
+
+html body .wo-timeline::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 6px;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(69,200,244,.5), rgba(69,200,244,.08));
+}
+
+html body .wo-tl-item {
+  --chip: #64748b;
+  position: relative;
+  padding: 0 0 16px;
+  animation: requestCardIn .4s cubic-bezier(.16,.84,.32,1) both;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+
+html body .wo-tl-dot {
+  position: absolute;
+  top: 5px;
+  left: -21px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--chip);
+  border-radius: 50%;
+  background: #0a1018;
+  box-shadow: 0 0 8px color-mix(in srgb, var(--chip) 60%, transparent);
+}
+
+html body .wo-tl-item.is-first .wo-tl-dot { background: var(--chip); }
+html body .wo-tl-item.is-gone .wo-tl-dot { border-color: #64748b; border-style: dashed; box-shadow: none; }
+html body .wo-tl-item.is-long .wo-tl-dot { border-color: #f59e0b; }
+
+html body .wo-tl-content {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: rgba(255,255,255,.02);
+}
+
+html body .wo-tl-item.is-long .wo-tl-content {
+  border-color: rgba(245,158,11,.45);
+  background: rgba(245,158,11,.05);
+}
+
+html body .wo-tl-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+html body .wo-tl-head > b {
+  color: #fff;
+  font: 800 12.5px var(--mono, ui-monospace, monospace);
+}
+
+html body .wo-tl-tag {
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: rgba(214,164,70,.14);
+  color: #f1d39a;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+html body .wo-tl-item.is-gone .wo-tl-tag {
+  background: rgba(100,116,139,.2);
+  color: #cbd5e1;
+}
+
+html body .wo-tl-alert {
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: rgba(245,158,11,.14);
+  color: #fbbf5a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+html body .wo-tl-note {
+  margin: 0;
+  color: #8ea5b6;
+  font-size: 12px;
+}
+
+html body .wo-tl-changes {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+html body .wo-tl-changes li {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12px;
+}
+
+html body .wo-tl-changes span { color: #7f9ab0; }
+
+html body .wo-tl-changes s {
+  color: #8a9aa8;
+  text-decoration-color: rgba(244,63,94,.6);
+  overflow-wrap: anywhere;
+}
+
+html body .wo-tl-changes b {
+  color: #6ee7b7;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 620px) {
+  html body .wo-archive-select { width: 100%; }
+  html body .wo-archive-select select { flex: 1 1 auto; max-width: none; }
+  html body .wo-archive-quick { width: 100%; }
+  html body .wo-archive-quick button { flex: 1 1 0; padding: 0 4px; font-size: 11px; }
+
+  html body .wo-history-card {
+    max-height: 92vh;
+    padding: 20px 14px !important;
+  }
+
+  html body .wo-tl-changes li {
+    grid-template-columns: 1fr;
+    gap: 1px;
+    padding-bottom: 4px;
+    border-bottom: 1px dashed var(--line);
+  }
+}
+
+html body .wo-hero {
+  align-items: flex-start;
+}
+
+html body .wo-hero > div:first-child {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 620px) {
+  html body .wo-hero { gap: 10px; }
+  html body .wo-hero .wo-hero-gauge { width: 72px; height: 72px; }
+  html body .wo-hero .wo-gauge-center strong { font-size: 14px; }
+  html body .wo-hero .wo-gauge-center span { font-size: 8px; }
+}
+
+html body .wo-shell > *,
+html body .requests-shell > * {
+  min-width: 0;
+}
+
+html body .wo-archive-select select {
+  width: 100%;
+  text-overflow: ellipsis;
+}
+
+html body .admin-storage-info {
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: #7f9ab0;
+}
+
+html body .admin-storage-info.is-warning {
+  color: #fbbf5a;
+}

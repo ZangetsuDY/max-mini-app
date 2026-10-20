@@ -7,6 +7,7 @@ import executiveMonitoring from "../handlers/executive-monitoring.js";
 import excelExports from "../handlers/excel-exports.js";
 import requestsDetails from "../handlers/requests-details.js";
 import workordersDetails from "../handlers/workorders-details.js";
+import workordersHistory from "../handlers/workorders-history.js";
 import heartbeat from "../handlers/heartbeat.js";
 import system from "../handlers/system.js";
 
@@ -31,6 +32,7 @@ const ROUTES = new Map([
   ["excel-exports", excelExports],
   ["requests-details", requestsDetails],
   ["workorders-details", workordersDetails],
+  ["workorders-history", workordersHistory],
   ["heartbeat", heartbeat],
   ["system", system],
   ["admin/dashboard", adminDashboard],
