@@ -6434,7 +6434,16 @@ function renderAdminStorageInfo(storage) {
   if (storage.migratedFromRedis) parts.push(`перенесено из Upstash: ${String(storage.migratedFromRedis).slice(0, 10)}`);
   if (storage.restoredFrom) parts.push(`загружено: ${String(storage.restoredFrom).startsWith("s3") ? "из S3" : "с диска"}`);
   if (storage.s3Backup) {
-    parts.push(storage.lastS3Upload ? `копия в S3: ${formatDateTime(storage.lastS3Upload)}` : "копия в S3: ожидается");
+    // После перезапуска, пока новая копия не отправлена, показываем время
+    // копии, из которой сервер восстановился.
+    const restoredAt = String(storage.restoredFrom || "").startsWith("s3 ")
+      ? String(storage.restoredFrom).slice(3)
+      : "";
+    parts.push(storage.lastS3Upload
+      ? `копия в S3: ${formatDateTime(storage.lastS3Upload)}`
+      : restoredAt
+        ? `копия в S3: ${formatDateTime(restoredAt)} (следующая — в течение 10 мин)`
+        : "копия в S3: в течение 10 мин");
   } else {
     parts.push("копия в S3 не настроена — данные могут пропасть при новом деплое");
   }
