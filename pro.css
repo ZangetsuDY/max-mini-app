@@ -4964,3 +4964,115 @@ html body .wo-older-toggle td { color: #9fb3c3 !important; background: rgba(255,
 html body .wo-older-row { display: none; }
 html body #woDaysTable.is-older-open .wo-older-row { display: table-row; }
 html body .wo-older-row td { color: #8ea5b6; }
+
+/* =========================================================
+   НДР · телефон: ничего не выходит за ширину экрана
+   ========================================================= */
+html body .wo-short { display: none; }
+
+html body .wo-grid,
+html body .wo-dashboard,
+html body .wo-shell {
+  min-width: 0;
+}
+
+html body .wo-grid > *,
+html body .wo-dashboard > *,
+html body .wo-panel > * {
+  min-width: 0;
+}
+
+@media (max-width: 1180px) {
+  html body .wo-grid { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 760px) {
+  html body .wo-panel { padding: 14px !important; }
+
+  /* График по дням: все столбцы помещаются в ширину */
+  html body .wo-bars {
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 4px;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  html body .wo-bar {
+    grid-template-rows: auto 130px auto auto;
+    gap: 4px;
+  }
+
+  html body .wo-bar-track { height: 130px; }
+
+  html body .wo-bar-value {
+    font-size: 9px;
+    letter-spacing: -.02em;
+  }
+
+  html body .wo-bar-label {
+    font-size: 9.5px;
+    letter-spacing: -.02em;
+  }
+
+  html body .wo-bar small {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 8.5px;
+    text-align: center;
+    text-overflow: clip;
+    white-space: normal;
+    line-height: 1.2;
+  }
+
+  /* Гистограмма допуска */
+  html body .wo-hist-bars { gap: 5px; }
+  html body .wo-hist-bar { grid-template-rows: auto 90px auto; }
+  html body .wo-hist-track { height: 90px; }
+  html body .wo-hist-bar span { font-size: 9px; }
+
+  /* Таблица по дням: компактная, без горизонтальной прокрутки */
+  html body .wo-table-wrap { overflow-x: visible; }
+  html body .wo-long { display: none; }
+  html body .wo-short { display: inline; }
+  html body .wo-col-day { display: none; }
+
+  html body .wo-table {
+    min-width: 0;
+    table-layout: fixed;
+  }
+
+  html body .wo-table th {
+    padding: 7px 2px !important;
+    font-size: 8.5px !important;
+    letter-spacing: .02em !important;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  html body .wo-table td {
+    padding: 7px 2px !important;
+    font-size: 10.5px !important;
+  }
+
+  html body .wo-table th:first-child,
+  html body .wo-table td:first-child { width: 17%; }
+  html body .wo-table th:last-child,
+  html body .wo-table td:last-child { width: 17%; }
+
+  html body .wo-table .wo-chip {
+    min-width: 0;
+    padding: 2px 3px;
+    font-size: 9.5px;
+  }
+
+  html body .wo-panel-head h2 { font-size: 16px; }
+}
+
+html body .wo-funnel-name small {
+  display: block;
+  overflow: hidden;
+  color: #6f879a;
+  font-size: 10.5px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
