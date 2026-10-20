@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261020-wo1" />
-  <link rel="stylesheet" href="pro.css?v=20261020-wo1" />
+  <link rel="stylesheet" href="style.css?v=20261020-wo2" />
+  <link rel="stylesheet" href="pro.css?v=20261020-wo2" />
 </head>
 
 <body class="auth-pending">
@@ -982,14 +982,14 @@
                 <thead>
                   <tr>
                     <th>Дата</th>
-                    <th>День</th>
-                    <th>Не проверен</th>
-                    <th>Проверен, не начат</th>
-                    <th>Работы начаты</th>
-                    <th>Допуск не производился</th>
-                    <th>Прочие</th>
+                    <th class="wo-col-day">День</th>
+                    <th><span class="wo-long">Не проверен</span><span class="wo-short">Не пров.</span></th>
+                    <th><span class="wo-long">Проверен, не начат</span><span class="wo-short">Пров.</span></th>
+                    <th><span class="wo-long">Работы начаты</span><span class="wo-short">Нач.</span></th>
+                    <th><span class="wo-long">Допуск не производился</span><span class="wo-short">Не доп.</span></th>
+                    <th><span class="wo-long">Прочие</span><span class="wo-short">Проч.</span></th>
                     <th>Всего</th>
-                    <th>% начаты</th>
+                    <th><span class="wo-long">% начаты</span><span class="wo-short">%</span></th>
                   </tr>
                 </thead>
                 <tbody id="woDaysTable"></tbody>
@@ -2129,6 +2129,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261020-wo1"></script>
+  <script src="app.js?v=20261020-wo2"></script>
 </body>
 </html>

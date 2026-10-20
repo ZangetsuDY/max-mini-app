@@ -2986,8 +2986,8 @@ function renderWoDays(analytics) {
     const percent = woPercent(item.counts.started, item.counts.total);
     return `
       <tr class="${extraClass}">
-        <td>${escapeHtml(item.date?.full || "—")}</td>
-        <td>${escapeHtml(item.date?.weekday || "")}</td>
+        <td><span class="wo-long">${escapeHtml(item.date?.full || "—")}</span><span class="wo-short">${escapeHtml(item.date?.label || "—")}</span></td>
+        <td class="wo-col-day">${escapeHtml(item.date?.weekday || "")}</td>
         ${WO_GROUPS.map((group) => `<td>${item.counts[group.key] || 0}</td>`).join("")}
         <td><b>${item.counts.total}</b></td>
         <td><span class="wo-chip is-${woTone(percent)}">${woFormatPercent(percent)}</span></td>
@@ -2998,7 +2998,7 @@ function renderWoDays(analytics) {
   woEl("woDaysTable").innerHTML = (olderDays.length ? `
     <tr class="wo-older-toggle" data-wo-older>
       <td>▸ Ранее</td>
-      <td>${olderDays.length} дн.</td>
+      <td class="wo-col-day">${olderDays.length} дн.</td>
       ${WO_GROUPS.map((group) => `<td>${olderCounts[group.key] || 0}</td>`).join("")}
       <td><b>${olderCounts.total}</b></td>
       <td><span class="wo-chip is-${woTone(olderPercent)}">${woFormatPercent(olderPercent)}</span></td>
@@ -3006,7 +3006,7 @@ function renderWoDays(analytics) {
     ${olderDays.map((item) => dayRow(item, "wo-older-row")).join("")}
   ` : "") + recentDays.map((item) => dayRow(item)).join("") + `
     <tr class="is-total">
-      <td>ИТОГО</td><td></td>
+      <td>ИТОГО</td><td class="wo-col-day"></td>
       ${WO_GROUPS.map((group) => `<td>${total[group.key] || 0}</td>`).join("")}
       <td><b>${total.total}</b></td>
       <td><span class="wo-chip is-${woTone(woPercent(total.started, total.total))}">${woFormatPercent(woPercent(total.started, total.total))}</span></td>
