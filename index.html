@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261020-wo3" />
-  <link rel="stylesheet" href="pro.css?v=20261020-wo3" />
+  <link rel="stylesheet" href="style.css?v=20261020-arch1" />
+  <link rel="stylesheet" href="pro.css?v=20261020-arch1" />
 </head>
 
 <body class="auth-pending">
@@ -880,6 +880,19 @@
             <span class="micro-label">СК-11 · НАРЯДЫ / РАСПОРЯЖЕНИЯ</span>
             <h1 id="woScopeTitle">НДР</h1>
             <p id="woShiftLine" class="requests-shift-line">Смена: —</p>
+            <div class="wo-archive-bar">
+              <label class="wo-archive-select">
+                <span>Сводка</span>
+                <select id="woSnapshotSelect">
+                  <option value="">Текущая (онлайн)</option>
+                </select>
+              </label>
+              <div class="wo-archive-quick">
+                <button type="button" data-wo-jump="0">Текущая</button>
+                <button type="button" data-wo-jump="1">Сутки назад</button>
+                <button type="button" data-wo-jump="7">Неделю назад</button>
+              </div>
+            </div>
           </div>
           <div class="wo-hero-gauge">
             <svg viewBox="0 0 120 120" aria-hidden="true">
@@ -894,6 +907,10 @@
         </div>
 
         <div id="woNotice" class="requests-notice" hidden></div>
+        <div id="woArchiveBanner" class="wo-archive-banner" hidden>
+          <span id="woArchiveBannerText">Архив</span>
+          <button id="woArchiveBackButton" type="button">Вернуться к текущей</button>
+        </div>
 
         <div class="wo-tabs glass-panel" role="tablist">
           <button class="wo-tab is-active" type="button" role="tab" aria-selected="true" data-wo-tab="dashboard">Дашборд</button>
@@ -996,7 +1013,7 @@
                 <tbody id="woDaysTable"></tbody>
               </table>
             </div>
-            <p class="wo-footnote">Пороги: <i class="wo-tone is-low"></i> &lt; 25% · <i class="wo-tone is-mid"></i> 25–39% · <i class="wo-tone is-high"></i> ≥ 40%. Длительность допуска &gt; 50 мин выделяется оранжевым.</p>
+            <p class="wo-footnote">Пороги: <i class="wo-tone is-low"></i> &lt; 25% · <i class="wo-tone is-mid"></i> 25–39% · <i class="wo-tone is-high"></i> ≥ 40%. Разница между допуском и началом работ &gt; 40 мин выделяется оранжевым.</p>
           </article>
         </div>
 
@@ -2105,6 +2122,19 @@
     <small class="grid-loader-caption">Все права защищены</small>
   </div>
 
+  <!-- WORKORDER HISTORY -->
+  <div id="woHistoryModal" class="modal-backdrop wo-history-backdrop" aria-hidden="true">
+    <div class="modal-card wo-history-card" role="dialog" aria-modal="true" aria-labelledby="woHistoryTitle">
+      <button id="woHistoryClose" class="icon-button modal-close" type="button" aria-label="Закрыть">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+      </button>
+      <span class="micro-label">ЖИЗНЬ НАРЯДА · АРХИВ 32 ДНЯ</span>
+      <h2 id="woHistoryTitle">История наряда</h2>
+      <p id="woHistorySubtitle" class="wo-history-subtitle"></p>
+      <div id="woHistoryBody" class="wo-history-body"></div>
+    </div>
+  </div>
+
   <!-- EXIT CONFIRMATION -->
   <div id="exitConfirmModal" class="modal-backdrop exit-confirm-backdrop" aria-hidden="true">
     <div class="modal-card exit-confirm-card" role="dialog" aria-modal="true" aria-labelledby="exitConfirmTitle">
@@ -2130,6 +2160,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261020-wo3"></script>
+  <script src="app.js?v=20261020-arch1"></script>
 </body>
 </html>

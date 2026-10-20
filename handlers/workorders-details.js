@@ -12,6 +12,12 @@ import {
   jsonResponse
 } from "../lib/detail-scope.js";
 
+import {
+  loadWorkorderSnapshot,
+  archiveInBackground,
+  archiveInfo
+} from "../lib/workorders-archive.js";
+
 const GROUP_ORDER = ["notChecked", "checked", "started", "notAdmitted", "other"];
 
 /*
@@ -29,7 +35,19 @@ export default {
     });
     if (scope.error) return scope.error;
 
-    const sourceState = await getLatestWorkordersDetails();
+    // Архивная сводка (?snapshot=ID) или текущая из чата.
+    const snapshotId = String(new URL(request.url).searchParams.get("snapshot") || "").trim();
+    let sourceState;
+    if (snapshotId) {
+      const archived = await loadWorkorderSnapshot(snapshotId).catch(() => null);
+      if (!archived) {
+        return jsonResponse({ error: "Сводка не найдена в архиве (хранится 32 дня)" }, 404);
+      }
+      sourceState = { configured: true, status: "ok", message: "", stale: false, details: archived };
+    } else {
+      sourceState = await getLatestWorkordersDetails();
+      archiveInBackground();
+    }
     const details = sourceState.details;
     const orders = !details
       ? []
@@ -63,6 +81,9 @@ export default {
       generatedAt: details?.generatedAt || "",
       fileName: details?.fileName || "",
       reportedTotal: details?.reportedTotal ?? null,
+      snapshotId: snapshotId || "",
+      isArchive: Boolean(snapshotId),
+      archive: archiveInfo(),
       orders,
       updatedAt: new Date().toISOString()
     });

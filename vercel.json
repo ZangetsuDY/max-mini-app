@@ -67,6 +67,10 @@
       "destination": "/api/router?route=admin/outage-config"
     },
     {
+      "source": "/api/workorders-history",
+      "destination": "/api/router?route=workorders-history"
+    },
+    {
       "source": "/api/workorders-details",
       "destination": "/api/router?route=workorders-details"
     },

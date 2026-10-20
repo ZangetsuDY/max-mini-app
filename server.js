@@ -699,8 +699,39 @@ server.listen(
     log(
       `Server listening on http://${HOST}:${PORT}`
     );
+    startWorkordersArchiveCollector();
   }
 );
+
+/*
+  Фоновый сбор архива НДР: раз в N минут забираем из чата новые
+  txt-файлы «СК-11 — НДР (детально, файл)» и сохраняем в архив (32 дня),
+  даже если приложение никто не открывает.
+  WORKORDERS_ARCHIVE_INTERVAL_MIN — интервал (по умолчанию 5, 0 — выключить).
+*/
+function startWorkordersArchiveCollector() {
+  const minutes = Number(process.env.WORKORDERS_ARCHIVE_INTERVAL_MIN ?? 5);
+  if (!Number.isFinite(minutes) || minutes <= 0) {
+    log("Архив НДР: фоновый сбор выключен");
+    return;
+  }
+
+  const run = async () => {
+    try {
+      const { archiveWorkordersFromChat } = await import("./lib/workorders-archive.js");
+      const result = await archiveWorkordersFromChat();
+      if (result?.processed) {
+        log(`Архив НДР: обработано файлов ${result.processed}`, JSON.stringify(result.results));
+      }
+    } catch (error) {
+      log("Архив НДР: ошибка сбора", error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  setTimeout(run, 15_000);
+  setInterval(run, Math.max(1, minutes) * 60_000).unref();
+  log(`Архив НДР: фоновый сбор каждые ${minutes} мин`);
+}
 
 function shutdown(
   signal
