@@ -6431,6 +6431,7 @@ function renderAdminStorageInfo(storage) {
     return;
   }
   const parts = [`Хранилище: сервер (${Number(storage.keys || 0)} записей)`];
+  if (storage.migratedFromRedis) parts.push(`перенесено из Upstash: ${String(storage.migratedFromRedis).slice(0, 10)}`);
   if (storage.restoredFrom) parts.push(`загружено: ${String(storage.restoredFrom).startsWith("s3") ? "из S3" : "с диска"}`);
   if (storage.s3Backup) {
     parts.push(storage.lastS3Upload ? `копия в S3: ${formatDateTime(storage.lastS3Upload)}` : "копия в S3: ожидается");
