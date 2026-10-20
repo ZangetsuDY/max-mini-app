@@ -5420,3 +5420,13 @@ html body .wo-archive-select select {
   width: 100%;
   text-overflow: ellipsis;
 }
+
+html body .admin-storage-info {
+  margin-top: 8px;
+  font-size: 11.5px;
+  color: #7f9ab0;
+}
+
+html body .admin-storage-info.is-warning {
+  color: #fbbf5a;
+}

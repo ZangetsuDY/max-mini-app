@@ -6292,6 +6292,8 @@ function selectMode(mode) {
 function renderAdminDashboard(
   payload
 ) {
+  renderAdminStorageInfo(payload?.storage);
+
   storageWarning.hidden =
     Boolean(
       payload.storageConfigured
@@ -6407,6 +6409,31 @@ function renderAdminDashboard(
         minute: "2-digit"
       }
     )}`;
+}
+
+function renderAdminStorageInfo(storage) {
+  const box = document.getElementById("adminStorageInfo");
+  if (!box) return;
+  if (!storage) {
+    box.hidden = true;
+    return;
+  }
+  box.hidden = false;
+  if (storage.backend === "redis") {
+    box.textContent = "Хранилище: внешний Redis";
+    box.classList.remove("is-warning");
+    return;
+  }
+  const parts = [`Хранилище: сервер (${Number(storage.keys || 0)} записей)`];
+  if (storage.restoredFrom) parts.push(`загружено: ${String(storage.restoredFrom).startsWith("s3") ? "из S3" : "с диска"}`);
+  if (storage.s3Backup) {
+    parts.push(storage.lastS3Upload ? `копия в S3: ${formatDateTime(storage.lastS3Upload)}` : "копия в S3: ожидается");
+  } else {
+    parts.push("копия в S3 не настроена — данные могут пропасть при новом деплое");
+  }
+  if (storage.lastS3Error) parts.push(`ошибка S3: ${storage.lastS3Error}`);
+  box.textContent = parts.join(" · ");
+  box.classList.toggle("is-warning", !storage.s3Backup || Boolean(storage.lastS3Error));
 }
 
 async function loadAdminDashboard() {

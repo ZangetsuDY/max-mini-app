@@ -4,6 +4,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { brotliCompressSync, gzipSync, constants as zlibConstants } from "node:zlib";
+import { startLocalStore, stopLocalStore, localStoreInfo } from "./lib/local-store.js";
+import { runtimeStoreBackend } from "./lib/runtime-store.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const ROOT = path.dirname(__filename);
@@ -692,6 +694,22 @@ server.keepAliveTimeout =
 server.headersTimeout =
   70_000;
 
+/*
+  Хранилище: внешний Redis (если задан) или собственное (диск + S3).
+  Загружаем до старта сервера, чтобы первые запросы видели настройки.
+*/
+if (runtimeStoreBackend() === "local") {
+  try {
+    await startLocalStore();
+    const info = localStoreInfo();
+    log(`Хранилище: локальное (${info.dataFile}), S3-копия: ${info.s3Backup ? "включена" : "выключена"}`);
+  } catch (error) {
+    log("Хранилище: ошибка загрузки", error instanceof Error ? error.message : String(error));
+  }
+} else {
+  log("Хранилище: внешний Redis");
+}
+
 server.listen(
   PORT,
   HOST,
@@ -740,15 +758,25 @@ function shutdown(
     `Received ${signal}, shutting down`
   );
 
-  server.close(
-    () => {
-      process.exit(0);
-    }
-  );
+  // Сначала сохраняем данные (диск + S3), затем закрываем сервер.
+  const saved = runtimeStoreBackend() === "local"
+    ? stopLocalStore().catch((error) => log("Хранилище: ошибка сохранения", String(error)))
+    : Promise.resolve();
+
+  saved.finally(() => {
+    server.close(
+      () => {
+        process.exit(0);
+      }
+    );
+    // Не ждём keep-alive соединения (до 65 с) — закрываем простаивающие.
+    server.closeIdleConnections?.();
+    setTimeout(() => server.closeAllConnections?.(), 3_000).unref();
+  });
 
   setTimeout(
     () => process.exit(1),
-    10_000
+    25_000
   ).unref();
 }
 

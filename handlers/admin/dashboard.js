@@ -1,4 +1,12 @@
 import {
+  runtimeStoreBackend
+} from "../../lib/runtime-store.js";
+
+import {
+  localStoreInfo
+} from "../../lib/local-store.js";
+
+import {
   getSession
 } from "../../lib/security.js";
 
@@ -101,6 +109,10 @@ export default {
       return json({
         storageConfigured:
           isRuntimeStoreConfigured(),
+        storage:
+          runtimeStoreBackend() === "local"
+            ? { backend: "local", ...localStoreInfo() }
+            : { backend: "redis" },
         system,
         onlineCount:
           presence.onlineCount,
