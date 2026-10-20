@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261015-anim2" />
-  <link rel="stylesheet" href="pro.css?v=20261015-anim2" />
+  <link rel="stylesheet" href="style.css?v=20261020-wo1" />
+  <link rel="stylesheet" href="pro.css?v=20261020-wo1" />
 </head>
 
 <body class="auth-pending">
@@ -654,12 +654,13 @@
             <div id="executiveRequestsMeta" class="executive-meta-line">Обновлено: —</div>
           </article>
 
-          <article class="glass-panel executive-panel executive-chart-panel">
+          <article id="executiveWorkordersPanel" class="glass-panel executive-panel executive-chart-panel workorders-open-panel" data-workorders-scope="executive" tabindex="0" role="button" aria-label="Открыть дашборд НДР">
             <div class="executive-panel-head">
               <div>
                 <span class="micro-label">НДР</span>
                 <h2>Наряд - Допуск/Распоряжения</h2>
               </div>
+              <span class="requests-open-link">Дашборд НДР <b aria-hidden="true">→</b></span>
             </div>
             <div class="dispatcher-workorders-chart-layout executive-chart-layout">
               <div id="executiveWorkordersChart" class="dispatcher-workorders-donut executive-donut" role="img" aria-label="Распределение НДР по статусам">
@@ -854,6 +855,162 @@
         <div id="requestsResultLine" class="requests-result-line"></div>
         <div id="requestsList" class="requests-list"></div>
         <button id="requestsMoreButton" class="secondary-action requests-more-button" type="button" hidden>Показать ещё</button>
+      </div>
+    </section>
+
+    <!-- WORKORDERS (НДР) DASHBOARD -->
+    <section id="workordersView" class="app-view">
+      <div class="view-toolbar">
+        <button id="backFromWorkordersButton" class="back-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19 12H5M11 18l-6-6 6-6"></path>
+          </svg>
+          <span id="woBackLabel">Назад</span>
+        </button>
+
+        <div class="toolbar-status">
+          <span class="system-pulse"></span>
+          <span id="woUpdatedAt">Сформировано: —</span>
+        </div>
+      </div>
+
+      <div class="wo-shell">
+        <div class="requests-hero wo-hero glass-panel">
+          <div>
+            <span class="micro-label">СК-11 · НАРЯДЫ / РАСПОРЯЖЕНИЯ</span>
+            <h1 id="woScopeTitle">НДР</h1>
+            <p id="woShiftLine" class="requests-shift-line">Смена: —</p>
+          </div>
+          <div class="wo-hero-gauge">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="wo-gauge-track" cx="60" cy="60" r="50"></circle>
+              <circle id="woGaugeValue" class="wo-gauge-value" cx="60" cy="60" r="50"></circle>
+            </svg>
+            <div class="wo-gauge-center">
+              <strong id="woGaugePercent">0%</strong>
+              <span>начаты</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="woNotice" class="requests-notice" hidden></div>
+
+        <div class="wo-tabs glass-panel" role="tablist">
+          <button class="wo-tab is-active" type="button" role="tab" aria-selected="true" data-wo-tab="dashboard">Дашборд</button>
+          <button class="wo-tab" type="button" role="tab" aria-selected="false" data-wo-tab="list">Наряды <b id="woListCount">0</b></button>
+        </div>
+
+        <div id="woDashboard" class="wo-dashboard">
+          <div id="woKpis" class="wo-kpis"></div>
+
+          <div class="wo-grid">
+            <article class="glass-panel wo-panel">
+              <div class="wo-panel-head">
+                <div>
+                  <span class="micro-label">СТАТУСЫ</span>
+                  <h2>Распределение статусов</h2>
+                </div>
+              </div>
+              <div class="wo-status-layout">
+                <div id="woStatusChart" class="dispatcher-workorders-donut wo-donut" role="img" aria-label="Распределение нарядов по группам статусов">
+                  <div class="dispatcher-workorders-donut-center">
+                    <strong id="woStatusTotal">0</strong>
+                    <span>Всего</span>
+                  </div>
+                </div>
+                <div id="woStatusLegend" class="wo-legend"></div>
+              </div>
+            </article>
+
+            <article class="glass-panel wo-panel">
+              <div class="wo-panel-head">
+                <div>
+                  <span class="micro-label">ПО ДНЯМ · ПЛАНОВОЕ НАЧАЛО</span>
+                  <h2>% начала работ по дням</h2>
+                </div>
+              </div>
+              <div id="woDaysChart" class="wo-days-chart"></div>
+            </article>
+          </div>
+
+          <article class="glass-panel wo-panel">
+            <div class="wo-panel-head">
+              <div>
+                <span class="micro-label">ВОРОНКА · ОТ ХУДШЕГО %</span>
+                <h2 id="woFunnelTitle">Воронка по подразделениям</h2>
+              </div>
+              <div class="wo-segmented" role="tablist">
+                <button type="button" class="is-active" data-wo-funnel="organization">Подразделения</button>
+                <button type="button" data-wo-funnel="journal">Журналы</button>
+              </div>
+            </div>
+            <div id="woFunnel" class="wo-funnel"></div>
+          </article>
+
+          <div class="wo-grid">
+            <article class="glass-panel wo-panel">
+              <div class="wo-panel-head">
+                <div>
+                  <span class="micro-label">ДОПУСК → ФАКТИЧЕСКОЕ НАЧАЛО</span>
+                  <h2>Длительность допуска</h2>
+                </div>
+              </div>
+              <div id="woAdmissionStats" class="wo-admission-stats"></div>
+              <div id="woAdmissionHist" class="wo-hist"></div>
+            </article>
+
+            <article class="glass-panel wo-panel">
+              <div class="wo-panel-head">
+                <div>
+                  <span class="micro-label">ДОЛЬШЕ ВСЕГО</span>
+                  <h2>Самые длительные допуски</h2>
+                </div>
+              </div>
+              <div id="woAdmissionTop" class="wo-admission-top"></div>
+            </article>
+          </div>
+
+          <article class="glass-panel wo-panel">
+            <div class="wo-panel-head">
+              <div>
+                <span class="micro-label">ДЕТАЛИЗАЦИЯ</span>
+                <h2>По дням</h2>
+              </div>
+            </div>
+            <div class="wo-table-wrap">
+              <table class="wo-table">
+                <thead>
+                  <tr>
+                    <th>Дата</th>
+                    <th>День</th>
+                    <th>Не проверен</th>
+                    <th>Проверен, не начат</th>
+                    <th>Работы начаты</th>
+                    <th>Допуск не производился</th>
+                    <th>Прочие</th>
+                    <th>Всего</th>
+                    <th>% начаты</th>
+                  </tr>
+                </thead>
+                <tbody id="woDaysTable"></tbody>
+              </table>
+            </div>
+            <p class="wo-footnote">Пороги: <i class="wo-tone is-low"></i> &lt; 25% · <i class="wo-tone is-mid"></i> 25–39% · <i class="wo-tone is-high"></i> ≥ 40%. Длительность допуска &gt; 50 мин выделяется оранжевым.</p>
+          </article>
+        </div>
+
+        <div id="woList" class="wo-list-view" hidden>
+          <div class="requests-toolbar glass-panel">
+            <div id="woFilters" class="requests-status-filters" role="tablist" aria-label="Фильтр нарядов"></div>
+            <label class="requests-search">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4 4"></path></svg>
+              <input id="woSearchInput" type="search" placeholder="Поиск: номер, объект, работы, журнал, производитель, бригада" autocomplete="off" />
+            </label>
+          </div>
+          <div id="woResultLine" class="requests-result-line"></div>
+          <div id="woCards" class="requests-list wo-cards"></div>
+          <button id="woMoreButton" class="secondary-action requests-more-button" type="button" hidden>Показать ещё</button>
+        </div>
       </div>
     </section>
 
@@ -1178,15 +1335,18 @@
               </div>
             </article>
 
-            <article class="dispatcher-panel glass-panel dispatcher-workorders-panel">
+            <article id="dispatcherWorkordersPanel" class="dispatcher-panel glass-panel dispatcher-workorders-panel workorders-open-panel" data-workorders-scope="dispatcher" tabindex="0" role="button" aria-label="Открыть дашборд НДР">
               <div class="dispatcher-panel-head">
                 <div>
                   <span class="micro-label">СК-11 · НДР</span>
                   <h2>Наряд - Допуск/Распоряжения</h2>
                 </div>
-                <div id="dispatcherWorkordersLiveBadge" class="dispatcher-live-badge">
-                  <i></i>
-                  LIVE
+                <div class="requests-open-head">
+                  <span class="requests-open-link">Дашборд НДР <b aria-hidden="true">→</b></span>
+                  <div id="dispatcherWorkordersLiveBadge" class="dispatcher-live-badge">
+                    <i></i>
+                    LIVE
+                  </div>
                 </div>
               </div>
 
@@ -1969,6 +2129,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261015-anim2"></script>
+  <script src="app.js?v=20261020-wo1"></script>
 </body>
 </html>

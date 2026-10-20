@@ -22,6 +22,7 @@ const API_ADMIN_OUTAGE_CONFIG = "/api/admin/outage-config";
 const API_EXCEL_EXPORTS = "/api/excel-exports";
 const API_ADMIN_OUTAGES_EXPORT = "/api/admin/outages-export";
 const API_REQUESTS_DETAILS = "/api/requests-details";
+const API_WORKORDERS_DETAILS = "/api/workorders-details";
 const API_ADMIN_EXCEL_EXPORT_CONFIG = "/api/admin/excel-export-config";
 
 const REFRESH_INTERVAL_MS = 120_000;
@@ -54,6 +55,7 @@ const monitoringView = document.getElementById("monitoringView");
 const dispatcherView = document.getElementById("dispatcherView");
 const executiveView = document.getElementById("executiveView");
 const requestsView = document.getElementById("requestsView");
+const workordersView = document.getElementById("workordersView");
 const excelExportsView = document.getElementById("excelExportsView");
 const adminView = document.getElementById("adminView");
 
@@ -322,6 +324,22 @@ const REQUEST_STATUS_FILTERS = [
   { key: "acknowledged", label: "Принята к сведению" },
   { key: "ending", label: "Заканчиваются в смену" }
 ];
+
+const WO_PAGE_SIZE = 48;
+const workordersState = {
+  scope: "dispatcher",
+  groupId: "",
+  unitId: "",
+  returnView: "home",
+  data: null,
+  tab: "dashboard",
+  funnelMode: "organization",
+  filter: "all",
+  query: "",
+  shown: WO_PAGE_SIZE,
+  refreshTimer: null,
+  loadToken: 0
+};
 
 const requestsState = {
   scope: "dispatcher",
@@ -1172,6 +1190,7 @@ function showLoginScreen() {
   dispatcherView.classList.remove("is-active");
   executiveView.classList.remove("is-active");
   requestsView?.classList.remove("is-active");
+  workordersView?.classList.remove("is-active");
   excelExportsView.classList.remove("is-active");
   adminView.classList.remove("is-active");
 
@@ -1223,6 +1242,11 @@ function setView(view) {
     view === "requests"
   );
 
+  workordersView?.classList.toggle(
+    "is-active",
+    view === "workorders"
+  );
+
   excelExportsView.classList.toggle(
     "is-active",
     view === "excel-exports"
@@ -1251,6 +1275,10 @@ function setView(view) {
 
   if (view !== "requests") {
     stopRequestsRefresh();
+  }
+
+  if (view !== "workorders") {
+    stopWorkordersRefresh();
   }
 
   window.scrollTo({
@@ -2745,6 +2773,724 @@ requestsEl("requestsMoreButton")?.addEventListener("click", () => {
 });
 
 requestsEl("requestsList")?.addEventListener("click", (event) => {
+  const toggle = event.target.closest(".request-works-toggle");
+  if (!toggle) return;
+  const works = toggle.closest(".request-works");
+  const collapsed = works.classList.toggle("is-collapsed");
+  toggle.textContent = collapsed ? "Показать полностью" : "Свернуть";
+});
+
+/* =========================================================
+   НДР · дашборд и список нарядов из txt-файла СК-11
+   Расчёты — по методике ТЗ «Анализ НДС»: 4 группы статусов
+   (+ «Прочие» из файла), % начаты = Работы начаты / Всего,
+   группировка по дате планового начала, длительность допуска.
+   ========================================================= */
+const WO_REFRESH_INTERVAL_MS = 60000;
+const WO_GROUPS = [
+  { key: "notChecked", label: "Не проверен", short: "Не пров.", color: "#a78bfa" },
+  { key: "checked", label: "Проверен, не начат", short: "Пров.", color: "#38bdf8" },
+  { key: "started", label: "Работы начаты", short: "Начаты", color: "#22c55e" },
+  { key: "notAdmitted", label: "Допуск не производился", short: "Не допущ.", color: "#f43f5e" },
+  { key: "other", label: "Прочие", short: "Прочие", color: "#64748b" }
+];
+const WO_WEEKDAYS = ["Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"];
+const WO_LONG_ADMISSION_MIN = 50;
+
+function woEl(id) {
+  return document.getElementById(id);
+}
+
+function woPercent(part, total) {
+  return total ? (part / total) * 100 : 0;
+}
+
+function woFormatPercent(value) {
+  return `${(Math.round(value * 10) / 10).toLocaleString("ru-RU")}%`;
+}
+
+// Пороги ТЗ: < 25 оранжевый, 25–39 жёлтый, ≥ 40 зелёный.
+function woTone(percent) {
+  if (percent >= 40) return "high";
+  if (percent >= 25) return "mid";
+  return "low";
+}
+
+function woParseDate(value) {
+  const match = String(value || "").match(/(\d{2})\.(\d{2})\.(\d{4})(?:\s+(\d{2}):(\d{2}))?/);
+  if (!match) return null;
+  const date = new Date(Number(match[3]), Number(match[2]) - 1, Number(match[1]), Number(match[4] || 0), Number(match[5] || 0));
+  return {
+    key: `${match[3]}-${match[2]}-${match[1]}`,
+    label: `${match[1]}.${match[2]}`,
+    full: `${match[1]}.${match[2]}.${match[3]}`,
+    weekday: WO_WEEKDAYS[date.getDay()],
+    time: date.getTime()
+  };
+}
+
+function woEmptyCounts() {
+  return { notChecked: 0, checked: 0, started: 0, notAdmitted: 0, other: 0, total: 0 };
+}
+
+function woCount(orders) {
+  const counts = woEmptyCounts();
+  for (const order of orders) {
+    counts[order.group] = (counts[order.group] || 0) + 1;
+    counts.total += 1;
+  }
+  return counts;
+}
+
+function woMedian(values) {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+function woAnalytics(orders) {
+  const counts = woCount(orders);
+
+  const dayMap = new Map();
+  for (const order of orders) {
+    const date = woParseDate(order.planStart);
+    const key = date?.key || "—";
+    if (!dayMap.has(key)) dayMap.set(key, { date, orders: [] });
+    dayMap.get(key).orders.push(order);
+  }
+  const days = [...dayMap.values()]
+    .sort((a, b) => (a.date?.time ?? -Infinity) - (b.date?.time ?? -Infinity))
+    .map((item) => ({ ...item, counts: woCount(item.orders) }));
+
+  const admissions = orders
+    .filter((order) => Number.isFinite(order.admissionMinutes) && order.admissionMinutes >= 0)
+    .sort((a, b) => b.admissionMinutes - a.admissionMinutes);
+  const minutes = admissions.map((order) => order.admissionMinutes);
+
+  return {
+    counts,
+    days,
+    admissions,
+    admissionStats: {
+      count: minutes.length,
+      average: minutes.length ? minutes.reduce((sum, value) => sum + value, 0) / minutes.length : null,
+      median: woMedian(minutes),
+      min: minutes.length ? Math.min(...minutes) : null,
+      max: minutes.length ? Math.max(...minutes) : null
+    },
+    inShift: orders.filter((order) => order.startsInShift).length
+  };
+}
+
+function woStackBar(counts) {
+  const total = counts.total || 1;
+  return `<div class="wo-stack">${WO_GROUPS.map((group) => {
+    const value = counts[group.key] || 0;
+    return value
+      ? `<i style="width:${((value / total) * 100).toFixed(2)}%;background:${group.color}" title="${group.label}: ${value}"></i>`
+      : "";
+  }).join("")}</div>`;
+}
+
+function renderWoKpis(analytics) {
+  const { counts, admissionStats, inShift } = analytics;
+  const startedPercent = woPercent(counts.started, counts.total);
+  const tiles = [
+    { label: "Всего нарядов", value: counts.total, hint: `${inShift} с началом в смену`, tone: "total" },
+    { label: "Работы начаты", value: counts.started, hint: "допуск, подготовка, перерыв", tone: "started" },
+    { label: "% начала работ", value: woFormatPercent(startedPercent), hint: "начаты / всего", tone: `percent is-${woTone(startedPercent)}` },
+    { label: "Проверены, не начаты", value: counts.checked, hint: "зарегистрирован", tone: "checked" },
+    { label: "Не проверены", value: counts.notChecked, hint: "создан", tone: "notChecked" },
+    { label: "Допуск не производился", value: counts.notAdmitted, hint: "по статусу СК-11", tone: "notAdmitted" },
+    { label: "Прочие", value: counts.other, hint: "закрыт, отменён и т. п.", tone: "other" },
+    { label: "Медиана допуска", value: admissionStats.median === null ? "—" : `${Math.round(admissionStats.median)} мин`, hint: `рассчитано: ${admissionStats.count}`, tone: "admission" }
+  ];
+
+  woEl("woKpis").innerHTML = tiles.map((tile, index) => `
+    <div class="wo-kpi is-${tile.tone}" style="--i:${index}">
+      <span>${tile.label}</span>
+      <strong>${typeof tile.value === "number" ? tile.value.toLocaleString("ru-RU") : tile.value}</strong>
+      <small>${tile.hint}</small>
+    </div>
+  `).join("");
+}
+
+function renderWoStatus(analytics) {
+  const { counts } = analytics;
+  woEl("woStatusTotal").textContent = counts.total;
+  renderDispatcherDonutChart(
+    woEl("woStatusChart"),
+    WO_GROUPS.map((group) => ({ label: group.label, value: counts[group.key] || 0, color: group.color }))
+  );
+  woEl("woStatusLegend").innerHTML = WO_GROUPS.map((group) => `
+    <div class="wo-legend-item">
+      <i style="background:${group.color}"></i>
+      <span>${group.label}</span>
+      <strong>${counts[group.key] || 0}</strong>
+      <small>${woFormatPercent(woPercent(counts[group.key] || 0, counts.total))}</small>
+    </div>
+  `).join("");
+}
+
+function renderWoDays(analytics) {
+  const chart = woEl("woDaysChart");
+  let days = analytics.days;
+
+  // Длинный хвост старых дат сворачиваем в «Ранее», чтобы график читался.
+  const MAX_DAYS = 8;
+  if (days.length > MAX_DAYS) {
+    const older = days.slice(0, days.length - (MAX_DAYS - 1));
+    const orders = older.flatMap((item) => item.orders);
+    days = [
+      { date: { label: "Ранее", weekday: `${older.length} дн.`, full: "Ранее" }, orders, counts: woCount(orders), isOlder: true },
+      ...days.slice(days.length - (MAX_DAYS - 1))
+    ];
+  }
+
+  if (!days.length) {
+    chart.innerHTML = '<div class="requests-empty">Нет данных</div>';
+  } else {
+    const maxTotal = Math.max(...days.map((item) => item.counts.total), 1);
+    chart.innerHTML = `
+      <div class="wo-bars">
+        ${days.map((item, index) => {
+          const percent = woPercent(item.counts.started, item.counts.total);
+          const height = Math.max(6, (item.counts.total / maxTotal) * 100);
+          return `
+            <div class="wo-bar${item.isOlder ? " is-older" : ""}" style="--i:${index}" title="${escapeHtml(item.date?.full || "—")}: всего ${item.counts.total}, начаты ${item.counts.started}">
+              <b class="wo-bar-value is-${woTone(percent)}">${woFormatPercent(percent)}</b>
+              <div class="wo-bar-track">
+                <div class="wo-bar-column" style="height:${height.toFixed(1)}%">
+                  ${WO_GROUPS.map((group) => {
+                    const value = item.counts[group.key] || 0;
+                    return value ? `<i style="flex:${value};background:${group.color}"></i>` : "";
+                  }).join("")}
+                </div>
+              </div>
+              <span class="wo-bar-label">${escapeHtml(item.date?.label || "—")}</span>
+              <small>${escapeHtml(item.date?.weekday || "")} · ${item.counts.total}</small>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `;
+  }
+
+  const total = analytics.counts;
+  const TABLE_DAYS = 8;
+  const olderDays = analytics.days.length > TABLE_DAYS ? analytics.days.slice(0, analytics.days.length - TABLE_DAYS) : [];
+  const recentDays = analytics.days.slice(olderDays.length);
+  const olderCounts = woCount(olderDays.flatMap((item) => item.orders));
+  const dayRow = (item, extraClass = "") => {
+    const percent = woPercent(item.counts.started, item.counts.total);
+    return `
+      <tr class="${extraClass}">
+        <td>${escapeHtml(item.date?.full || "—")}</td>
+        <td>${escapeHtml(item.date?.weekday || "")}</td>
+        ${WO_GROUPS.map((group) => `<td>${item.counts[group.key] || 0}</td>`).join("")}
+        <td><b>${item.counts.total}</b></td>
+        <td><span class="wo-chip is-${woTone(percent)}">${woFormatPercent(percent)}</span></td>
+      </tr>
+    `;
+  };
+  const olderPercent = woPercent(olderCounts.started, olderCounts.total);
+  woEl("woDaysTable").innerHTML = (olderDays.length ? `
+    <tr class="wo-older-toggle" data-wo-older>
+      <td>▸ Ранее</td>
+      <td>${olderDays.length} дн.</td>
+      ${WO_GROUPS.map((group) => `<td>${olderCounts[group.key] || 0}</td>`).join("")}
+      <td><b>${olderCounts.total}</b></td>
+      <td><span class="wo-chip is-${woTone(olderPercent)}">${woFormatPercent(olderPercent)}</span></td>
+    </tr>
+    ${olderDays.map((item) => dayRow(item, "wo-older-row")).join("")}
+  ` : "") + recentDays.map((item) => dayRow(item)).join("") + `
+    <tr class="is-total">
+      <td>ИТОГО</td><td></td>
+      ${WO_GROUPS.map((group) => `<td>${total[group.key] || 0}</td>`).join("")}
+      <td><b>${total.total}</b></td>
+      <td><span class="wo-chip is-${woTone(woPercent(total.started, total.total))}">${woFormatPercent(woPercent(total.started, total.total))}</span></td>
+    </tr>
+  `;
+}
+
+function renderWoFunnel(orders) {
+  const mode = workordersState.funnelMode;
+  const key = mode === "journal" ? "journal" : "organization";
+  woEl("woFunnelTitle").textContent = mode === "journal" ? "Воронка по журналам" : "Воронка по подразделениям";
+
+  const map = new Map();
+  for (const order of orders) {
+    const name = order[key] || (mode === "journal" ? "Без журнала" : "Без организации");
+    if (!map.has(name)) map.set(name, []);
+    map.get(name).push(order);
+  }
+
+  const rows = [...map.entries()]
+    .map(([name, list]) => ({ name, counts: woCount(list) }))
+    .map((row) => ({ ...row, percent: woPercent(row.counts.started, row.counts.total) }))
+    // ТЗ: сортировка по % начаты по возрастанию (сначала худшие); при равенстве — крупнее выше.
+    .sort((a, b) => a.percent - b.percent || b.counts.total - a.counts.total);
+
+  // Строки с 1–2 нарядами (обычно подрядчики) сворачиваем, чтобы
+  // основные подразделения были наверху и не терялись.
+  const SMALL_LIMIT = 2;
+  const mainRows = rows.length > 6 ? rows.filter((row) => row.counts.total > SMALL_LIMIT) : rows;
+  const smallRows = rows.length > 6 ? rows.filter((row) => row.counts.total <= SMALL_LIMIT) : [];
+  const renderRow = (row, index) => `
+        <div class="wo-funnel-row" style="--i:${Math.min(index, 20)}">
+          <div class="wo-funnel-name" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</div>
+          <div class="wo-funnel-bar">${woStackBar(row.counts)}</div>
+          <div class="wo-funnel-numbers">
+            ${WO_GROUPS.map((group) => `<span title="${group.label}" style="--c:${group.color}">${row.counts[group.key] || 0}</span>`).join("")}
+          </div>
+          <div class="wo-funnel-total">${row.counts.total}</div>
+          <div class="wo-funnel-percent"><span class="wo-chip is-${woTone(row.percent)}">${woFormatPercent(row.percent)}</span></div>
+        </div>
+      `;
+  const smallCounts = woCount(smallRows.flatMap((row) => map.get(row.name)));
+
+  woEl("woFunnel").innerHTML = rows.length
+    ? `
+      <div class="wo-funnel-legend">${WO_GROUPS.map((group) => `<span><i style="background:${group.color}"></i>${group.short}</span>`).join("")}</div>
+      ${mainRows.map(renderRow).join("")}
+      ${smallRows.length ? `
+        <details class="wo-funnel-small">
+          <summary>
+            <span>Небольшие (до ${SMALL_LIMIT} нарядов): ${smallRows.length} шт.</span>
+            <b>${smallCounts.total} нарядов · начаты ${smallCounts.started}</b>
+          </summary>
+          ${smallRows.map(renderRow).join("")}
+        </details>
+      ` : ""}
+    `
+    : '<div class="requests-empty">Нет данных</div>';
+}
+
+function renderWoAdmission(analytics) {
+  const { admissionStats: stats, admissions } = analytics;
+  const format = (value) => (value === null ? "—" : `${Math.round(value * 10) / 10}`);
+  woEl("woAdmissionStats").innerHTML = [
+    ["Рассчитано", stats.count, ""],
+    ["Медиана", format(stats.median), "мин"],
+    ["Среднее", format(stats.average), "мин"],
+    ["Мин", format(stats.min), "мин"],
+    ["Макс", format(stats.max), "мин"]
+  ].map(([label, value, unit]) => `
+    <div class="wo-stat"><span>${label}</span><strong>${value}<small>${unit}</small></strong></div>
+  `).join("");
+
+  const buckets = [
+    { label: "0–10", from: 0, to: 10 },
+    { label: "10–20", from: 10, to: 20 },
+    { label: "20–30", from: 20, to: 30 },
+    { label: "30–50", from: 30, to: 50 },
+    { label: "50–90", from: 50, to: 90, long: true },
+    { label: "90+", from: 90, to: Infinity, long: true }
+  ].map((bucket) => ({
+    ...bucket,
+    count: admissions.filter((order) => order.admissionMinutes >= bucket.from && order.admissionMinutes < bucket.to).length
+  }));
+  const maxCount = Math.max(...buckets.map((bucket) => bucket.count), 1);
+
+  woEl("woAdmissionHist").innerHTML = `
+    <div class="wo-hist-bars">
+      ${buckets.map((bucket, index) => `
+        <div class="wo-hist-bar${bucket.long ? " is-long" : ""}" style="--i:${index}">
+          <b>${bucket.count}</b>
+          <div class="wo-hist-track"><i style="height:${Math.max(bucket.count ? 4 : 0, (bucket.count / maxCount) * 100).toFixed(1)}%"></i></div>
+          <span>${bucket.label}</span>
+        </div>
+      `).join("")}
+    </div>
+    <small class="wo-hist-caption">минут от проверки р.м. (или допуска) до фактического начала работ</small>
+  `;
+
+  const top = admissions.slice(0, 8);
+  woEl("woAdmissionTop").innerHTML = top.length
+    ? top.map((order) => `
+        <div class="wo-top-row${order.admissionMinutes > WO_LONG_ADMISSION_MIN ? " is-long" : ""}">
+          <div>
+            <strong>${order.number ? `№${escapeHtml(order.number)}` : "Без номера"}</strong>
+            <span>${escapeHtml(order.organization || "—")} · ${escapeHtml(order.status || "")}</span>
+            <small>${escapeHtml(order.object || "")}</small>
+          </div>
+          <div class="wo-top-times">
+            <span>${escapeHtml(order.checkedAt ? `Проверка ${order.checkedAt}` : `Допуск ${order.admittedAt || "—"}`)}</span>
+            <span>Факт ${escapeHtml(order.actualStartAt || "—")}</span>
+          </div>
+          <b>${order.admissionMinutes}<small>мин</small></b>
+        </div>
+      `).join("")
+    : '<div class="requests-empty">Нет рассчитанных допусков</div>';
+}
+
+/* ---------- список нарядов ---------- */
+const WO_FILTERS = [
+  { key: "all", label: "Все", color: "#d6a446" },
+  ...WO_GROUPS.map((group) => ({ key: group.key, label: group.label, color: group.color })),
+  { key: "inShift", label: "Начало в смену", color: "#45c8f4" },
+  { key: "longAdmission", label: `Допуск > ${WO_LONG_ADMISSION_MIN} мин`, color: "#f59e0b" }
+];
+
+function woMatchesFilter(order, filter) {
+  if (filter === "all") return true;
+  if (filter === "inShift") return Boolean(order.startsInShift);
+  if (filter === "longAdmission") return Number(order.admissionMinutes) > WO_LONG_ADMISSION_MIN;
+  return order.group === filter;
+}
+
+function woSearchText(order) {
+  if (!order._search) {
+    order._search = [
+      order.number, order.status, order.groupLabel, order.organization, order.journal,
+      order.object, order.places, order.works, order.issuer, order.responsible,
+      order.producer, ...(order.brigade || []), order.stageBy, order.uid
+    ].join(" ").toLowerCase().replace(/ё/g, "е");
+  }
+  return order._search;
+}
+
+function woFilteredOrders() {
+  const orders = Array.isArray(workordersState.data?.orders) ? workordersState.data.orders : [];
+  const words = workordersState.query.toLowerCase().replace(/ё/g, "е").split(/\s+/).filter(Boolean);
+  return orders.filter((order) =>
+    woMatchesFilter(order, workordersState.filter) &&
+    words.every((word) => woSearchText(order).includes(word))
+  );
+}
+
+function renderWoCard(order, index) {
+  const group = WO_GROUPS.find((item) => item.key === order.group) || WO_GROUPS[4];
+  const longAdmission = Number(order.admissionMinutes) > WO_LONG_ADMISSION_MIN;
+  const times = [
+    ["План начало", order.planStart],
+    ["План конец", order.planEnd],
+    ["Выдан", order.issuedAt],
+    ["Проверка р.м.", order.checkedAt],
+    ["Допуск", order.admittedAt],
+    ["Факт. начало", order.actualStartAt]
+  ];
+  const people = [
+    ["Выдающий", order.issuer],
+    ["Отв. руководитель", order.responsible],
+    ["Производитель", order.producer],
+    [`Бригада${order.brigadeCount ? ` (${order.brigadeCount})` : ""}`, (order.brigade || []).join(", ")]
+  ];
+  const extra = [
+    ["Бригада полностью", (order.brigade || []).length > 2 ? order.brigade.join(", ") : ""],
+    ["Текущий этап с", [order.stageSince, order.stageBy].filter(Boolean).join(" · ")],
+    ["Подготовка р.м.", order.preparation],
+    ["Результат", order.result],
+    ["Доп. указания", order.notes],
+    ["Прочие даты", order.otherDates],
+    ["UID", order.uid]
+  ].filter(([, value]) => value);
+
+  return `
+    <article class="request-card wo-card is-${order.group}" style="--chip:${group.color};--i:${index % WO_PAGE_SIZE}">
+      <header class="request-card-head">
+        <span class="request-number">${order.number ? `<small>№</small>${escapeHtml(order.number)}` : '<small>№</small>—'}</span>
+        <span class="request-status">${escapeHtml(order.status || "—")}</span>
+        <span class="wo-group-chip">${group.label}</span>
+      </header>
+
+      <div class="wo-card-meta" title="${escapeHtml(order.journal || "")}">
+        <b>${escapeHtml(order.organization || "—")}</b>${order.journal ? ` · ${escapeHtml(order.journal)}` : ""}
+      </div>
+
+      <div class="request-object" title="${escapeHtml(order.object || "")}">${escapeHtml(order.object || "—")}</div>
+      <div class="request-equipment"${order.places ? ` title="${escapeHtml(order.places)}"` : ""}>${escapeHtml(order.places || "Места: —")}</div>
+
+      <div class="wo-badges">
+        ${order.startsInShift ? '<span class="wo-badge is-shift">Начало в смену</span>' : ""}
+        ${order.admissionMinutes !== null && order.admissionMinutes !== undefined ? `<span class="wo-badge${longAdmission ? " is-long" : ""}">Допуск ${order.admissionMinutes} мин</span>` : ""}
+      </div>
+
+      <dl class="request-times wo-times">
+        ${times.map(([label, value]) => `<div${value ? "" : ' class="is-empty"'}><dt>${label}</dt><dd>${escapeHtml(value || "—")}</dd></div>`).join("")}
+      </dl>
+
+      <div class="request-works${String(order.works || "").length > 150 ? " is-collapsible is-collapsed" : ""}">
+        <span class="request-label">Работы</span>
+        <p>${escapeHtml(order.works || "—")}</p>
+        ${String(order.works || "").length > 150 ? '<button class="request-works-toggle" type="button">Показать полностью</button>' : ""}
+      </div>
+
+      <dl class="wo-people">
+        ${people.map(([label, value]) => `<div${value ? "" : ' class="is-empty"'}><dt>${label}</dt><dd title="${escapeHtml(value || "")}">${escapeHtml(value || "—")}</dd></div>`).join("")}
+      </dl>
+
+      ${extra.length ? `
+        <details class="wo-more">
+          <summary>Подробнее</summary>
+          <dl>${extra.map(([label, value]) => `<div><dt>${label}</dt><dd>${escapeHtml(value)}</dd></div>`).join("")}</dl>
+        </details>
+      ` : ""}
+    </article>
+  `;
+}
+
+function renderWoFilters() {
+  const orders = Array.isArray(workordersState.data?.orders) ? workordersState.data.orders : [];
+  woEl("woFilters").innerHTML = WO_FILTERS.map((filter) => {
+    const count = orders.filter((order) => woMatchesFilter(order, filter.key)).length;
+    const active = workordersState.filter === filter.key;
+    return `
+      <button class="requests-filter${active ? " is-active" : ""}" style="--chip:${filter.color}" type="button" role="tab" aria-selected="${active}" data-wo-filter="${filter.key}"${count || filter.key === "all" ? "" : " disabled"}>
+        <i></i><span>${filter.label}</span><b>${count}</b>
+      </button>
+    `;
+  }).join("");
+}
+
+function renderWoCards() {
+  const items = woFilteredOrders();
+  const visible = items.slice(0, workordersState.shown);
+  const total = Number(workordersState.data?.orders?.length || 0);
+  const cards = woEl("woCards");
+
+  woEl("woResultLine").textContent = items.length === total
+    ? `Показано ${visible.length} из ${items.length}`
+    : `Найдено ${items.length} из ${total} · показано ${visible.length}`;
+
+  cards.innerHTML = visible.length
+    ? visible.map(renderWoCard).join("")
+    : `<div class="requests-empty">${total ? "Нет нарядов по выбранному фильтру" : "Нарядов нет"}</div>`;
+
+  const more = woEl("woMoreButton");
+  const rest = items.length - visible.length;
+  more.hidden = rest <= 0;
+  more.textContent = `Показать ещё ${Math.min(rest, WO_PAGE_SIZE)} из ${rest}`;
+}
+
+function renderWoTabs() {
+  const isList = workordersState.tab === "list";
+  woEl("woDashboard").hidden = isList;
+  woEl("woList").hidden = !isList;
+  document.querySelectorAll("[data-wo-tab]").forEach((button) => {
+    const active = button.dataset.woTab === workordersState.tab;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+}
+
+function renderWorkordersView() {
+  const data = workordersState.data || {};
+  const orders = Array.isArray(data.orders) ? data.orders : [];
+  const analytics = woAnalytics(orders);
+  const percent = woPercent(analytics.counts.started, analytics.counts.total);
+
+  woEl("woScopeTitle").textContent = `НДР · ${data.scopeLabel || "—"}`;
+  woEl("woShiftLine").textContent = [
+    data.shift ? `Смена ${String(data.shift).toLowerCase()}` : "",
+    data.period || ""
+  ].filter(Boolean).join(": ") || "Смена: —";
+  woEl("woUpdatedAt").textContent = data.generatedAt ? `Сформировано: ${data.generatedAt}` : "Сформировано: —";
+  woEl("woListCount").textContent = orders.length;
+
+  const gauge = woEl("woGaugeValue");
+  const circumference = 2 * Math.PI * 50;
+  gauge.style.strokeDasharray = `${circumference}`;
+  gauge.style.strokeDashoffset = `${circumference * (1 - Math.min(percent, 100) / 100)}`;
+  gauge.setAttribute("class", `wo-gauge-value is-${woTone(percent)}`);
+  woEl("woGaugePercent").textContent = woFormatPercent(percent);
+
+  const notice = woEl("woNotice");
+  const text = data.status && data.status !== "ok" ? data.message : "";
+  notice.hidden = !text;
+  notice.textContent = text || "";
+  notice.classList.toggle("is-warning", data.status === "stale");
+
+  renderWoKpis(analytics);
+  renderWoStatus(analytics);
+  renderWoDays(analytics);
+  renderWoFunnel(orders);
+  renderWoAdmission(analytics);
+  renderWoFilters();
+  renderWoCards();
+  renderWoTabs();
+}
+
+function stopWorkordersRefresh() {
+  if (workordersState.refreshTimer) {
+    clearInterval(workordersState.refreshTimer);
+    workordersState.refreshTimer = null;
+  }
+}
+
+function startWorkordersRefresh() {
+  stopWorkordersRefresh();
+  workordersState.refreshTimer = setInterval(() => {
+    if (currentView === "workorders" && isAppVisible()) {
+      loadWorkordersDetails({ quiet: true });
+    }
+  }, WO_REFRESH_INTERVAL_MS);
+}
+
+async function loadWorkordersDetails({ quiet = false } = {}) {
+  const token = ++workordersState.loadToken;
+  const params = new URLSearchParams({ scope: workordersState.scope });
+  if (workordersState.groupId) params.set("group", workordersState.groupId);
+  if (workordersState.unitId) params.set("unit", workordersState.unitId);
+
+  try {
+    const response = await fetch(`${API_WORKORDERS_DETAILS}?${params.toString()}`, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "include",
+      headers: getSessionHeaders()
+    });
+
+    if (response.status === 401) {
+      setAppSessionToken("");
+      showLoginScreen();
+      return false;
+    }
+
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new Error(payload?.error || payload?.message || `Сервер вернул ошибку ${response.status}`);
+    }
+
+    if (token !== workordersState.loadToken) return true;
+
+    workordersState.data = payload;
+    renderWorkordersView();
+    return true;
+  } catch (error) {
+    if (!quiet) {
+      openModal({
+        type: "denied",
+        eyebrow: "НДР",
+        title: "Не удалось загрузить наряды",
+        message: error instanceof Error ? error.message : "Попробуйте ещё раз."
+      });
+    }
+    return false;
+  }
+}
+
+async function openWorkordersView(scope) {
+  const isExecutive = scope === "executive";
+  const panel = isExecutive ? "executive-monitoring" : "dispatcher";
+  if (!hasPanelAccess(panel)) {
+    showPanelAccessDenied(panel);
+    return;
+  }
+
+  Object.assign(workordersState, {
+    scope: isExecutive ? "executive" : "dispatcher",
+    groupId: isExecutive ? selectedExecutiveGroupId : selectedDispatcherGroupId,
+    unitId: isExecutive ? selectedExecutiveUnitId : selectedDispatcherUnitId,
+    returnView: isExecutive ? "executive" : "dispatcher",
+    data: null,
+    tab: "dashboard",
+    filter: "all",
+    query: "",
+    shown: WO_PAGE_SIZE
+  });
+
+  woEl("woSearchInput").value = "";
+  woEl("woBackLabel").textContent = isExecutive ? "Диспетчерский мониторинг" : "Интерфейс диспетчера";
+  renderWoTabs();
+
+  setView("workorders");
+  const token = showViewLoading("Загрузка НДР…");
+
+  try {
+    const ok = await loadWorkordersDetails();
+    if (currentView !== "workorders") return;
+    if (ok) {
+      startWorkordersRefresh();
+    } else {
+      closeWorkordersView();
+    }
+  } finally {
+    hideViewLoading(token);
+  }
+}
+
+function closeWorkordersView() {
+  stopWorkordersRefresh();
+  hideViewLoading();
+
+  if (workordersState.returnView === "dispatcher" && hasPanelAccess("dispatcher")) {
+    setView("dispatcher");
+    startDispatcherRefresh();
+    loadDispatcherDashboard({ quiet: true });
+  } else if (workordersState.returnView === "executive" && hasPanelAccess("executive-monitoring")) {
+    setView("executive");
+    startExecutiveRefresh();
+    loadExecutiveDashboard({ quiet: true });
+  } else {
+    navigateHome();
+  }
+}
+
+document.querySelectorAll(".workorders-open-panel").forEach((panel) => {
+  const open = () => openWorkordersView(panel.dataset.workordersScope);
+  panel.addEventListener("click", open);
+  panel.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      open();
+    }
+  });
+});
+
+woEl("backFromWorkordersButton")?.addEventListener("click", closeWorkordersView);
+
+woEl("woDaysTable")?.addEventListener("click", (event) => {
+  const toggle = event.target.closest("[data-wo-older]");
+  if (!toggle) return;
+  const table = woEl("woDaysTable");
+  const open = table.classList.toggle("is-older-open");
+  toggle.firstElementChild.textContent = open ? "▾ Ранее" : "▸ Ранее";
+});
+
+document.querySelectorAll("[data-wo-tab]").forEach((button) => {
+  button.addEventListener("click", () => {
+    workordersState.tab = button.dataset.woTab;
+    renderWoTabs();
+  });
+});
+
+document.querySelectorAll("[data-wo-funnel]").forEach((button) => {
+  button.addEventListener("click", () => {
+    workordersState.funnelMode = button.dataset.woFunnel;
+    document.querySelectorAll("[data-wo-funnel]").forEach((item) =>
+      item.classList.toggle("is-active", item === button)
+    );
+    renderWoFunnel(Array.isArray(workordersState.data?.orders) ? workordersState.data.orders : []);
+  });
+});
+
+woEl("woFilters")?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-wo-filter]");
+  if (!button || button.disabled) return;
+  workordersState.filter = button.dataset.woFilter;
+  workordersState.shown = WO_PAGE_SIZE;
+  renderWoFilters();
+  renderWoCards();
+});
+
+let woSearchTimer = null;
+woEl("woSearchInput")?.addEventListener("input", (event) => {
+  clearTimeout(woSearchTimer);
+  woSearchTimer = setTimeout(() => {
+    workordersState.query = String(event.target.value || "").trim();
+    workordersState.shown = WO_PAGE_SIZE;
+    renderWoCards();
+  }, 160);
+});
+
+woEl("woMoreButton")?.addEventListener("click", () => {
+  workordersState.shown += WO_PAGE_SIZE;
+  renderWoCards();
+});
+
+woEl("woCards")?.addEventListener("click", (event) => {
   const toggle = event.target.closest(".request-works-toggle");
   if (!toggle) return;
   const works = toggle.closest(".request-works");
@@ -10888,6 +11634,11 @@ function handleAppBackAction() {
 
   if (currentView === "requests") {
     closeRequestsView();
+    return;
+  }
+
+  if (currentView === "workorders") {
+    closeWorkordersView();
     return;
   }
 
