@@ -25,6 +25,9 @@ const API_REQUESTS_DETAILS = "/api/requests-details";
 const API_WORKORDERS_DETAILS = "/api/workorders-details";
 const API_WORKORDERS_HISTORY = "/api/workorders-history";
 const API_ADMIN_EXCEL_EXPORT_CONFIG = "/api/admin/excel-export-config";
+const API_BRANCH_CHATS = "/api/branch-chats";
+const API_ADMIN_BRANCH_CHATS = "/api/admin/branch-chats";
+const BRANCH_FEED_POLL_MS = 3_000;
 
 const REFRESH_INTERVAL_MS = 120_000;
 const HEARTBEAT_INTERVAL_MS = 60_000;
@@ -364,6 +367,23 @@ const modalMessage = document.getElementById("modalMessage");
 
 let currentUser = null;
 let currentView = "home";
+// Филиалы: этап (branches → panels → feed), выбранные филиал и панель, лента.
+const branchState = {
+  stage: "branches",
+  branches: [],
+  branchId: "",
+  panelId: "",
+  version: "",
+  messages: [],
+  knownIds: new Set(),
+  expandedIds: new Set(),
+  pollTimer: null,
+  polling: false,
+  loadToken: 0,
+  pendingNew: 0
+};
+let branchAdminDraft = null;
+let branchAdminDirty = false;
 let currentSystemState = {
   mode: "normal",
   message: "",
@@ -950,6 +970,10 @@ const PANEL_ACCESS_META = {
     title: "Excel выгрузки",
     description: "У вашей текущей роли нет доступа к панели «Excel выгрузки»."
   },
+  "branch-chats": {
+    title: "Филиалы",
+    description: "У вашей текущей роли нет доступа к панели «Филиалы»."
+  },
   "system-control": {
     title: "Центр управления системой",
     description: "У вашей текущей роли нет доступа к панели «Центр управления системой»."
@@ -1155,13 +1179,19 @@ function setUserUi(user) {
     "XLSX"
   );
   applyModuleAccessState(
+    document.getElementById("openBranchChatsButton"),
+    document.getElementById("branchChatsCardStatus"),
+    "branch-chats",
+    "ОНЛАЙН"
+  );
+  applyModuleAccessState(
     openAdminButton,
     adminCardStatus,
     "system-control",
     currentUser.isDeveloper ? "РОЛЬ: РАЗРАБОТЧИК" : "ДОСТУП РАЗРЕШЁН"
   );
 
-  const visibleModules = 5;
+  const visibleModules = 6;
 
   moduleCount.textContent =
     `${visibleModules} ${
@@ -1195,6 +1225,7 @@ function showLoginScreen() {
   requestsView?.classList.remove("is-active");
   workordersView?.classList.remove("is-active");
   excelExportsView.classList.remove("is-active");
+  document.getElementById("branchChatsView")?.classList.remove("is-active");
   adminView.classList.remove("is-active");
 
   setTimeout(
@@ -1255,10 +1286,19 @@ function setView(view) {
     view === "excel-exports"
   );
 
+  document.getElementById("branchChatsView")?.classList.toggle(
+    "is-active",
+    view === "branch-chats"
+  );
+
   adminView.classList.toggle(
     "is-active",
     view === "admin"
   );
+
+  if (view !== "branch-chats") {
+    stopBranchFeedPolling();
+  }
 
   if (view !== "monitoring") {
     stopAutoRefresh();
@@ -6458,6 +6498,11 @@ function renderAdminDashboard(
       !Boolean(payload.canManageRoles);
   }
 
+  const branchChatsManagementPanel = document.getElementById("branchChatsManagementPanel");
+  if (branchChatsManagementPanel) {
+    branchChatsManagementPanel.hidden = !Boolean(payload.canManageRoles);
+  }
+
   dispatcherWorkordersManagementPanel.hidden =
     !Boolean(
       payload.canManageRoles
@@ -6470,6 +6515,7 @@ function renderAdminDashboard(
     loadOutageConfigManagement();
     loadDispatcherConfigManagement();
     loadExcelTemplateAdmin();
+    loadBranchChatsAdmin();
   }
 
   adminUpdatedAt.textContent =
@@ -12082,6 +12128,11 @@ function handleAppBackAction() {
     return;
   }
 
+  if (currentView === "branch-chats" && branchState.stage !== "branches") {
+    branchStepBack();
+    return;
+  }
+
   if (currentView !== "home" && document.body.classList.contains("authenticated")) {
     navigateHome();
     return;
@@ -12189,4 +12240,879 @@ document.addEventListener(
     c.textContent=n.toLocaleTimeString("ru-RU",{timeZone:"Europe/Moscow",hour12:false});
     d.textContent=n.toLocaleDateString("ru-RU",{timeZone:"Europe/Moscow",day:"2-digit",month:"short"}).toUpperCase()+" · МСК";};
   tick();setInterval(tick,1000);
+})();
+
+
+/* =========================================================
+   ФИЛИАЛЫ · ИНФОРМАЦИОННЫЕ ПАНЕЛИ (чаты MAX)
+   Филиал → панель → лента последних 100 сообщений.
+   Лента опрашивается каждые 3 секунды, пока открыта и видна;
+   сервер возвращает сообщения только при изменениях (version).
+   ========================================================= */
+const branchEls = {
+  view: document.getElementById("branchChatsView"),
+  openButton: document.getElementById("openBranchChatsButton"),
+  backButton: document.getElementById("backFromBranchChatsButton"),
+  backLabel: document.getElementById("branchChatsBackLabel"),
+  updatedAt: document.getElementById("branchChatsUpdatedAt"),
+  crumbs: document.getElementById("branchCrumbs"),
+  stageBranches: document.getElementById("branchStageBranches"),
+  stagePanels: document.getElementById("branchStagePanels"),
+  stageFeed: document.getElementById("branchStageFeed"),
+  count: document.getElementById("branchCountValue"),
+  search: document.getElementById("branchSearchInput"),
+  grid: document.getElementById("branchGrid"),
+  panelsTitle: document.getElementById("branchPanelsTitle"),
+  panelsSubtitle: document.getElementById("branchPanelsSubtitle"),
+  panelsCount: document.getElementById("branchPanelsCount"),
+  panelList: document.getElementById("branchPanelList"),
+  feedKicker: document.getElementById("branchFeedKicker"),
+  feedTitle: document.getElementById("branchFeedTitle"),
+  feedSubtitle: document.getElementById("branchFeedSubtitle"),
+  liveBadge: document.getElementById("branchLiveBadge"),
+  feedMeta: document.getElementById("branchFeedMeta"),
+  feedNotice: document.getElementById("branchFeedNotice"),
+  feed: document.getElementById("branchFeed"),
+  newMessages: document.getElementById("branchNewMessagesButton"),
+  expandAll: document.getElementById("branchExpandAllButton"),
+  refresh: document.getElementById("branchRefreshButton")
+};
+
+const BRANCH_MESSAGE_COLLAPSE_PX = 260;
+
+function pluralRu(count, one, few, many) {
+  const n = Math.abs(count) % 100;
+  const n1 = n % 10;
+  if (n > 10 && n < 20) return many;
+  if (n1 > 1 && n1 < 5) return few;
+  if (n1 === 1) return one;
+  return many;
+}
+
+function currentBranch() {
+  return branchState.branches.find((item) => item.id === branchState.branchId) || null;
+}
+
+function currentBranchPanel() {
+  return currentBranch()?.chats.find((item) => item.id === branchState.panelId) || null;
+}
+
+async function fetchBranchJson(url) {
+  const response = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+    credentials: "include",
+    headers: getSessionHeaders()
+  });
+  if (response.status === 401) {
+    setAppSessionToken("");
+    showLoginScreen();
+    return { unauthorized: true };
+  }
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new Error(payload?.error || `Сервер вернул ошибку ${response.status}`);
+  }
+  return { payload };
+}
+
+async function loadBranchList() {
+  try {
+    const { payload, unauthorized } = await fetchBranchJson(API_BRANCH_CHATS);
+    if (unauthorized) return false;
+    branchState.branches = Array.isArray(payload?.branches) ? payload.branches : [];
+    renderBranchStage();
+    return true;
+  } catch (error) {
+    openModal({
+      type: "denied",
+      eyebrow: "ФИЛИАЛЫ",
+      title: "Не удалось загрузить филиалы",
+      message: error instanceof Error ? error.message : "Попробуйте позже."
+    });
+    return false;
+  }
+}
+
+async function navigateBranchChats() {
+  if (!hasPanelAccess("branch-chats")) {
+    showPanelAccessDenied("branch-chats");
+    return;
+  }
+  branchState.stage = "branches";
+  if (branchEls.search) branchEls.search.value = "";
+  await openViewWithLoading(
+    "branch-chats",
+    () => loadBranchList(),
+    () => {},
+    "Загрузка филиалов…"
+  );
+}
+
+function setBranchStage(stage) {
+  branchState.stage = stage;
+  if (stage !== "feed") stopBranchFeedPolling();
+  renderBranchStage();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function branchStepBack() {
+  if (branchState.stage === "feed") {
+    setBranchStage("panels");
+  } else if (branchState.stage === "panels") {
+    setBranchStage("branches");
+  } else {
+    navigateHome();
+  }
+}
+
+function renderBranchStage() {
+  const stage = branchState.stage;
+  branchEls.stageBranches.hidden = stage !== "branches";
+  branchEls.stagePanels.hidden = stage !== "panels";
+  branchEls.stageFeed.hidden = stage !== "feed";
+
+  const branch = currentBranch();
+  const panel = currentBranchPanel();
+  branchEls.backLabel.textContent =
+    stage === "feed" ? branch?.name || "Филиал" : stage === "panels" ? "Филиалы" : "Главное меню";
+
+  // Хлебные крошки: на любом этапе можно вернуться на шаг выше.
+  const crumbs = [`<button type="button" data-branch-crumb="branches"${stage === "branches" ? ' aria-current="page"' : ""}>Филиалы</button>`];
+  if (stage !== "branches" && branch) {
+    crumbs.push(`<button type="button" data-branch-crumb="panels"${stage === "panels" ? ' aria-current="page"' : ""}>${escapeHtml(branch.name)}</button>`);
+  }
+  if (stage === "feed" && panel) {
+    crumbs.push(`<button type="button" aria-current="page">${escapeHtml(panel.name)}</button>`);
+  }
+  branchEls.crumbs.innerHTML = crumbs.join('<span aria-hidden="true">›</span>');
+
+  if (stage === "branches") {
+    renderBranchGrid();
+    branchEls.updatedAt.textContent = "Филиалы · выбор";
+  } else if (stage === "panels") {
+    renderBranchPanels();
+    branchEls.updatedAt.textContent = `${branch?.name || "Филиал"} · панели`;
+  }
+}
+
+function renderBranchGrid() {
+  const query = String(branchEls.search?.value || "").trim().toLowerCase();
+  const branches = branchState.branches.filter((branch) =>
+    !query ||
+    branch.name.toLowerCase().includes(query) ||
+    String(branch.description || "").toLowerCase().includes(query)
+  );
+  branchEls.count.textContent = String(branchState.branches.length);
+
+  if (!branchState.branches.length) {
+    branchEls.grid.innerHTML = `<div class="branch-empty glass-panel">Филиалы ещё не настроены. Добавьте их в «Центре управления системой».</div>`;
+    return;
+  }
+  if (!branches.length) {
+    branchEls.grid.innerHTML = `<div class="branch-empty glass-panel">Ничего не найдено по запросу «${escapeHtml(query)}».</div>`;
+    return;
+  }
+
+  branchEls.grid.innerHTML = branches.map((branch) => {
+    const count = branch.chats.length;
+    return `
+      <button type="button" class="branch-tile${count ? "" : " is-empty"}" data-branch-id="${escapeHtml(branch.id)}">
+        <span class="branch-tile-code">${escapeHtml(branch.name)}</span>
+        ${branch.description ? `<span class="branch-tile-desc">${escapeHtml(branch.description)}</span>` : ""}
+        <span class="branch-tile-meta">
+          <i></i>${count ? `${count} ${pluralRu(count, "панель", "панели", "панелей")}` : "нет панелей"}
+        </span>
+      </button>`;
+  }).join("");
+}
+
+function renderBranchPanels() {
+  const branch = currentBranch();
+  if (!branch) {
+    setBranchStage("branches");
+    return;
+  }
+  branchEls.panelsTitle.textContent = branch.name;
+  branchEls.panelsSubtitle.textContent = branch.description || "Выберите информационную панель";
+  branchEls.panelsCount.textContent = String(branch.chats.length);
+
+  if (!branch.chats.length) {
+    branchEls.panelList.innerHTML = `<div class="branch-empty glass-panel">Для филиала пока не настроены информационные панели. Их добавляет разработчик в «Центре управления системой».</div>`;
+    return;
+  }
+
+  branchEls.panelList.innerHTML = branch.chats.map((chat, index) => `
+    <button type="button" class="branch-panel-card glass-panel" data-branch-panel-id="${escapeHtml(chat.id)}">
+      <span class="branch-panel-index">${String(index + 1).padStart(2, "0")}</span>
+      <span class="branch-panel-copy">
+        <strong>${escapeHtml(chat.name)}</strong>
+        <small>${escapeHtml(chat.description || "Сообщения чата · последние 100")}</small>
+      </span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+    </button>`).join("");
+}
+
+function openBranch(branchId) {
+  branchState.branchId = branchId;
+  const branch = currentBranch();
+  // Единственная панель филиала открывается сразу.
+  if (branch?.chats.length === 1) {
+    branchState.stage = "panels";
+    openBranchPanel(branch.chats[0].id);
+    return;
+  }
+  setBranchStage("panels");
+}
+
+function openBranchPanel(panelId) {
+  branchState.panelId = panelId;
+  branchState.version = "";
+  branchState.messages = [];
+  branchState.knownIds = new Set();
+  branchState.expandedIds = new Set();
+  branchState.pendingNew = 0;
+  branchState.stage = "feed";
+  renderBranchStage();
+
+  const branch = currentBranch();
+  const panel = currentBranchPanel();
+  branchEls.feedKicker.textContent = `ФИЛИАЛ ${String(branch?.name || "").toUpperCase()} · ИНФОРМАЦИОННАЯ ПАНЕЛЬ`;
+  branchEls.feedTitle.textContent = panel?.name || "—";
+  branchEls.feedSubtitle.textContent = panel?.description || "";
+  branchEls.feedSubtitle.hidden = !panel?.description;
+  branchEls.feedNotice.hidden = true;
+  branchEls.newMessages.hidden = true;
+  branchEls.feedMeta.textContent = "Загрузка сообщений…";
+  branchEls.feed.innerHTML = Array.from({ length: 3 }, () => '<div class="branch-message is-skeleton"><span></span><span></span><span></span></div>').join("");
+  branchEls.updatedAt.textContent = "Подключение к чату…";
+  window.scrollTo({ top: 0, behavior: "smooth" });
+
+  startBranchFeedPolling();
+}
+
+function startBranchFeedPolling() {
+  stopBranchFeedPolling();
+  const tick = async () => {
+    if (currentView !== "branch-chats" || branchState.stage !== "feed") return;
+    if (isAppVisible()) await pollBranchFeed();
+    if (currentView === "branch-chats" && branchState.stage === "feed") {
+      branchState.pollTimer = setTimeout(tick, BRANCH_FEED_POLL_MS);
+    }
+  };
+  tick();
+}
+
+function stopBranchFeedPolling() {
+  if (branchState.pollTimer) clearTimeout(branchState.pollTimer);
+  branchState.pollTimer = null;
+  branchState.loadToken += 1;
+  branchState.polling = false;
+}
+
+async function pollBranchFeed({ manual = false } = {}) {
+  if (branchState.polling && !manual) return;
+  const token = ++branchState.loadToken;
+  branchState.polling = true;
+  branchEls.refresh?.classList.add("is-loading");
+
+  const params = new URLSearchParams({ branch: branchState.branchId, panel: branchState.panelId });
+  if (branchState.version && !manual) params.set("version", branchState.version);
+
+  try {
+    const { payload, unauthorized } = await fetchBranchJson(`${API_BRANCH_CHATS}?${params}`);
+    if (unauthorized || token !== branchState.loadToken) return;
+
+    branchEls.liveBadge.classList.remove("is-offline");
+    if (payload.stale) {
+      branchEls.feedNotice.textContent = `MAX временно не отвечает, показаны последние полученные сообщения. ${payload.warning || ""}`;
+      branchEls.feedNotice.classList.add("is-warning");
+      branchEls.feedNotice.hidden = false;
+    } else {
+      branchEls.feedNotice.hidden = true;
+    }
+
+    if (!payload.unchanged) {
+      branchState.version = payload.version || "";
+      applyBranchMessages(Array.isArray(payload.messages) ? payload.messages : []);
+    }
+    const time = new Date().toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    branchEls.updatedAt.textContent = `Обновлено ${time}`;
+  } catch (error) {
+    if (token !== branchState.loadToken) return;
+    branchEls.liveBadge.classList.add("is-offline");
+    branchEls.feedNotice.textContent = error instanceof Error ? error.message : "Не удалось получить сообщения";
+    branchEls.feedNotice.classList.remove("is-warning");
+    branchEls.feedNotice.hidden = false;
+    if (!branchState.messages.length) {
+      branchEls.feed.innerHTML = `<div class="branch-empty glass-panel">Сообщения пока недоступны. Проверьте ID чата и что бот добавлен в чат.</div>`;
+      branchEls.feedMeta.textContent = "Нет данных";
+    }
+  } finally {
+    if (token === branchState.loadToken) {
+      branchState.polling = false;
+      branchEls.refresh?.classList.remove("is-loading");
+    }
+  }
+}
+
+function applyBranchMessages(messages) {
+  const firstLoad = !branchState.messages.length && !branchState.knownIds.size;
+  const freshIds = firstLoad
+    ? new Set()
+    : new Set(messages.filter((item) => !branchState.knownIds.has(item.id)).map((item) => item.id));
+
+  // Новые сообщения добавляются сверху: сохраняем позицию читателя,
+  // если он пролистал ленту вниз.
+  const anchor = [...branchEls.feed.querySelectorAll(".branch-message[data-id]")]
+    .find((node) => node.getBoundingClientRect().bottom > 80);
+  const anchorId = anchor?.dataset.id;
+  const anchorTop = anchor?.getBoundingClientRect().top;
+  const readingBelow = branchEls.feed.getBoundingClientRect().top < 0;
+
+  branchState.messages = messages;
+  messages.forEach((item) => branchState.knownIds.add(item.id));
+  renderBranchFeed(freshIds);
+
+  if (anchorId && readingBelow) {
+    const again = branchEls.feed.querySelector(`.branch-message[data-id="${CSS.escape(anchorId)}"]`);
+    if (again) window.scrollBy(0, again.getBoundingClientRect().top - anchorTop);
+  }
+
+  if (freshIds.size && readingBelow) {
+    branchState.pendingNew += freshIds.size;
+    branchEls.newMessages.textContent = `↑ ${branchState.pendingNew} ${pluralRu(branchState.pendingNew, "новое сообщение", "новых сообщения", "новых сообщений")}`;
+    branchEls.newMessages.hidden = false;
+  }
+}
+
+function branchDayLabel(ts) {
+  const date = new Date(ts);
+  const today = new Date();
+  const yesterday = new Date(Date.now() - 86_400_000);
+  const same = (a, b) => a.toDateString() === b.toDateString();
+  if (same(date, today)) return "Сегодня";
+  if (same(date, yesterday)) return "Вчера";
+  return date.toLocaleDateString("ru-RU", {
+    day: "numeric",
+    month: "long",
+    year: date.getFullYear() === today.getFullYear() ? undefined : "numeric"
+  });
+}
+
+function linkifyEscaped(html) {
+  return html.replace(/(https?:\/\/[^\s<>"']+[^\s<>"'.,;:!?)\]])/g,
+    (url) => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`);
+}
+
+// Текст MAX с разметкой (жирный, курсив, ссылки…) → безопасный HTML.
+function renderBranchRichText(text, markup) {
+  const source = String(text || "");
+  const spans = (Array.isArray(markup) ? markup : [])
+    .map((item) => ({ ...item, to: item.from + item.length }))
+    .filter((item) => item.from >= 0 && item.to <= source.length && item.to > item.from);
+
+  if (!spans.length) return linkifyEscaped(escapeHtml(source));
+
+  const points = new Set([0, source.length]);
+  spans.forEach((item) => { points.add(item.from); points.add(item.to); });
+  const sorted = [...points].sort((a, b) => a - b);
+  const TAGS = {
+    strong: ["<strong>", "</strong>"],
+    emphasized: ["<em>", "</em>"],
+    monospaced: ["<code>", "</code>"],
+    strikethrough: ["<s>", "</s>"],
+    underline: ["<u>", "</u>"],
+    user_mention: ['<b class="branch-mention">', "</b>"],
+    heading: ["<strong>", "</strong>"],
+    highlighted: ["<mark>", "</mark>"]
+  };
+
+  let html = "";
+  for (let i = 0; i < sorted.length - 1; i += 1) {
+    const from = sorted[i];
+    const to = sorted[i + 1];
+    let piece = escapeHtml(source.slice(from, to));
+    const active = spans.filter((item) => item.from <= from && item.to >= to);
+    const link = active.find((item) => item.type === "link" && item.url);
+    if (!link) piece = linkifyEscaped(piece);
+    active.forEach((item) => {
+      const tag = TAGS[item.type];
+      if (tag) piece = tag[0] + piece + tag[1];
+    });
+    if (link) piece = `<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">${piece}</a>`;
+    html += piece;
+  }
+  return html;
+}
+
+function renderBranchAttachments(list) {
+  if (!Array.isArray(list) || !list.length) return "";
+  const LABELS = {
+    image: "Изображение", video: "Видео", audio: "Аудио", file: "Файл",
+    sticker: "Стикер", contact: "Контакт", location: "Геопозиция", share: "Ссылка"
+  };
+  const images = list.filter((item) => item.type === "image" && item.url);
+  const others = list.filter((item) => !(item.type === "image" && item.url));
+  return `
+    ${images.length ? `<div class="branch-message-images">${images.map((item) =>
+      `<a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(item.url)}" alt="Изображение" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('a').remove()"></a>`
+    ).join("")}</div>` : ""}
+    ${others.length ? `<div class="branch-message-files">${others.map((item) =>
+      `<span class="branch-file-chip"><i></i>${escapeHtml(item.name || LABELS[item.type] || "Вложение")}</span>`
+    ).join("")}</div>` : ""}`;
+}
+
+function renderBranchFeed(freshIds = new Set()) {
+  const messages = branchState.messages;
+  const count = messages.length;
+  branchEls.feedMeta.textContent = count
+    ? `${count} ${pluralRu(count, "сообщение", "сообщения", "сообщений")} · новые сверху`
+    : "В чате пока нет сообщений";
+
+  if (!count) {
+    branchEls.feed.innerHTML = `<div class="branch-empty glass-panel">В этом чате пока нет сообщений.</div>`;
+    return;
+  }
+
+  let lastDay = "";
+  branchEls.feed.innerHTML = messages.map((message) => {
+    const day = message.ts ? branchDayLabel(message.ts) : "";
+    const divider = day && day !== lastDay ? `<div class="branch-day"><span>${escapeHtml(day)}</span></div>` : "";
+    lastDay = day || lastDay;
+
+    const time = message.ts
+      ? new Date(message.ts).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" })
+      : "";
+    const linked = message.linked
+      ? `<div class="branch-message-linked">
+          <span>${message.linked.type === "forward" ? "Переслано" : "В ответ"}${message.linked.author ? ` · ${escapeHtml(message.linked.author)}` : ""}</span>
+          ${message.linked.text ? `<div class="branch-message-text">${renderBranchRichText(message.linked.text, message.linked.markup)}</div>` : ""}
+          ${renderBranchAttachments(message.linked.attachments)}
+        </div>`
+      : "";
+    const expanded = branchState.expandedIds.has(message.id);
+    const initials = message.author.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "•";
+
+    return `${divider}
+      <article class="branch-message${freshIds.has(message.id) ? " is-new" : ""}${expanded ? " is-expanded" : ""}" data-id="${escapeHtml(message.id)}">
+        <header class="branch-message-head">
+          <span class="branch-avatar${message.isBot ? " is-bot" : ""}">${escapeHtml(initials)}</span>
+          <span class="branch-message-author">${escapeHtml(message.author)}${message.isBot ? ' <em>бот</em>' : ""}</span>
+          <time>${escapeHtml(time)}</time>
+        </header>
+        <div class="branch-message-body">
+          ${message.text ? `<div class="branch-message-text">${renderBranchRichText(message.text, message.markup)}</div>` : ""}
+          ${linked}
+          ${renderBranchAttachments(message.attachments)}
+        </div>
+        <button type="button" class="branch-message-toggle" data-branch-toggle hidden>
+          <span>Показать полностью</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+        </button>
+      </article>`;
+  }).join("");
+
+  markBranchLongMessages();
+}
+
+// Длинные сообщения сворачиваются; кнопка раскрывает их целиком.
+function markBranchLongMessages() {
+  branchEls.feed.querySelectorAll(".branch-message[data-id]").forEach((node) => {
+    const body = node.querySelector(".branch-message-body");
+    const toggle = node.querySelector("[data-branch-toggle]");
+    if (!body || !toggle) return;
+    const long = body.scrollHeight > BRANCH_MESSAGE_COLLAPSE_PX + 40;
+    node.classList.toggle("is-long", long);
+    toggle.hidden = !long;
+    toggle.querySelector("span").textContent = node.classList.contains("is-expanded") ? "Свернуть" : "Показать полностью";
+  });
+  syncBranchExpandAllButton();
+}
+
+function syncBranchExpandAllButton() {
+  const long = branchEls.feed.querySelectorAll(".branch-message.is-long");
+  branchEls.expandAll.hidden = !long.length;
+  const allOpen = long.length && [...long].every((node) => node.classList.contains("is-expanded"));
+  branchEls.expandAll.textContent = allOpen ? "Свернуть все" : "Развернуть все";
+}
+
+function toggleBranchMessage(node, force) {
+  const id = node.dataset.id;
+  const open = force ?? !node.classList.contains("is-expanded");
+  node.classList.toggle("is-expanded", open);
+  if (open) branchState.expandedIds.add(id);
+  else branchState.expandedIds.delete(id);
+  const label = node.querySelector("[data-branch-toggle] span");
+  if (label) label.textContent = open ? "Свернуть" : "Показать полностью";
+}
+
+branchEls.openButton?.addEventListener("click", navigateBranchChats);
+branchEls.backButton?.addEventListener("click", branchStepBack);
+branchEls.search?.addEventListener("input", renderBranchGrid);
+
+branchEls.grid?.addEventListener("click", (event) => {
+  const tile = event.target.closest("[data-branch-id]");
+  if (tile) openBranch(tile.dataset.branchId);
+});
+
+branchEls.panelList?.addEventListener("click", (event) => {
+  const card = event.target.closest("[data-branch-panel-id]");
+  if (card) openBranchPanel(card.dataset.branchPanelId);
+});
+
+branchEls.crumbs?.addEventListener("click", (event) => {
+  const crumb = event.target.closest("[data-branch-crumb]");
+  if (crumb && crumb.dataset.branchCrumb !== branchState.stage) setBranchStage(crumb.dataset.branchCrumb);
+});
+
+branchEls.feed?.addEventListener("click", (event) => {
+  const toggle = event.target.closest("[data-branch-toggle]");
+  if (toggle) {
+    const node = toggle.closest(".branch-message");
+    const wasOpen = node.classList.contains("is-expanded");
+    toggleBranchMessage(node);
+    // При сворачивании возвращаем к началу сообщения.
+    if (wasOpen && node.getBoundingClientRect().top < 0) {
+      node.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+    syncBranchExpandAllButton();
+    return;
+  }
+  // Клик по свёрнутому тексту тоже раскрывает сообщение.
+  const message = event.target.closest(".branch-message.is-long:not(.is-expanded)");
+  if (message && !event.target.closest("a")) {
+    toggleBranchMessage(message, true);
+    syncBranchExpandAllButton();
+  }
+});
+
+branchEls.expandAll?.addEventListener("click", () => {
+  const long = [...branchEls.feed.querySelectorAll(".branch-message.is-long")];
+  const open = !long.every((node) => node.classList.contains("is-expanded"));
+  long.forEach((node) => toggleBranchMessage(node, open));
+  syncBranchExpandAllButton();
+});
+
+branchEls.refresh?.addEventListener("click", () => pollBranchFeed({ manual: true }));
+
+branchEls.newMessages?.addEventListener("click", () => {
+  branchState.pendingNew = 0;
+  branchEls.newMessages.hidden = true;
+  branchEls.stageFeed.scrollIntoView({ block: "start", behavior: "smooth" });
+});
+
+window.addEventListener("scroll", () => {
+  if (branchEls.newMessages && !branchEls.newMessages.hidden &&
+      branchEls.feed.getBoundingClientRect().top >= 0) {
+    branchState.pendingNew = 0;
+    branchEls.newMessages.hidden = true;
+  }
+}, { passive: true });
+
+window.addEventListener("resize", () => {
+  if (currentView === "branch-chats" && branchState.stage === "feed") markBranchLongMessages();
+});
+
+// Возврат в приложение — сразу подтягиваем свежие сообщения.
+document.addEventListener("visibilitychange", () => {
+  if (isAppVisible() && currentView === "branch-chats" && branchState.stage === "feed") {
+    pollBranchFeed();
+  }
+});
+
+
+/* =========================================================
+   ЦЕНТР УПРАВЛЕНИЯ · ФИЛИАЛЫ И ЧАТЫ MAX
+   Черновик редактируется целиком и сохраняется одной кнопкой.
+   ========================================================= */
+const branchAdminEls = {
+  list: document.getElementById("branchAdminList"),
+  status: document.getElementById("branchAdminStatus"),
+  add: document.getElementById("branchAdminAddButton"),
+  save: document.getElementById("branchAdminSaveButton")
+};
+const branchAdminOpenIds = new Set();
+
+function branchAdminUid(prefix) {
+  return `${prefix}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+}
+
+function setBranchAdminStatus(text, warning = false) {
+  if (!branchAdminEls.status) return;
+  branchAdminEls.status.textContent = text;
+  branchAdminEls.status.classList.toggle("is-warning", warning);
+}
+
+function markBranchAdminDirty() {
+  branchAdminDirty = true;
+  setBranchAdminStatus("Есть несохранённые изменения — нажмите «Сохранить».", true);
+}
+
+async function loadBranchChatsAdmin({ force = false } = {}) {
+  if (!currentUser?.isDeveloper || !branchAdminEls.list) return;
+  if (branchAdminDirty && !force) return;
+  try {
+    const response = await fetch(API_ADMIN_BRANCH_CHATS, {
+      method: "GET", cache: "no-store", credentials: "include", headers: getSessionHeaders()
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(payload?.error || "Не удалось загрузить филиалы");
+    branchAdminDraft = payload.config;
+    branchAdminDirty = false;
+    renderBranchChatsAdmin();
+    const updated = payload.config?.updatedAt
+      ? `Последнее изменение: ${formatDateTime(payload.config.updatedAt)}${payload.config.updatedBy ? ` · ${payload.config.updatedBy}` : ""}`
+      : "Стандартный список филиалов — ещё не сохранялся.";
+    setBranchAdminStatus(updated);
+  } catch (error) {
+    setBranchAdminStatus(error instanceof Error ? error.message : "Ошибка загрузки филиалов", true);
+  }
+}
+
+function renderBranchChatsAdmin() {
+  const branches = branchAdminDraft?.branches || [];
+  if (!branches.length) {
+    branchAdminEls.list.innerHTML = `<div class="branch-empty">Филиалов нет. Нажмите «+ Филиал».</div>`;
+    return;
+  }
+
+  branchAdminEls.list.innerHTML = branches.map((branch, index) => {
+    const open = branchAdminOpenIds.has(branch.id);
+    const chats = branch.chats.map((chat, chatIndex) => `
+      <div class="branch-admin-chat" data-chat-index="${chatIndex}">
+        <label><span>Название панели</span>
+          <input type="text" maxlength="80" data-chat-field="name" value="${escapeHtml(chat.name)}" placeholder="Например: Оперативная обстановка" />
+        </label>
+        <label><span>ID чата MAX</span>
+          <input type="text" inputmode="numeric" maxlength="21" data-chat-field="chatId" value="${escapeHtml(chat.chatId)}" placeholder="-71234567890123" />
+        </label>
+        <label class="branch-admin-chat-wide"><span>Описание (необязательно)</span>
+          <input type="text" maxlength="160" data-chat-field="description" value="${escapeHtml(chat.description || "")}" placeholder="Коротко, что публикуется в чате" />
+        </label>
+        <div class="branch-admin-chat-actions">
+          <button type="button" class="icon-button" data-chat-action="up" title="Выше" ${chatIndex === 0 ? "disabled" : ""}>↑</button>
+          <button type="button" class="icon-button" data-chat-action="down" title="Ниже" ${chatIndex === branch.chats.length - 1 ? "disabled" : ""}>↓</button>
+          <button type="button" class="icon-button is-danger" data-chat-action="delete" title="Удалить панель">✕</button>
+        </div>
+      </div>`).join("");
+
+    return `
+      <section class="branch-admin-item${open ? " is-open" : ""}" data-branch-index="${index}">
+        <header class="branch-admin-item-head">
+          <button type="button" class="branch-admin-expander" data-branch-action="toggle" aria-expanded="${open}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"></path></svg>
+            <strong>${escapeHtml(branch.name || "Без названия")}</strong>
+            <small>${branch.chats.length} ${pluralRu(branch.chats.length, "панель", "панели", "панелей")}</small>
+          </button>
+          <div class="branch-admin-item-actions">
+            <button type="button" class="icon-button" data-branch-action="up" title="Выше" ${index === 0 ? "disabled" : ""}>↑</button>
+            <button type="button" class="icon-button" data-branch-action="down" title="Ниже" ${index === branches.length - 1 ? "disabled" : ""}>↓</button>
+            <button type="button" class="icon-button is-danger" data-branch-action="delete" title="Удалить филиал">✕</button>
+          </div>
+        </header>
+        <div class="branch-admin-item-body">
+          <div class="branch-admin-fields">
+            <label><span>Название филиала</span>
+              <input type="text" maxlength="60" data-branch-field="name" value="${escapeHtml(branch.name)}" />
+            </label>
+            <label><span>Подпись (необязательно)</span>
+              <input type="text" maxlength="120" data-branch-field="description" value="${escapeHtml(branch.description || "")}" placeholder="Например: полное название филиала" />
+            </label>
+          </div>
+          <div class="branch-admin-chats">${chats || '<div class="branch-admin-hint">Информационных панелей пока нет.</div>'}</div>
+          <button type="button" class="secondary-action" data-branch-action="add-chat">+ Информационная панель</button>
+        </div>
+      </section>`;
+  }).join("");
+}
+
+function moveItem(list, index, delta) {
+  const target = index + delta;
+  if (target < 0 || target >= list.length) return;
+  [list[index], list[target]] = [list[target], list[index]];
+}
+
+branchAdminEls.list?.addEventListener("input", (event) => {
+  const input = event.target;
+  const item = input.closest("[data-branch-index]");
+  if (!item || !branchAdminDraft) return;
+  const branch = branchAdminDraft.branches[Number(item.dataset.branchIndex)];
+  if (!branch) return;
+
+  if (input.dataset.branchField) {
+    branch[input.dataset.branchField] = input.value;
+    if (input.dataset.branchField === "name") {
+      item.querySelector(".branch-admin-expander strong").textContent = input.value || "Без названия";
+    }
+  } else if (input.dataset.chatField) {
+    const chat = branch.chats[Number(input.closest("[data-chat-index]").dataset.chatIndex)];
+    if (chat) {
+      chat[input.dataset.chatField] = input.dataset.chatField === "chatId"
+        ? input.value.replace(/[^\d-]/g, "")
+        : input.value;
+    }
+  }
+  markBranchAdminDirty();
+});
+
+branchAdminEls.list?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-branch-action], [data-chat-action]");
+  if (!button || !branchAdminDraft) return;
+  const item = button.closest("[data-branch-index]");
+  const index = Number(item.dataset.branchIndex);
+  const branches = branchAdminDraft.branches;
+  const branch = branches[index];
+  if (!branch) return;
+
+  const action = button.dataset.branchAction;
+  if (action === "toggle") {
+    if (branchAdminOpenIds.has(branch.id)) branchAdminOpenIds.delete(branch.id);
+    else branchAdminOpenIds.add(branch.id);
+    item.classList.toggle("is-open");
+    button.setAttribute("aria-expanded", String(item.classList.contains("is-open")));
+    return;
+  }
+  if (action === "up" || action === "down") {
+    moveItem(branches, index, action === "up" ? -1 : 1);
+  } else if (action === "delete") {
+    const chatsNote = branch.chats.length ? ` и ${branch.chats.length} ${pluralRu(branch.chats.length, "его панель", "его панели", "его панелей")}` : "";
+    if (!window.confirm(`Удалить филиал «${branch.name || "без названия"}»${chatsNote}?`)) return;
+    branches.splice(index, 1);
+  } else if (action === "add-chat") {
+    branch.chats.push({ id: branchAdminUid("chat"), name: "", chatId: "", description: "" });
+    branchAdminOpenIds.add(branch.id);
+  }
+
+  const chatAction = button.dataset.chatAction;
+  if (chatAction) {
+    const chatIndex = Number(button.closest("[data-chat-index]").dataset.chatIndex);
+    if (chatAction === "delete") {
+      const chat = branch.chats[chatIndex];
+      if (chat?.name && !window.confirm(`Удалить панель «${chat.name}»?`)) return;
+      branch.chats.splice(chatIndex, 1);
+    } else {
+      moveItem(branch.chats, chatIndex, chatAction === "up" ? -1 : 1);
+    }
+  }
+
+  markBranchAdminDirty();
+  renderBranchChatsAdmin();
+  if (action === "add-chat") {
+    const inputs = branchAdminEls.list.querySelectorAll(`[data-branch-index="${index}"] [data-chat-field="name"]`);
+    inputs[inputs.length - 1]?.focus();
+  }
+});
+
+branchAdminEls.add?.addEventListener("click", () => {
+  if (!branchAdminDraft) return;
+  const id = branchAdminUid("branch");
+  branchAdminDraft.branches.push({ id, name: "Новый филиал", description: "", chats: [] });
+  branchAdminOpenIds.add(id);
+  markBranchAdminDirty();
+  renderBranchChatsAdmin();
+  const last = branchAdminEls.list.querySelector(".branch-admin-item:last-child");
+  last?.scrollIntoView({ block: "center", behavior: "smooth" });
+  last?.querySelector('[data-branch-field="name"]')?.select();
+});
+
+branchAdminEls.save?.addEventListener("click", async () => {
+  if (!branchAdminDraft || !currentUser?.isDeveloper) return;
+  branchAdminEls.save.disabled = true;
+  try {
+    const response = await fetch(API_ADMIN_BRANCH_CHATS, {
+      method: "POST",
+      cache: "no-store",
+      credentials: "include",
+      headers: { "Content-Type": "application/json", ...getSessionHeaders() },
+      body: JSON.stringify({ config: branchAdminDraft })
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(payload?.error || "Не удалось сохранить");
+    branchAdminDraft = payload.config;
+    branchAdminDirty = false;
+    renderBranchChatsAdmin();
+    setBranchAdminStatus("Сохранено. Изменения уже видны в разделе «Филиалы».");
+  } catch (error) {
+    setBranchAdminStatus(error instanceof Error ? error.message : "Ошибка сохранения", true);
+  } finally {
+    branchAdminEls.save.disabled = false;
+  }
+});
+
+
+/* =========================================================
+   ЦЕНТР УПРАВЛЕНИЯ · СВОРАЧИВАЕМЫЕ РАЗДЕЛЫ
+   Заголовок раздела сворачивает/разворачивает его; состояние
+   запоминается на устройстве. По умолчанию открыты только
+   «Состояние системы» и «Активность пользователей».
+   ========================================================= */
+(function setupCollapsibleAdminPanels() {
+  const STORAGE_KEY = "le_admin_collapsed_v1";
+  const DEFAULT_OPEN = new Set(["Состояние системы", "Активность пользователей"]);
+  const view = document.getElementById("adminView");
+  if (!view) return;
+
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); } catch { saved = null; }
+  const state = saved && typeof saved === "object" ? saved : {};
+  const persist = () => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
+  };
+
+  const panels = [...view.querySelectorAll(".admin-panel")]
+    .filter((panel) => panel.querySelector(":scope > .admin-panel-heading h2"));
+
+  panels.forEach((panel) => {
+    const heading = panel.querySelector(":scope > .admin-panel-heading");
+    const title = heading.querySelector("h2").textContent.trim();
+    panel.dataset.collapseKey = title;
+    panel.classList.add("is-collapsible");
+
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "admin-collapse-toggle";
+    toggle.setAttribute("aria-label", `Свернуть или развернуть: ${title}`);
+    toggle.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>';
+    heading.prepend(toggle);
+
+    const collapsed = title in state ? Boolean(state[title]) : !DEFAULT_OPEN.has(title);
+    setCollapsed(panel, collapsed);
+
+    heading.addEventListener("click", (event) => {
+      // Кнопки, поля и списки внутри заголовка работают как обычно.
+      if (event.target.closest("button, select, input, textarea, a, label") &&
+          !event.target.closest(".admin-collapse-toggle")) return;
+      const next = !panel.classList.contains("is-collapsed");
+      setCollapsed(panel, next);
+      state[title] = next;
+      persist();
+    });
+  });
+
+  function setCollapsed(panel, collapsed) {
+    panel.classList.toggle("is-collapsed", collapsed);
+    panel.querySelector(".admin-collapse-toggle")?.setAttribute("aria-expanded", String(!collapsed));
+  }
+
+  // Панель «свернуть / развернуть все» над разделами.
+  const bar = document.createElement("div");
+  bar.className = "admin-collapse-bar";
+  bar.innerHTML = `
+    <span>Разделы центра управления</span>
+    <div>
+      <button type="button" class="secondary-action" data-admin-collapse="open">Развернуть все</button>
+      <button type="button" class="secondary-action" data-admin-collapse="close">Свернуть все</button>
+    </div>`;
+  view.querySelector(".admin-layout")?.before(bar);
+  bar.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-admin-collapse]");
+    if (!button) return;
+    const collapse = button.dataset.adminCollapse === "close";
+    panels.forEach((panel) => {
+      setCollapsed(panel, collapse);
+      state[panel.dataset.collapseKey] = collapse;
+    });
+    persist();
+  });
 })();

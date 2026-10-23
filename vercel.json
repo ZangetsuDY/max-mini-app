@@ -79,6 +79,14 @@
       "destination": "/api/router?route=requests-details"
     },
     {
+      "source": "/api/branch-chats",
+      "destination": "/api/router?route=branch-chats"
+    },
+    {
+      "source": "/api/admin/branch-chats",
+      "destination": "/api/router?route=admin/branch-chats"
+    },
+    {
       "source": "/api/excel-exports",
       "destination": "/api/router?route=excel-exports"
     },
