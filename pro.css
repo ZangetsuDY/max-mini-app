@@ -5482,3 +5482,319 @@ html body .scope-switch-field select option {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   ФИЛИАЛЫ · ИНФОРМАЦИОННЫЕ ПАНЕЛИ
+   ========================================================= */
+html body .module-card-branches { border-left: 3px solid var(--cyan) !important; }
+html body .module-card-branches .module-icon {
+  color: var(--cyan) !important;
+  border-color: rgba(60,195,232,.35) !important;
+  background: rgba(60,195,232,.08) !important;
+}
+html body .module-card-branches .module-icon svg { stroke: var(--cyan) !important; }
+
+html body .branch-shell { display: grid; gap: 14px; padding-bottom: 32px; }
+html body .branch-shell > *, html body .branch-stage > * { min-width: 0; }
+html body .branch-stage { display: grid; gap: 14px; }
+html body .branch-stage[hidden] { display: none; }
+
+html body .branch-crumbs {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  margin-top: 12px; color: var(--muted); font: 600 11px/1 var(--mono); letter-spacing: .06em;
+}
+html body .branch-crumbs button {
+  border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.02);
+  color: var(--text-2); padding: 7px 11px; font: inherit; cursor: pointer;
+  max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+html body .branch-crumbs button:hover { border-color: var(--line-strong); color: var(--text); }
+html body .branch-crumbs button[aria-current="page"] {
+  border-color: rgba(214,164,70,.45); color: var(--gold); background: rgba(214,164,70,.08); cursor: default;
+}
+
+html body .branch-hero {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  padding: 22px 24px !important;
+}
+html body .branch-hero h1 { margin: 8px 0 6px; overflow-wrap: anywhere; }
+html body .branch-hero p { margin: 0; font-size: 13px; }
+html body .branch-hero-total { display: grid; justify-items: end; gap: 2px; flex: none; }
+html body .branch-hero-total strong { color: #fff; font: 800 40px/1 var(--mono); }
+html body .branch-hero-total span {
+  color: #7f9ab0; font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+}
+
+html body .branch-search {
+  display: flex; align-items: center; gap: 10px; padding: 0 14px !important; min-height: 48px; cursor: text;
+}
+html body .branch-search svg { width: 18px; height: 18px; fill: none; stroke: var(--muted); stroke-width: 2; flex: none; }
+html body .branch-search input {
+  flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text);
+  font-family: inherit; font-size: 15px; font-weight: 500; line-height: 1.2; padding: 12px 0;
+}
+html body .branch-search:focus-within { border-color: var(--line-strong) !important; }
+
+/* Плитки филиалов: крупные зоны нажатия, адаптивная сетка */
+html body .branch-grid {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr));
+}
+html body .branch-tile {
+  position: relative; display: grid; align-content: space-between; gap: 10px;
+  min-height: 112px; padding: 16px; text-align: left; cursor: pointer;
+  border: 1px solid var(--line); border-radius: 8px; color: var(--text);
+  background: linear-gradient(180deg, rgba(18,27,38,.92), rgba(10,16,24,.94));
+  box-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 10px 26px rgba(0,0,0,.4);
+  transition: border-color .15s ease, transform .15s ease, background .15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+html body .branch-tile::before {
+  content: ""; position: absolute; left: -1px; top: -1px; width: 12px; height: 12px;
+  border-left: 2px solid var(--gold); border-top: 2px solid var(--gold); border-top-left-radius: 8px; opacity: .8;
+}
+html body .branch-tile:hover { border-color: var(--line-strong); background: linear-gradient(180deg, rgba(24,35,48,.95), rgba(12,19,28,.96)); }
+html body .branch-tile:active { transform: scale(.98); }
+html body .branch-tile:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+html body .branch-tile-code { font: 700 24px/1.05 var(--mono); letter-spacing: .02em; overflow-wrap: anywhere; }
+html body .branch-tile-desc { color: var(--text-2); font-size: 12px; line-height: 1.3; }
+html body .branch-tile-meta {
+  display: inline-flex; align-items: center; gap: 7px;
+  color: var(--muted); font: 600 10.5px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+}
+html body .branch-tile-meta i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px rgba(63,210,154,.7); }
+html body .branch-tile.is-empty .branch-tile-meta i { background: var(--muted); box-shadow: none; }
+
+html body .branch-empty {
+  padding: 22px !important; color: var(--text-2); font-size: 13px; text-align: center; grid-column: 1 / -1;
+}
+
+/* Информационные панели филиала */
+html body .branch-panel-list { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); }
+html body .branch-panel-card {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px;
+  padding: 16px 18px !important; text-align: left; cursor: pointer; color: var(--text); min-height: 76px;
+  -webkit-tap-highlight-color: transparent;
+}
+html body .branch-panel-card:hover { border-color: var(--line-strong) !important; }
+html body .branch-panel-card:active { transform: scale(.99) !important; }
+html body .branch-panel-index { color: var(--gold); font: 700 13px/1 var(--mono); }
+html body .branch-panel-copy { display: grid; gap: 4px; min-width: 0; }
+html body .branch-panel-copy strong { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+html body .branch-panel-copy small { color: var(--muted); font-size: 12px; }
+html body .branch-panel-card svg { width: 18px; height: 18px; fill: none; stroke: var(--gold); stroke-width: 2; }
+
+/* Лента сообщений */
+html body .branch-feed-subtitle[hidden] { display: none; }
+html body .branch-live {
+  display: inline-flex; align-items: center; gap: 8px; flex: none;
+  padding: 8px 12px; border: 1px solid rgba(63,210,154,.35); border-radius: 999px;
+  color: var(--green); font: 700 11px/1 var(--mono); letter-spacing: .14em; background: rgba(63,210,154,.07);
+}
+html body .branch-live i { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: branch-live-pulse 1.6s ease-in-out infinite; }
+html body .branch-live.is-offline { color: var(--red); border-color: rgba(240,84,95,.4); background: rgba(240,84,95,.07); }
+html body .branch-live.is-offline i { animation: none; }
+@keyframes branch-live-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(63,210,154,.55); } 50% { box-shadow: 0 0 0 6px rgba(63,210,154,0); } }
+
+html body .branch-feed-toolbar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px;
+}
+html body .branch-feed-meta { color: var(--muted); font: 600 11px/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+html body .branch-feed-actions { display: flex; align-items: center; gap: 8px; }
+html body .branch-feed-actions .secondary-action { min-height: 38px; padding: 0 14px; }
+html body .branch-feed-actions .secondary-action[hidden] { display: none; }
+html body #branchRefreshButton.is-loading svg { animation: branch-spin .9s linear infinite; }
+@keyframes branch-spin { to { transform: rotate(360deg); } }
+
+html body .branch-new-messages {
+  position: sticky; top: 10px; z-index: 5; justify-self: center;
+  padding: 9px 16px; border: 1px solid rgba(214,164,70,.55); border-radius: 999px; cursor: pointer;
+  background: rgba(20,16,8,.94); color: var(--gold); font: 700 12px/1 var(--mono); letter-spacing: .04em;
+  box-shadow: 0 8px 22px rgba(0,0,0,.5);
+}
+html body .branch-new-messages[hidden] { display: none; }
+
+html body .branch-feed { display: grid; gap: 10px; }
+html body .branch-day {
+  display: flex; align-items: center; gap: 12px; margin: 6px 0 0;
+  color: var(--gold); font: 600 10.5px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase;
+}
+html body .branch-day::before, html body .branch-day::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+
+html body .branch-message {
+  position: relative; display: grid; gap: 10px; padding: 14px 16px;
+  border: 1px solid var(--line); border-left: 3px solid rgba(60,195,232,.55); border-radius: 8px;
+  background: linear-gradient(180deg, rgba(18,27,38,.92), rgba(10,16,24,.94));
+  box-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 10px 26px rgba(0,0,0,.35);
+}
+html body .branch-message.is-new { animation: branch-new 2.4s ease-out; }
+@keyframes branch-new {
+  0% { border-color: rgba(214,164,70,.8); box-shadow: 0 0 0 3px rgba(214,164,70,.25); transform: translateY(-4px); }
+  100% { box-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 10px 26px rgba(0,0,0,.35); transform: none; }
+}
+html body .branch-message-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; }
+html body .branch-avatar {
+  display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%;
+  border: 1px solid rgba(60,195,232,.35); background: rgba(60,195,232,.1); color: var(--cyan);
+  font: 700 11px/1 var(--mono);
+}
+html body .branch-avatar.is-bot { border-color: rgba(214,164,70,.45); background: rgba(214,164,70,.1); color: var(--gold); }
+html body .branch-message-author { font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html body .branch-message-author em {
+  margin-left: 6px; padding: 2px 6px; border-radius: 4px; font: 600 9.5px/1 var(--mono); font-style: normal;
+  letter-spacing: .1em; text-transform: uppercase; color: var(--gold); background: rgba(214,164,70,.1);
+}
+html body .branch-message-head time { color: var(--muted); font: 600 12px/1 var(--mono); }
+
+html body .branch-message-body { display: grid; gap: 10px; min-width: 0; }
+html body .branch-message-text {
+  color: var(--text); font-size: 14px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+html body .branch-message-text a { color: var(--cyan-bright); text-decoration: underline; text-underline-offset: 2px; }
+html body .branch-message-text code {
+  padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,.06); font: 13px/1.4 var(--mono);
+}
+html body .branch-message-text mark { background: rgba(214,164,70,.25); color: inherit; }
+html body .branch-mention { color: var(--cyan-bright); }
+
+html body .branch-message-linked {
+  display: grid; gap: 6px; padding: 10px 12px; border-left: 2px solid var(--gold);
+  border-radius: 0 6px 6px 0; background: rgba(214,164,70,.05);
+}
+html body .branch-message-linked > span { color: var(--gold); font: 600 10.5px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+html body .branch-message-linked .branch-message-text { color: var(--text-2); font-size: 13px; }
+
+html body .branch-message-images { display: flex; flex-wrap: wrap; gap: 8px; }
+html body .branch-message-images img {
+  display: block; max-width: min(100%, 320px); max-height: 220px; border-radius: 6px;
+  border: 1px solid var(--line); object-fit: cover;
+}
+html body .branch-message-files { display: flex; flex-wrap: wrap; gap: 6px; }
+html body .branch-file-chip {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--text-2);
+  font-size: 12px; background: rgba(255,255,255,.03); overflow-wrap: anywhere;
+}
+html body .branch-file-chip i { width: 8px; height: 10px; flex: none; border: 1.5px solid var(--gold); border-radius: 2px; }
+
+/* Сворачивание длинных сообщений */
+html body .branch-message.is-long:not(.is-expanded) .branch-message-body {
+  max-height: 260px; overflow: hidden; cursor: pointer;
+  -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent);
+  mask-image: linear-gradient(180deg, #000 70%, transparent);
+}
+html body .branch-message-toggle {
+  display: inline-flex; align-items: center; justify-self: start; gap: 6px;
+  padding: 8px 12px; border: 1px solid rgba(214,164,70,.4); border-radius: 6px; cursor: pointer;
+  background: rgba(214,164,70,.08); color: var(--gold); font-family: inherit; font-size: 12.5px; font-weight: 600; line-height: 1;
+}
+html body .branch-message-toggle[hidden] { display: none; }
+html body .branch-message-toggle svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; transition: transform .2s ease; }
+html body .branch-message.is-expanded .branch-message-toggle svg { transform: rotate(180deg); }
+
+html body .branch-message.is-skeleton { min-height: 96px; gap: 10px; }
+html body .branch-message.is-skeleton span {
+  display: block; height: 10px; border-radius: 4px;
+  background: linear-gradient(90deg, rgba(255,255,255,.04), rgba(255,255,255,.1), rgba(255,255,255,.04));
+  background-size: 200% 100%; animation: branch-shimmer 1.3s linear infinite;
+}
+html body .branch-message.is-skeleton span:nth-child(1) { width: 40%; }
+html body .branch-message.is-skeleton span:nth-child(3) { width: 70%; }
+@keyframes branch-shimmer { to { background-position: -200% 0; } }
+
+@media (max-width: 640px) {
+  html body .branch-hero { padding: 16px !important; gap: 12px; }
+  html body .branch-hero-total strong { font-size: 30px; }
+  html body .branch-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  html body .branch-tile { min-height: 92px; padding: 13px; }
+  html body .branch-tile-code { font-size: 20px; }
+  html body .branch-message { padding: 12px; }
+  html body .branch-message-text { font-size: 14px; }
+  html body .branch-feed-hero { align-items: flex-start; }
+}
+@media (max-width: 340px) {
+  html body .branch-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html body .branch-live i, html body .branch-message.is-new, html body .branch-message.is-skeleton span { animation: none; }
+}
+
+/* Центр управления: управление филиалами */
+html body .branch-admin-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+html body .branch-admin-list { display: grid; gap: 8px; margin-top: 12px; }
+html body .branch-admin-item { border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,.02); }
+html body .branch-admin-item.is-open { border-color: rgba(214,164,70,.3); }
+html body .branch-admin-item-head { display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 4px; }
+html body .branch-admin-expander {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 8px;
+  border: 0; background: transparent; color: var(--text); cursor: pointer; text-align: left;
+}
+html body .branch-admin-expander svg { width: 16px; height: 16px; flex: none; fill: none; stroke: var(--gold); stroke-width: 2; transition: transform .2s ease; }
+html body .branch-admin-item.is-open .branch-admin-expander svg { transform: rotate(90deg); }
+html body .branch-admin-expander strong { font: 700 15px/1.2 var(--mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+html body .branch-admin-expander small { color: var(--muted); font-size: 12px; white-space: nowrap; }
+html body .branch-admin-item-actions, html body .branch-admin-chat-actions { display: flex; gap: 4px; flex: none; }
+html body .branch-admin-item-actions .icon-button, html body .branch-admin-chat-actions .icon-button {
+  width: 32px; height: 32px; min-width: 32px; font-size: 14px;
+}
+html body .branch-admin-item-actions .icon-button:disabled, html body .branch-admin-chat-actions .icon-button:disabled { opacity: .3; }
+html body .icon-button.is-danger { color: var(--red); }
+html body .branch-admin-item-body { display: none; gap: 12px; padding: 4px 14px 14px; }
+html body .branch-admin-item.is-open .branch-admin-item-body { display: grid; }
+html body .branch-admin-fields, html body .branch-admin-chat {
+  display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+html body .branch-admin-chats { display: grid; gap: 8px; }
+html body .branch-admin-chat {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) auto; align-items: end;
+  padding: 10px; border: 1px dashed var(--line); border-radius: 6px;
+}
+html body .branch-admin-chat-wide { grid-column: 1 / 3; }
+html body .branch-admin-chat-actions { grid-column: 3; grid-row: 1; align-self: end; }
+html body .branch-admin-fields label, html body .branch-admin-chat label { display: grid; gap: 5px; min-width: 0; }
+html body .branch-admin-fields span, html body .branch-admin-chat span {
+  color: var(--muted); font: 600 10px/1.2 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+}
+html body .branch-admin-fields input, html body .branch-admin-chat input {
+  width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px;
+  background: rgba(0,0,0,.25); color: var(--text); font-family: inherit; font-size: 14px; line-height: 1.2;
+}
+html body .branch-admin-fields input:focus, html body .branch-admin-chat input:focus { outline: none; border-color: var(--line-strong); }
+html body .branch-admin-hint { color: var(--muted); font-size: 12px; }
+html body .branch-admin-item-body > .secondary-action { justify-self: start; }
+@media (max-width: 640px) {
+  html body .branch-admin-fields { grid-template-columns: 1fr; }
+  html body .branch-admin-chat { grid-template-columns: minmax(0, 1fr) auto; }
+  html body .branch-admin-chat label { grid-column: 1 / 2; }
+  html body .branch-admin-chat-wide { grid-column: 1 / 2; }
+  html body .branch-admin-chat-actions { grid-column: 2; grid-row: 1 / 4; flex-direction: column; align-self: start; }
+  html body .branch-admin-expander small { display: none; }
+}
+
+/* Центр управления: сворачиваемые разделы */
+html body .admin-collapse-bar {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 14px 0 0;
+}
+html body .admin-collapse-bar > span { color: var(--muted); font: 600 10.5px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; }
+html body .admin-collapse-bar > div { display: flex; gap: 8px; }
+html body .admin-collapse-bar .secondary-action { min-height: 34px; padding: 0 12px; font-size: 12px; }
+html body .admin-panel.is-collapsible > .admin-panel-heading { cursor: pointer; user-select: none; }
+html body .admin-panel.is-collapsible > .admin-panel-heading { position: relative; padding-left: 40px !important; }
+html body .admin-collapse-toggle {
+  position: absolute; left: 0; top: 2px; display: grid; place-items: center;
+  width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 6px; cursor: pointer;
+  background: rgba(214,164,70,.06); color: var(--gold);
+}
+html body .admin-collapse-toggle svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; transition: transform .2s ease; }
+html body .admin-panel.is-collapsed .admin-collapse-toggle svg { transform: rotate(-90deg); }
+html body .admin-panel.is-collapsed { align-self: start; }
+html body .admin-panel.is-collapsed > :not(.admin-panel-heading),
+html body .admin-panel.is-collapsed > .admin-panel-heading > :not(:first-of-type):not(.admin-collapse-toggle),
+html body .admin-panel.is-collapsed > .admin-panel-heading .access-heading-copy { display: none !important; }
+html body .admin-panel.is-collapsed > .admin-panel-heading { margin-bottom: 0 !important; padding-bottom: 0 !important; border-bottom: 0 !important; }
+html body #branchRefreshButton { width: 38px; height: 38px; min-width: 38px; border-radius: 6px; }
+html body #branchRefreshButton svg { width: 18px; height: 18px; }
+html body .admin-collapse-bar .secondary-action { white-space: nowrap; }
+html body .branch-admin-toolbar .secondary-action,
+html body .branch-admin-toolbar .primary-action { width: auto !important; min-height: 40px; padding: 0 16px !important; white-space: nowrap; }
+html body .branch-feed-actions .secondary-action { white-space: nowrap; }

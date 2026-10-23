@@ -10,6 +10,7 @@ import workordersDetails from "../handlers/workorders-details.js";
 import workordersHistory from "../handlers/workorders-history.js";
 import heartbeat from "../handlers/heartbeat.js";
 import system from "../handlers/system.js";
+import branchChats from "../handlers/branch-chats.js";
 
 import adminDashboard from "../handlers/admin/dashboard.js";
 import adminSystem from "../handlers/admin/system.js";
@@ -21,6 +22,7 @@ import adminDispatcherConfig from "../handlers/admin/dispatcher-config.js";
 import adminOutageConfig from "../handlers/admin/outage-config.js";
 import adminExcelExportConfig from "../handlers/admin/excel-export-config.js";
 import adminOutagesExport from "../handlers/admin/outages-export.js";
+import adminBranchChats from "../handlers/admin/branch-chats.js";
 
 const ROUTES = new Map([
   ["login", login],
@@ -35,6 +37,7 @@ const ROUTES = new Map([
   ["workorders-history", workordersHistory],
   ["heartbeat", heartbeat],
   ["system", system],
+  ["branch-chats", branchChats],
   ["admin/dashboard", adminDashboard],
   ["admin/system", adminSystem],
   ["admin/access", adminAccess],
@@ -44,7 +47,8 @@ const ROUTES = new Map([
   ["admin/dispatcher-config", adminDispatcherConfig],
   ["admin/outage-config", adminOutageConfig],
   ["admin/excel-export-config", adminExcelExportConfig],
-  ["admin/outages-export", adminOutagesExport]
+  ["admin/outages-export", adminOutagesExport],
+  ["admin/branch-chats", adminBranchChats]
 ]);
 
 function json(data, status = 200) {

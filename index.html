@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261020-scope1" />
-  <link rel="stylesheet" href="pro.css?v=20261020-scope1" />
+  <link rel="stylesheet" href="style.css?v=20261023-branches1" />
+  <link rel="stylesheet" href="pro.css?v=20261023-branches1" />
 </head>
 
 <body class="auth-pending">
@@ -331,6 +331,31 @@
 
           <div class="module-footer">
             <span>Открыть выгрузки</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+          </div>
+        </button>
+
+        <button id="openBranchChatsButton" class="module-card module-card-branches" type="button">
+          <div class="module-topline">
+            <div class="module-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3v5M5 13V9h14v4M5 13v3M12 8v8M19 13v3"></path>
+                <rect x="3" y="16" width="4" height="4" rx="1"></rect>
+                <rect x="10" y="16" width="4" height="4" rx="1"></rect>
+                <rect x="17" y="16" width="4" height="4" rx="1"></rect>
+              </svg>
+            </div>
+            <span id="branchChatsCardStatus" class="module-status module-status-live"><i></i> ОНЛАЙН</span>
+          </div>
+
+          <div class="module-copy">
+            <span>ИНФОРМАЦИОННЫЕ ПАНЕЛИ</span>
+            <h3>Филиалы</h3>
+            <p>Выбор филиала и чтение сообщений из его рабочих чатов в реальном времени.</p>
+          </div>
+
+          <div class="module-footer">
+            <span>Выбрать филиал</span>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
           </div>
         </button>
@@ -1533,6 +1558,93 @@
       </div>
     </section>
 
+    <!-- BRANCH CHATS -->
+    <section id="branchChatsView" class="app-view">
+      <div class="view-toolbar">
+        <button id="backFromBranchChatsButton" class="back-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"></path></svg>
+          <span id="branchChatsBackLabel">Главное меню</span>
+        </button>
+        <div class="toolbar-status">
+          <span class="system-pulse"></span>
+          <span id="branchChatsUpdatedAt">Филиалы</span>
+        </div>
+      </div>
+
+      <div class="branch-shell">
+        <nav id="branchCrumbs" class="branch-crumbs" aria-label="Навигация по филиалам"></nav>
+
+        <!-- 1. Выбор филиала -->
+        <div id="branchStageBranches" class="branch-stage">
+          <div class="branch-hero glass-panel">
+            <div>
+              <span class="micro-label">ИНФОРМАЦИОННЫЕ ПАНЕЛИ · ФИЛИАЛЫ</span>
+              <h1>Выберите филиал</h1>
+              <p>Откройте филиал, затем нужную информационную панель — сообщения из чата обновляются автоматически.</p>
+            </div>
+            <div class="branch-hero-total">
+              <strong id="branchCountValue">—</strong>
+              <span>филиалов</span>
+            </div>
+          </div>
+
+          <label class="branch-search glass-panel">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg>
+            <input id="branchSearchInput" type="search" placeholder="Поиск филиала" autocomplete="off" aria-label="Поиск филиала" />
+          </label>
+
+          <div id="branchGrid" class="branch-grid"></div>
+        </div>
+
+        <!-- 2. Информационные панели филиала -->
+        <div id="branchStagePanels" class="branch-stage" hidden>
+          <div class="branch-hero glass-panel">
+            <div>
+              <span class="micro-label">ФИЛИАЛ</span>
+              <h1 id="branchPanelsTitle">—</h1>
+              <p id="branchPanelsSubtitle">Выберите информационную панель</p>
+            </div>
+            <div class="branch-hero-total">
+              <strong id="branchPanelsCount">0</strong>
+              <span>панелей</span>
+            </div>
+          </div>
+          <div id="branchPanelList" class="branch-panel-list"></div>
+        </div>
+
+        <!-- 3. Сообщения панели -->
+        <div id="branchStageFeed" class="branch-stage" hidden>
+          <div class="branch-hero branch-feed-hero glass-panel">
+            <div>
+              <span id="branchFeedKicker" class="micro-label">ИНФОРМАЦИОННАЯ ПАНЕЛЬ</span>
+              <h1 id="branchFeedTitle">—</h1>
+              <p id="branchFeedSubtitle" class="branch-feed-subtitle"></p>
+            </div>
+            <div class="branch-live" id="branchLiveBadge">
+              <i></i><span>LIVE</span>
+            </div>
+          </div>
+
+          <div class="branch-feed-toolbar">
+            <span id="branchFeedMeta" class="branch-feed-meta">Последние 100 сообщений</span>
+            <div class="branch-feed-actions">
+              <button id="branchExpandAllButton" class="secondary-action" type="button">Развернуть все</button>
+              <button id="branchRefreshButton" class="icon-button" type="button" title="Обновить">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M20 6v5h-5M4 18v-5h5"></path>
+                  <path d="M18.5 9A7 7 0 0 0 6 6.5L4 11M5.5 15A7 7 0 0 0 18 17.5l2-4.5"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div id="branchFeedNotice" class="requests-notice" hidden></div>
+          <button id="branchNewMessagesButton" class="branch-new-messages" type="button" hidden></button>
+          <div id="branchFeed" class="branch-feed"></div>
+        </div>
+      </div>
+    </section>
+
     <!-- DEVELOPER CONTROL CENTER -->
     <section id="adminView" class="app-view">
       <div class="view-toolbar">
@@ -2021,6 +2133,26 @@
         <div id="dispatcherWorkordersConfigStatus" class="dispatcher-config-status"></div>
         <div id="dispatcherWorkordersConfigList" class="dispatcher-config-list"></div>
       </article>
+
+      <article id="branchChatsManagementPanel" class="admin-panel branch-chats-management" hidden>
+        <div class="admin-panel-heading access-heading">
+          <div>
+            <span class="micro-label">ФИЛИАЛЫ · ИНФОРМАЦИОННЫЕ ПАНЕЛИ</span>
+            <h2>Филиалы и чаты MAX</h2>
+            <p class="access-heading-copy">
+              Добавляйте, переименовывайте и удаляйте филиалы. Для каждого филиала
+              укажите информационные панели: название и ID чата MAX, из которого
+              берутся последние 100 сообщений. Бот должен состоять в этом чате.
+            </p>
+          </div>
+          <div class="branch-admin-toolbar">
+            <button id="branchAdminAddButton" class="secondary-action" type="button">+ Филиал</button>
+            <button id="branchAdminSaveButton" class="primary-action" type="button"><span>Сохранить</span></button>
+          </div>
+        </div>
+        <div id="branchAdminStatus" class="dispatcher-config-status"></div>
+        <div id="branchAdminList" class="branch-admin-list"></div>
+      </article>
     </section>
   </main>
 
@@ -2181,6 +2313,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261020-scope1"></script>
+  <script src="app.js?v=20261023-branches1"></script>
 </body>
 </html>
