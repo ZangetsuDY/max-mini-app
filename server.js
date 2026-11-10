@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { brotliCompressSync, gzipSync, constants as zlibConstants } from "node:zlib";
 import { startLocalStore, stopLocalStore, localStoreInfo, ensureArchiveStoreLoaded } from "./lib/local-store.js";
+import { monitorEventLoopDelay } from "node:perf_hooks";
+import v8 from "node:v8";
 import { runtimeStoreBackend } from "./lib/runtime-store.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -713,11 +715,34 @@ server.listen(
   }
 );
 
+/*
+  Ресурсы процесса в логе: память и задержка обработки (если сервер
+  «захлёбывается», задержка растёт до секунд). Раз в 5 минут и при старте.
+*/
+const loopDelay = monitorEventLoopDelay({ resolution: 50 });
+loopDelay.enable();
+
+function logResources(stage) {
+  const memory = process.memoryUsage();
+  const heapLimit = v8.getHeapStatistics().heap_size_limit;
+  const mb = (value) => Math.round(value / 1024 / 1024);
+  log(
+    `Ресурсы${stage ? ` (${stage})` : ""}: память ${mb(memory.rss)} МБ, куча ${mb(memory.heapUsed)}/${mb(heapLimit)} МБ, ` +
+    `задержка обработки макс. ${Math.round(loopDelay.max / 1e6)} мс`
+  );
+  loopDelay.reset();
+}
+
+setInterval(() => logResources(""), 5 * 60_000).unref();
+
 async function startStorage() {
+  logResources("старт");
   if (runtimeStoreBackend() === "local") {
     try {
+      const mainStartedAt = Date.now();
       await startLocalStore();
       const info = localStoreInfo();
+      log(`Хранилище: основная часть загружена за ${Math.round((Date.now() - mainStartedAt) / 1000)} с`);
       log(`Хранилище: локальное (${info.dataFile}), S3-копия: ${info.s3Backup ? "включена" : "выключена"}`);
     } catch (error) {
       log("Хранилище: ошибка загрузки", error instanceof Error ? error.message : String(error));
@@ -736,6 +761,7 @@ async function startStorage() {
     await ensureArchiveStoreLoaded().catch((error) => log("Архив НДР: ошибка загрузки", String(error)));
     log(`Архив НДР: загружен за ${Math.round((Date.now() - startedAt) / 1000)} с, ключей ${localStoreInfo().archiveKeys}`);
   }
+  logResources("хранилище загружено");
   startWorkordersArchiveCollector();
 }
 
