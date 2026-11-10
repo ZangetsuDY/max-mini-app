@@ -5798,3 +5798,49 @@ html body .admin-collapse-bar .secondary-action { white-space: nowrap; }
 html body .branch-admin-toolbar .secondary-action,
 html body .branch-admin-toolbar .primary-action { width: auto !important; min-height: 40px; padding: 0 16px !important; white-space: nowrap; }
 html body .branch-feed-actions .secondary-action { white-space: nowrap; }
+
+/* Центр управления: доступ к сайту плановых работ */
+html body .lenenergo-form {
+  display: grid; gap: 10px; align-items: end; margin-top: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr));
+}
+html body .lenenergo-form label { display: grid; gap: 5px; min-width: 0; }
+html body .lenenergo-form label > span {
+  color: var(--muted); font: 600 10px/1.2 var(--mono); letter-spacing: .1em; text-transform: uppercase;
+}
+html body .lenenergo-form input, html body .lenenergo-form select {
+  width: 100%; min-width: 0; min-height: 40px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 6px;
+  background: rgba(0,0,0,.25); color: var(--text); font-family: inherit; font-size: 14px;
+}
+html body .lenenergo-form .primary-action { min-height: 40px; width: 100% !important; justify-content: center; }
+html body .lenenergo-result { display: grid; gap: 10px; margin-top: 14px; }
+html body .lenenergo-status {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 8px; border: 1px solid var(--line);
+}
+html body .lenenergo-status i { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+html body .lenenergo-status div { display: grid; gap: 3px; }
+html body .lenenergo-status small { color: var(--text-2); font-size: 12.5px; }
+html body .lenenergo-status.is-ok { border-color: rgba(63,210,154,.4); background: rgba(63,210,154,.07); }
+html body .lenenergo-status.is-ok i { background: var(--green); box-shadow: 0 0 10px rgba(63,210,154,.7); }
+html body .lenenergo-status.is-bad { border-color: rgba(240,84,95,.4); background: rgba(240,84,95,.07); }
+html body .lenenergo-status.is-bad i { background: var(--red); }
+html body .lenenergo-steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+html body .lenenergo-steps li {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; color: var(--muted); font: 12px/1.4 var(--mono);
+}
+html body .lenenergo-steps b.is-ok { color: var(--green); }
+html body .lenenergo-steps b.is-bad { color: var(--red); }
+html body .lenenergo-steps em { color: var(--amber); font-style: normal; }
+html body .lenenergo-steps a { color: var(--cyan-bright); }
+html body .lenenergo-found { color: var(--gold); font: 600 11px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+html body .lenenergo-rows { display: grid; gap: 8px; }
+html body .lenenergo-row {
+  display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--line); border-left: 3px solid var(--gold);
+  border-radius: 6px; background: rgba(255,255,255,.02);
+}
+html body .lenenergo-row header { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; }
+html body .lenenergo-row header strong { font-size: 14px; overflow-wrap: anywhere; }
+html body .lenenergo-row header span { color: var(--cyan-bright); font: 600 12px/1.3 var(--mono); white-space: nowrap; }
+html body .lenenergo-row-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--muted); font-size: 12px; }
+html body .lenenergo-row details summary { cursor: pointer; color: var(--gold); font-size: 12px; }
+html body .lenenergo-row details p { margin: 6px 0 0; white-space: pre-wrap; font-size: 13px; overflow-wrap: anywhere; }

@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261023-branches1" />
-  <link rel="stylesheet" href="pro.css?v=20261023-branches1" />
+  <link rel="stylesheet" href="style.css?v=20261110-lenenergo1" />
+  <link rel="stylesheet" href="pro.css?v=20261110-lenenergo1" />
 </head>
 
 <body class="auth-pending">
@@ -2153,6 +2153,51 @@
         <div id="branchAdminStatus" class="dispatcher-config-status"></div>
         <div id="branchAdminList" class="branch-admin-list"></div>
       </article>
+
+      <article id="lenenergoSitePanel" class="admin-panel lenenergo-site-panel" hidden>
+        <div class="admin-panel-heading access-heading">
+          <div>
+            <span class="micro-label">ROSSETI-LENENERGO.RU · ГРАФИК ПЛАНОВЫХ РАБОТ</span>
+            <h2>Доступ к сайту плановых работ</h2>
+            <p class="access-heading-copy">
+              Сервер мини-аппа открывает страницу «График плановых работ» на сайте
+              Россети Ленэнерго и пробует прочитать таблицу по выбранному адресу.
+              Так видно, пускает ли сайт наш сервер и можно ли получать плановые работы автоматически.
+            </p>
+          </div>
+        </div>
+
+        <div class="lenenergo-form">
+          <label><span>Регион</span>
+            <select id="lenenergoRegSelect" class="dispatcher-select">
+              <option value="">Любой</option>
+              <option value="4">Санкт-Петербург</option>
+              <option value="5" selected>Ленинградская область</option>
+            </select>
+          </label>
+          <label><span>РЭС</span>
+            <select id="lenenergoResSelect" class="dispatcher-select"><option value="">Любой</option></select>
+          </label>
+          <label><span>Населённый пункт / адрес</span>
+            <input id="lenenergoStreetInput" type="text" maxlength="120" value="Пески" placeholder="Например: Пески" />
+          </label>
+          <label><span>Район (фильтр)</span>
+            <input id="lenenergoDistrictInput" type="text" maxlength="80" value="Выборгский" placeholder="Например: Выборгский" />
+          </label>
+          <label><span>Страниц</span>
+            <select id="lenenergoPagesSelect" class="dispatcher-select">
+              <option value="1">1 (до 50 строк)</option>
+              <option value="3" selected>3 (до 150 строк)</option>
+              <option value="5">5 (до 250 строк)</option>
+            </select>
+          </label>
+          <button id="lenenergoProbeButton" class="primary-action" type="button"><span>Проверить доступ</span></button>
+        </div>
+
+        <div id="lenenergoProbeResult" class="lenenergo-result">
+          <div class="branch-admin-hint">Проверка ещё не запускалась.</div>
+        </div>
+      </article>
     </section>
   </main>
 
@@ -2313,6 +2358,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261023-branches1"></script>
+  <script src="app.js?v=20261110-lenenergo1"></script>
 </body>
 </html>
