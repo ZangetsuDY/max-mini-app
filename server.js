@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createHash } from "node:crypto";
 import { brotliCompressSync, gzipSync, constants as zlibConstants } from "node:zlib";
-import { startLocalStore, stopLocalStore, localStoreInfo } from "./lib/local-store.js";
+import { startLocalStore, stopLocalStore, localStoreInfo, ensureArchiveStoreLoaded } from "./lib/local-store.js";
 import { runtimeStoreBackend } from "./lib/runtime-store.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -678,12 +678,15 @@ const server =
           response.end();
         }
       } finally {
-        log(
-          request.method,
-          request.url,
-          `${Date.now() -
-            startedAt}ms`
-        );
+        // Проверки живости от платформы (каждые 30 с) в лог не пишем.
+        if (request.url !== "/health") {
+          log(
+            request.method,
+            request.url,
+            `${Date.now() -
+              startedAt}ms`
+          );
+        }
       }
     }
   );
@@ -695,28 +698,10 @@ server.headersTimeout =
   70_000;
 
 /*
-  Хранилище: внешний Redis (если задан) или собственное (диск + S3).
-  Загружаем до старта сервера, чтобы первые запросы видели настройки.
+  Сервер начинает отвечать сразу (проверка /health проходит, деплой не
+  ждёт), а хранилище загружается следом: запросы к API сами дожидаются
+  загрузки. Большой архив НДР грузится в фоне последним.
 */
-if (runtimeStoreBackend() === "local") {
-  try {
-    await startLocalStore();
-    const info = localStoreInfo();
-    log(`Хранилище: локальное (${info.dataFile}), S3-копия: ${info.s3Backup ? "включена" : "выключена"}`);
-  } catch (error) {
-    log("Хранилище: ошибка загрузки", error instanceof Error ? error.message : String(error));
-  }
-}
-
-// Проверка хранилища при запуске — результат виден в логах приложения Timeweb.
-{
-  const { checkRuntimeStore } = await import("./lib/runtime-store.js");
-  const health = await checkRuntimeStore();
-  log(
-    `Хранилище: ${health.backend === "redis" ? "внешний Redis" : "собственное"} — ${health.ok ? `OK (${health.latencyMs} мс)` : `ОШИБКА: ${health.error}`}`
-  );
-}
-
 server.listen(
   PORT,
   HOST,
@@ -724,9 +709,35 @@ server.listen(
     log(
       `Server listening on http://${HOST}:${PORT}`
     );
-    startWorkordersArchiveCollector();
+    startStorage().catch((error) => log("Хранилище: ошибка запуска", error instanceof Error ? error.message : String(error)));
   }
 );
+
+async function startStorage() {
+  if (runtimeStoreBackend() === "local") {
+    try {
+      await startLocalStore();
+      const info = localStoreInfo();
+      log(`Хранилище: локальное (${info.dataFile}), S3-копия: ${info.s3Backup ? "включена" : "выключена"}`);
+    } catch (error) {
+      log("Хранилище: ошибка загрузки", error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  // Проверка хранилища при запуске — результат виден в логах приложения Timeweb.
+  const { checkRuntimeStore } = await import("./lib/runtime-store.js");
+  const health = await checkRuntimeStore();
+  log(
+    `Хранилище: ${health.backend === "redis" ? "внешний Redis" : "собственное"} — ${health.ok ? `OK (${health.latencyMs} мс)` : `ОШИБКА: ${health.error}`}`
+  );
+
+  if (runtimeStoreBackend() === "local") {
+    const startedAt = Date.now();
+    await ensureArchiveStoreLoaded().catch((error) => log("Архив НДР: ошибка загрузки", String(error)));
+    log(`Архив НДР: загружен за ${Math.round((Date.now() - startedAt) / 1000)} с, ключей ${localStoreInfo().archiveKeys}`);
+  }
+  startWorkordersArchiveCollector();
+}
 
 /*
   Фоновый сбор архива НДР: раз в N минут забираем из чата новые
