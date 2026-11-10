@@ -27,6 +27,7 @@ const API_WORKORDERS_HISTORY = "/api/workorders-history";
 const API_ADMIN_EXCEL_EXPORT_CONFIG = "/api/admin/excel-export-config";
 const API_BRANCH_CHATS = "/api/branch-chats";
 const API_ADMIN_BRANCH_CHATS = "/api/admin/branch-chats";
+const API_ADMIN_LENENERGO_SITE = "/api/admin/lenenergo-site";
 const BRANCH_FEED_POLL_MS = 3_000;
 
 const REFRESH_INTERVAL_MS = 120_000;
@@ -6501,6 +6502,12 @@ function renderAdminDashboard(
   const branchChatsManagementPanel = document.getElementById("branchChatsManagementPanel");
   if (branchChatsManagementPanel) {
     branchChatsManagementPanel.hidden = !Boolean(payload.canManageRoles);
+  }
+
+  const lenenergoSitePanel = document.getElementById("lenenergoSitePanel");
+  if (lenenergoSitePanel) {
+    lenenergoSitePanel.hidden = !Boolean(payload.canManageRoles);
+    if (payload.canManageRoles) loadLenenergoSiteOptions();
   }
 
   dispatcherWorkordersManagementPanel.hidden =
@@ -13116,3 +13123,104 @@ branchAdminEls.save?.addEventListener("click", async () => {
     persist();
   });
 })();
+
+
+/* =========================================================
+   ЦЕНТР УПРАВЛЕНИЯ · ДОСТУП К САЙТУ ПЛАНОВЫХ РАБОТ
+   Сервер открывает «График плановых работ» rosseti-lenenergo.ru
+   и пробует разобрать таблицу по выбранному адресу.
+   ========================================================= */
+const lenenergoEls = {
+  reg: document.getElementById("lenenergoRegSelect"),
+  res: document.getElementById("lenenergoResSelect"),
+  street: document.getElementById("lenenergoStreetInput"),
+  district: document.getElementById("lenenergoDistrictInput"),
+  pages: document.getElementById("lenenergoPagesSelect"),
+  button: document.getElementById("lenenergoProbeButton"),
+  result: document.getElementById("lenenergoProbeResult")
+};
+let lenenergoOptionsLoaded = false;
+
+async function loadLenenergoSiteOptions() {
+  if (lenenergoOptionsLoaded || !lenenergoEls.res) return;
+  try {
+    const response = await fetch(`${API_ADMIN_LENENERGO_SITE}?options=1`, {
+      method: "GET", cache: "no-store", credentials: "include", headers: getSessionHeaders()
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok || !Array.isArray(payload?.res)) return;
+    const options = [...payload.res].sort((a, b) => a.name.localeCompare(b.name, "ru"));
+    lenenergoEls.res.innerHTML = '<option value="">Любой</option>' +
+      options.map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`).join("");
+    lenenergoOptionsLoaded = true;
+  } catch {
+    // Список РЭС не обязателен — проверка работает и без него.
+  }
+}
+
+function renderLenenergoProbe(payload) {
+  const steps = (payload.steps || []).map((step) => `
+    <li>
+      <b class="${step.status >= 200 && step.status < 300 && !step.note ? "is-ok" : "is-bad"}">${step.status || "—"}</b>
+      <span>${escapeHtml(step.ms ? `${step.ms} мс` : "")}${step.rows !== undefined ? ` · строк: ${step.rows}` : ""}${step.server ? ` · ${escapeHtml(step.server)}` : ""}</span>
+      ${step.note ? `<em>${escapeHtml(step.note)}</em>` : ""}
+      <a href="${escapeHtml(step.url)}" target="_blank" rel="noopener noreferrer">ссылка</a>
+    </li>`).join("");
+
+  const status = payload.ok
+    ? `<div class="lenenergo-status is-ok"><i></i><div><strong>Доступ есть</strong><small>Сервер получил таблицу: ${payload.fetchedRows} ${pluralRu(payload.fetchedRows, "строка", "строки", "строк")} (страниц на сайте: ${payload.totalPages}).</small></div></div>`
+    : `<div class="lenenergo-status is-bad"><i></i><div><strong>Нет доступа</strong><small>${escapeHtml(payload.blocked || payload.error || "Неизвестная ошибка")}</small></div></div>`;
+
+  const filterNote = payload.query?.district
+    ? ` · фильтр по району «${escapeHtml(payload.query.district)}»`
+    : "";
+  const rows = payload.ok
+    ? (payload.rows.length
+      ? payload.rows.map((row) => `
+        <article class="lenenergo-row">
+          <header>
+            <strong>${escapeHtml(row.addresses.join(", ") || row.district || row.region || "Адрес не указан")}</strong>
+            <span>${escapeHtml(row.start)} → ${escapeHtml(row.end)}</span>
+          </header>
+          <div class="lenenergo-row-meta">
+            <span>${escapeHtml([row.region, row.district].filter(Boolean).join(" · "))}</span>
+            <span>${escapeHtml(row.branch)} · ${escapeHtml(row.res)}</span>
+          </div>
+          ${row.comment ? `<details><summary>Комментарий</summary><p>${escapeHtml(row.comment)}</p></details>` : ""}
+        </article>`).join("")
+      : `<div class="branch-admin-hint">По этому запросу плановых работ не найдено${filterNote}.</div>`)
+    : "";
+
+  lenenergoEls.result.innerHTML = `
+    ${status}
+    <ol class="lenenergo-steps">${steps}</ol>
+    ${payload.ok ? `<div class="lenenergo-found">Найдено: ${payload.rows.length}${filterNote}</div>` : ""}
+    <div class="lenenergo-rows">${rows}</div>
+    <div class="branch-admin-hint">Проверено ${escapeHtml(formatDateTime(payload.checkedAt))}</div>`;
+}
+
+lenenergoEls.button?.addEventListener("click", async () => {
+  const params = new URLSearchParams({
+    reg: lenenergoEls.reg.value,
+    res: lenenergoEls.res.value,
+    street: lenenergoEls.street.value.trim(),
+    district: lenenergoEls.district.value.trim(),
+    pages: lenenergoEls.pages.value
+  });
+  lenenergoEls.button.disabled = true;
+  lenenergoEls.button.querySelector("span").textContent = "Проверка…";
+  lenenergoEls.result.innerHTML = '<div class="branch-admin-hint">Сервер обращается к сайту Россети Ленэнерго…</div>';
+  try {
+    const response = await fetch(`${API_ADMIN_LENENERGO_SITE}?${params}`, {
+      method: "GET", cache: "no-store", credentials: "include", headers: getSessionHeaders()
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok && !payload?.steps) throw new Error(payload?.error || `Ошибка ${response.status}`);
+    renderLenenergoProbe(payload);
+  } catch (error) {
+    lenenergoEls.result.innerHTML = `<div class="lenenergo-status is-bad"><i></i><div><strong>Проверка не выполнена</strong><small>${escapeHtml(error instanceof Error ? error.message : "Ошибка")}</small></div></div>`;
+  } finally {
+    lenenergoEls.button.disabled = false;
+    lenenergoEls.button.querySelector("span").textContent = "Проверить доступ";
+  }
+});
