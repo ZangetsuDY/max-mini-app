@@ -3379,6 +3379,8 @@ html body .outages-export-sheets i {
 
 html body .outages-export-sheets i.is-emergency { background: #e0565b; }
 html body .outages-export-sheets i.is-planned { background: #4f8fca; }
+html body .outages-export-sheets i.is-roles-list { background: #6fbf8e; }
+html body .outages-export-sheets i.is-roles-access { background: #9a86d6; }
 
 html body .outages-export-footer {
   display: flex;
@@ -3397,7 +3399,8 @@ html body .outages-export-status.is-error {
   color: #ff8a8f;
 }
 
-html body #outagesExportButton.is-loading {
+html body #outagesExportButton.is-loading,
+html body #rolesExportButton.is-loading {
   opacity: .7;
   cursor: progress;
 }
@@ -3407,7 +3410,8 @@ html body #outagesExportButton.is-loading {
     display: grid;
   }
 
-  html body #outagesExportButton {
+  html body #outagesExportButton,
+  html body #rolesExportButton {
     width: 100%;
     justify-content: center;
   }

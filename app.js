@@ -21,6 +21,7 @@ const API_ADMIN_DISPATCHER_CONFIG = "/api/admin/dispatcher-config";
 const API_ADMIN_OUTAGE_CONFIG = "/api/admin/outage-config";
 const API_EXCEL_EXPORTS = "/api/excel-exports";
 const API_ADMIN_OUTAGES_EXPORT = "/api/admin/outages-export";
+const API_ADMIN_ROLES_EXPORT = "/api/admin/roles-export";
 const API_REQUESTS_DETAILS = "/api/requests-details";
 const API_WORKORDERS_DETAILS = "/api/workorders-details";
 const API_WORKORDERS_HISTORY = "/api/workorders-history";
@@ -2489,6 +2490,76 @@ async function downloadOutagesWorkbook() {
 }
 
 outagesExportButton?.addEventListener("click", downloadOutagesWorkbook);
+
+/* Центр управления · Excel «Роли по подразделениям» */
+const rolesExportButton = document.getElementById("rolesExportButton");
+const rolesExportStatus = document.getElementById("rolesExportStatus");
+
+async function downloadRolesWorkbook() {
+  if (!rolesExportButton || rolesExportButton.disabled) return;
+
+  const label = rolesExportButton.querySelector("span");
+  const oldText = label?.textContent || "Скачать Excel";
+  rolesExportButton.disabled = true;
+  rolesExportButton.classList.add("is-loading");
+  if (label) label.textContent = "Формирование…";
+  if (rolesExportStatus) {
+    rolesExportStatus.classList.remove("is-error");
+    rolesExportStatus.textContent = "Собираем роли по всем подразделениям…";
+  }
+
+  try {
+    const response = await fetch(API_ADMIN_ROLES_EXPORT, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "include",
+      headers: getSessionHeaders()
+    });
+
+    if (response.status === 401) {
+      setAppSessionToken("");
+      showLoginScreen();
+      return;
+    }
+
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new Error(payload?.error || "Не удалось сформировать Excel");
+    }
+
+    const blob = await response.blob();
+    const disposition = response.headers.get("content-disposition") || "";
+    const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1] || "";
+    const fileName = encoded ? decodeURIComponent(encoded) : "Роли_по_подразделениям.xlsx";
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+    const groups = response.headers.get("x-roles-groups");
+    const units = response.headers.get("x-roles-units");
+    if (rolesExportStatus) {
+      rolesExportStatus.textContent = groups !== null && units !== null
+        ? `Готово: подразделений — ${groups}, РЭС/районов — ${units}. ${formatDateTime(new Date().toISOString())}`
+        : "Файл сформирован.";
+    }
+  } catch (error) {
+    if (rolesExportStatus) {
+      rolesExportStatus.classList.add("is-error");
+      rolesExportStatus.textContent = error instanceof Error ? error.message : "Не удалось сформировать Excel";
+    }
+  } finally {
+    rolesExportButton.disabled = false;
+    rolesExportButton.classList.remove("is-loading");
+    if (label) label.textContent = oldText;
+  }
+}
+
+rolesExportButton?.addEventListener("click", downloadRolesWorkbook);
 
 
 /* =========================================================
@@ -6497,6 +6568,11 @@ function renderAdminDashboard(
   if (excelExportManagementPanel) {
     excelExportManagementPanel.hidden =
       !Boolean(payload.canManageRoles);
+  }
+
+  const rolesExportPanel = document.getElementById("rolesExportPanel");
+  if (rolesExportPanel) {
+    rolesExportPanel.hidden = !Boolean(payload.canManageRoles);
   }
 
   const branchChatsManagementPanel = document.getElementById("branchChatsManagementPanel");

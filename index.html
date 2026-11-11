@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261110-storage2" />
-  <link rel="stylesheet" href="pro.css?v=20261110-storage2" />
+  <link rel="stylesheet" href="style.css?v=20261111-roles1" />
+  <link rel="stylesheet" href="pro.css?v=20261111-roles1" />
 </head>
 
 <body class="auth-pending">
@@ -1845,6 +1845,41 @@
         </div>
       </article>
 
+      <article id="rolesExportPanel" class="admin-panel outages-export-panel roles-export-panel" hidden>
+        <div class="admin-panel-heading">
+          <div>
+            <span class="micro-label">ВЫГРУЗКА НАСТРОЕК · EXCEL</span>
+            <h2>Роли по подразделениям</h2>
+          </div>
+        </div>
+
+        <div class="outages-export-body">
+          <p class="outages-export-copy">
+            Книга Excel со всеми подразделениями и их РЭС/районами: какие роли СК-11 назначены для заявок,
+            журналы НДР, подразделения и роли для отключений, главная и подчинённые роли, а также отметка,
+            что раздел изменён вручную. Отдельно — плоский список «одна строка — одна роль» с фильтрами
+            и роли доступа Mini App.
+          </p>
+
+          <ul class="outages-export-sheets" aria-label="Листы книги">
+            <li><i class="is-summary"></i>Сводка</li>
+            <li><i class="is-planned"></i>Роли по РЭС</li>
+            <li><i class="is-roles-list"></i>Список ролей</li>
+            <li><i class="is-roles-access"></i>Роли доступа</li>
+          </ul>
+
+          <div class="outages-export-footer">
+            <span id="rolesExportStatus" class="outages-export-status">Файл формируется по текущим настройкам в момент скачивания.</span>
+            <button id="rolesExportButton" class="primary-action admin-save-button" type="button">
+              <span>Скачать Excel</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </article>
+
       <article
         id="accessManagementPanel"
         class="admin-panel access-management-panel"
@@ -2358,6 +2393,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261110-storage2"></script>
+  <script src="demo.js?v=20261111-roles1"></script>
+  <script src="app.js?v=20261111-roles1"></script>
 </body>
 </html>
