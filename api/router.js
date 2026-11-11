@@ -22,6 +22,7 @@ import adminDispatcherConfig from "../handlers/admin/dispatcher-config.js";
 import adminOutageConfig from "../handlers/admin/outage-config.js";
 import adminExcelExportConfig from "../handlers/admin/excel-export-config.js";
 import adminOutagesExport from "../handlers/admin/outages-export.js";
+import adminRolesExport from "../handlers/admin/roles-export.js";
 import adminBranchChats from "../handlers/admin/branch-chats.js";
 import adminLenenergoSite from "../handlers/admin/lenenergo-site.js";
 
@@ -49,6 +50,7 @@ const ROUTES = new Map([
   ["admin/outage-config", adminOutageConfig],
   ["admin/excel-export-config", adminExcelExportConfig],
   ["admin/outages-export", adminOutagesExport],
+  ["admin/roles-export", adminRolesExport],
   ["admin/branch-chats", adminBranchChats],
   ["admin/lenenergo-site", adminLenenergoSite]
 ]);

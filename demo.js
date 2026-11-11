@@ -592,6 +592,7 @@
         if (params.get("options") === "1") return [200, { regions: [{ id: "4", name: "Санкт-Петербург" }, { id: "5", name: "Ленинградская область" }], res: [{ id: "71", name: "Выборгский РЭС" }, { id: "72", name: "Приозерский РЭС" }, { id: "73", name: "Рощинский РЭС" }] }];
         return [200, { ...LENENERGO_DEMO, checkedAt: new Date().toISOString(), query: { reg: params.get("reg"), res: params.get("res"), street: params.get("street"), district: params.get("district") }, steps: [{ url: "https://rosseti-lenenergo.ru/clients/planned_work/ (демо)", status: 200, ms: 640, server: "демо", rows: 3, note: "" }] }];
       case "admin/outages-export": return [400, { error: "В демонстрационной версии выгрузка файла недоступна" }];
+      case "admin/roles-export": return [400, { error: "В демонстрационной версии выгрузка файла недоступна" }];
       default:
         return method === "GET"
           ? [503, { error: "Этот раздел в демонстрационной версии не настроен" }]
