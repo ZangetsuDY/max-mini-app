@@ -3689,39 +3689,178 @@ function woFormatTs(ts) {
   });
 }
 
-function renderWoSnapshotSelect() {
-  const select = woEl("woSnapshotSelect");
-  if (!select) return;
-  const list = workordersState.snapshots || [];
+const WO_MONTHS = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+const WO_SNAP_WEEKDAYS = ["вс", "пн", "вт", "ср", "чт", "пт", "сб"];
+const woSnapUi = { open: false, months: new Set(), days: new Set(), allHours: new Set(), initialized: false };
 
-  // Группируем по дате сводки.
-  const groups = new Map();
+// «ДД.ММ.ГГГГ ЧЧ:ММ» сводки → части даты (МСК).
+function woSnapParts(item) {
+  const text = String(item.generatedAt || woFormatTs(item.ts));
+  const match = text.match(/(\d{2})\.(\d{2})\.(\d{4})\D+(\d{1,2}):(\d{2})/);
+  if (!match) return null;
+  const [, dd, mm, yyyy, hh, mi] = match;
+  return {
+    day: `${dd}.${mm}.${yyyy}`,
+    month: `${yyyy}-${mm}`,
+    monthLabel: `${WO_MONTHS[Number(mm) - 1] || mm} ${yyyy}`,
+    weekday: WO_SNAP_WEEKDAYS[new Date(Date.UTC(Number(yyyy), Number(mm) - 1, Number(dd))).getUTCDay()],
+    time: `${hh.padStart(2, "0")}:${mi}`,
+    minutes: Number(hh) * 60 + Number(mi)
+  };
+}
+
+// Месяцы → дни → сводки, от новых к старым.
+function woSnapTree() {
+  const list = [...(workordersState.snapshots || [])].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  const months = [];
+  const monthMap = new Map();
   for (const item of list) {
-    const label = String(item.generatedAt || woFormatTs(item.ts)).split(/\s+/)[0] || "—";
-    if (!groups.has(label)) groups.set(label, []);
-    groups.get(label).push(item);
+    const parts = woSnapParts(item);
+    if (!parts) continue;
+    let month = monthMap.get(parts.month);
+    if (!month) {
+      month = { key: parts.month, label: parts.monthLabel, days: [], dayMap: new Map() };
+      monthMap.set(parts.month, month);
+      months.push(month);
+    }
+    let day = month.dayMap.get(parts.day);
+    if (!day) {
+      day = { key: parts.day, weekday: parts.weekday, items: [] };
+      month.dayMap.set(parts.day, day);
+      month.days.push(day);
+    }
+    day.items.push({ ...item, parts });
+  }
+  // Главные сводки дня: последняя до 08:00 (итог ночной смены)
+  // и последняя до 20:00 (итог дневной смены).
+  for (const month of months) {
+    for (const day of month.days) {
+      const night = day.items.find((item) => item.parts.minutes < 8 * 60);
+      const dayShift = day.items.find((item) => item.parts.minutes >= 8 * 60 && item.parts.minutes < 20 * 60);
+      day.keys = [
+        dayShift && { item: dayShift, tag: "до 20:00" },
+        night && { item: night, tag: "до 08:00" }
+      ].filter(Boolean);
+    }
+  }
+  return months;
+}
+
+function woSnapLabel(item) {
+  const percent = item.total ? Math.round((item.started / item.total) * 1000) / 10 : 0;
+  const shift = item.shift ? ` · ${String(item.shift).toLowerCase()}` : "";
+  return `${shift} · ${item.total} НДР · начаты ${percent}%`;
+}
+
+function woSnapOption(item, tag = "") {
+  const active = item.id === workordersState.snapshotId;
+  return `
+    <button type="button" class="wo-snap-item${active ? " is-active" : ""}" data-wo-snap="${escapeHtml(item.id)}">
+      <b>${escapeHtml(item.parts.time)}</b>
+      <span>${escapeHtml(woSnapLabel(item).replace(/^ · /, ""))}</span>
+      ${tag ? `<i>${escapeHtml(tag)}</i>` : ""}
+    </button>`;
+}
+
+function renderWoSnapshotMenu() {
+  const menu = woEl("woSnapshotMenu");
+  if (!menu) return;
+  const months = woSnapTree();
+  const chevron = (open) => `<svg class="wo-snap-chevron${open ? " is-open" : ""}" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>`;
+
+  menu.innerHTML = `
+    <button type="button" class="wo-snap-item wo-snap-live${workordersState.snapshotId ? "" : " is-active"}" data-wo-snap="">
+      <b>Текущая</b><span>онлайн-сводка</span>
+    </button>
+    ${months.length ? "" : `<div class="wo-snap-empty">Архивных сводок пока нет</div>`}
+    ${months.map((month) => {
+      const monthOpen = woSnapUi.months.has(month.key);
+      return `
+        <div class="wo-snap-month">
+          <button type="button" class="wo-snap-toggle is-month" data-wo-month="${escapeHtml(month.key)}" aria-expanded="${monthOpen}">
+            ${chevron(monthOpen)}<b>${escapeHtml(month.label)}</b><small>${month.days.length} дн.</small>
+          </button>
+          ${monthOpen ? month.days.map((day) => {
+            const dayOpen = woSnapUi.days.has(day.key);
+            const allOpen = woSnapUi.allHours.has(day.key);
+            const keyIds = new Set(day.keys.map((entry) => entry.item.id));
+            const others = day.items.filter((item) => !keyIds.has(item.id));
+            return `
+              <div class="wo-snap-day">
+                <button type="button" class="wo-snap-toggle is-day" data-wo-day="${escapeHtml(day.key)}" aria-expanded="${dayOpen}">
+                  ${chevron(dayOpen)}<b>${escapeHtml(day.key)}</b><small>${escapeHtml(day.weekday)} · ${day.items.length} сводок</small>
+                </button>
+                ${dayOpen ? `
+                  <div class="wo-snap-items">
+                    ${day.keys.map((entry) => woSnapOption(entry.item, entry.tag)).join("")}
+                    <div class="wo-snap-reports">
+                      <button type="button" data-wo-report-day="${escapeHtml(day.key)}" data-wo-report-shift="day">Отчёт: дневная 08–20</button>
+                      <button type="button" data-wo-report-day="${escapeHtml(day.key)}" data-wo-report-shift="night">Отчёт: ночная 20–08</button>
+                    </div>
+                    ${others.length ? `
+                      <button type="button" class="wo-snap-more" data-wo-all="${escapeHtml(day.key)}">
+                        ${allOpen ? "Скрыть остальные часы" : `Все часы (ещё ${others.length})`}
+                      </button>
+                      ${allOpen ? `<div class="wo-snap-all">${others.map((item) => woSnapOption(item)).join("")}</div>` : ""}
+                    ` : ""}
+                  </div>` : ""}
+              </div>`;
+          }).join("") : ""}
+        </div>`;
+    }).join("")}
+  `;
+}
+
+function renderWoSnapshotSelect() {
+  const button = woEl("woSnapshotButton");
+  const label = woEl("woSnapshotButtonLabel");
+  const list = workordersState.snapshots || [];
+  const selected = list.find((item) => item.id === workordersState.snapshotId);
+
+  // По умолчанию раскрыт последний месяц; день выбранной сводки
+  // раскрывается вместе с часами, если это не главная сводка дня.
+  const months = woSnapTree();
+  if (!woSnapUi.initialized && months.length) {
+    woSnapUi.months.add(months[0].key);
+    if (months[0].days[0]) woSnapUi.days.add(months[0].days[0].key);
+    woSnapUi.initialized = true;
+  }
+  if (selected) {
+    const parts = woSnapParts(selected);
+    if (parts) {
+      woSnapUi.months.add(parts.month);
+      woSnapUi.days.add(parts.day);
+      const day = months.find((month) => month.key === parts.month)?.dayMap.get(parts.day);
+      if (day && !day.keys.some((entry) => entry.item.id === selected.id)) woSnapUi.allHours.add(parts.day);
+    }
   }
 
-  select.innerHTML = `
-    <option value="">Текущая (онлайн)</option>
-    ${[...groups.entries()].map(([date, items]) => `
-      <optgroup label="${escapeHtml(date)}">
-        ${items.map((item) => {
-          const time = String(item.generatedAt || woFormatTs(item.ts)).split(/\s+/)[1] || "";
-          const percent = item.total ? Math.round((item.started / item.total) * 1000) / 10 : 0;
-          const shift = item.shift ? ` · ${String(item.shift).toLowerCase()}` : "";
-          return `<option value="${escapeHtml(item.id)}">${escapeHtml(time)}${escapeHtml(shift)} · ${item.total} НДР · начаты ${percent}%</option>`;
-        }).join("")}
-      </optgroup>
-    `).join("")}
-  `;
-  select.value = workordersState.snapshotId || "";
-  select.disabled = !list.length;
-  document.querySelectorAll("[data-wo-jump]").forEach((button) => {
-    const days = Number(button.dataset.woJump);
-    button.disabled = days > 0 && !list.length;
-    button.classList.toggle("is-active", days === 0 ? !workordersState.snapshotId : false);
+  if (label) {
+    label.textContent = selected
+      ? `${String(selected.generatedAt || woFormatTs(selected.ts))}${woSnapLabel(selected)}`
+      : "Текущая (онлайн)";
+  }
+  if (button) button.disabled = !list.length;
+  if (!list.length) setWoSnapshotMenuOpen(false);
+  if (woSnapUi.open) renderWoSnapshotMenu();
+
+  document.querySelectorAll("[data-wo-jump]").forEach((jump) => {
+    const days = Number(jump.dataset.woJump);
+    jump.disabled = days > 0 && !list.length;
+    jump.classList.toggle("is-active", days === 0 ? !workordersState.snapshotId : false);
   });
+}
+
+function setWoSnapshotMenuOpen(open) {
+  const menu = woEl("woSnapshotMenu");
+  const button = woEl("woSnapshotButton");
+  woSnapUi.open = Boolean(open);
+  if (menu) menu.hidden = !woSnapUi.open;
+  if (button) button.setAttribute("aria-expanded", String(woSnapUi.open));
+  if (woSnapUi.open) {
+    renderWoSnapshotMenu();
+    menu?.querySelector(".wo-snap-item.is-active")?.scrollIntoView({ block: "nearest" });
+  }
 }
 
 async function loadWoSnapshots() {
@@ -3769,8 +3908,36 @@ function woSnapshotDaysAgo(days) {
   return best?.id || "";
 }
 
-woEl("woSnapshotSelect")?.addEventListener("change", (event) => {
-  selectWoSnapshot(event.target.value);
+woEl("woSnapshotButton")?.addEventListener("click", () => setWoSnapshotMenuOpen(!woSnapUi.open));
+
+woEl("woSnapshotMenu")?.addEventListener("click", (event) => {
+  const target = event.target.closest("button");
+  if (!target) return;
+  const toggle = (set, key) => (set.has(key) ? set.delete(key) : set.add(key));
+  if (target.dataset.woMonth !== undefined) toggle(woSnapUi.months, target.dataset.woMonth);
+  else if (target.dataset.woDay !== undefined) toggle(woSnapUi.days, target.dataset.woDay);
+  else if (target.dataset.woAll !== undefined) toggle(woSnapUi.allHours, target.dataset.woAll);
+  else if (target.dataset.woReportDay) {
+    setWoSnapshotMenuOpen(false);
+    showWoShiftReport(target.dataset.woReportDay, target.dataset.woReportShift);
+    return;
+  }
+  else if (target.dataset.woSnap !== undefined) {
+    setWoSnapshotMenuOpen(false);
+    selectWoSnapshot(target.dataset.woSnap);
+    return;
+  }
+  renderWoSnapshotMenu();
+});
+
+document.addEventListener("click", (event) => {
+  // composedPath: нажатая кнопка меню к этому моменту уже перерисована.
+  const picker = woEl("woSnapshotPicker");
+  if (woSnapUi.open && picker && !event.composedPath().includes(picker)) setWoSnapshotMenuOpen(false);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && woSnapUi.open) setWoSnapshotMenuOpen(false);
 });
 
 document.querySelectorAll("[data-wo-jump]").forEach((button) => {
@@ -3781,6 +3948,228 @@ document.querySelectorAll("[data-wo-jump]").forEach((button) => {
 });
 
 woEl("woArchiveBackButton")?.addEventListener("click", () => selectWoSnapshot(""));
+
+/* ---------- отчёт за смену ---------- */
+const woShiftState = { day: "", shift: "day", token: 0 };
+
+function woMskNow() {
+  const date = new Date(Date.now() + 3 * 60 * 60 * 1000);
+  return { y: date.getUTCFullYear(), m: date.getUTCMonth(), d: date.getUTCDate(), h: date.getUTCHours() };
+}
+
+function woDayKey(y, m, d) {
+  const date = new Date(Date.UTC(y, m, d));
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${pad(date.getUTCDate())}.${pad(date.getUTCMonth() + 1)}.${date.getUTCFullYear()}`;
+}
+
+function woShiftShift(day, shift, step) {
+  const [dd, mm, yyyy] = day.split(".").map(Number);
+  let index = Date.UTC(yyyy, mm - 1, dd) / 86400000 * 2 + (shift === "night" ? 1 : 0) + step;
+  const dayIndex = Math.floor(index / 2);
+  const date = new Date(dayIndex * 86400000);
+  return { day: woDayKey(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()), shift: index % 2 ? "night" : "day" };
+}
+
+// Текущая (начавшаяся) смена.
+function woCurrentShift() {
+  const now = woMskNow();
+  if (now.h >= 20) return { day: woDayKey(now.y, now.m, now.d), shift: "night" };
+  if (now.h >= 8) return { day: woDayKey(now.y, now.m, now.d), shift: "day" };
+  return { day: woDayKey(now.y, now.m, now.d - 1), shift: "night" };
+}
+
+function openWoShiftModal() {
+  const modal = woEl("woShiftModal");
+  modal?.classList.add("is-open");
+  modal?.setAttribute("aria-hidden", "false");
+}
+
+function closeWoShiftModal() {
+  const modal = woEl("woShiftModal");
+  modal?.classList.remove("is-open");
+  modal?.setAttribute("aria-hidden", "true");
+}
+
+function woShiftOrderRow(item, extra = "") {
+  const attrs = item.uid ? ` data-wo-history="${escapeHtml(item.uid)}" role="button" tabindex="0" title="История наряда"` : "";
+  return `
+    <li class="wo-shift-order"${attrs}>
+      <div class="wo-shift-order-head">
+        <b>${item.number ? `№${escapeHtml(item.number)}` : "Без номера"}</b>
+        <span>${escapeHtml(item.journal || "")}</span>
+      </div>
+      <div class="wo-shift-order-object">${escapeHtml(item.object || item.works || "—")}</div>
+      ${extra}
+    </li>`;
+}
+
+function woShiftList(title, items, total, render, open = false) {
+  if (!total) return "";
+  return `
+    <details class="wo-shift-section"${open ? " open" : ""}>
+      <summary><b>${escapeHtml(title)}</b><span>${total}</span></summary>
+      <ul class="wo-shift-orders">${items.map(render).join("")}</ul>
+      ${total > items.length ? `<p class="wo-shift-note">Показаны первые ${items.length} из ${total}.</p>` : ""}
+    </details>`;
+}
+
+function renderWoShiftReport(report) {
+  const shiftName = report.shift === "night" ? "Ночная смена" : "Дневная смена";
+  woEl("woShiftTitle").textContent = `${shiftName} · ${report.day}`;
+  document.querySelectorAll("[data-wo-shift-pick]").forEach((button) => {
+    button.classList.toggle("is-active", button.dataset.woShiftPick === report.shift);
+  });
+  const nextShift = woShiftShift(report.day, report.shift, 1);
+  const current = woCurrentShift();
+  const isFuture = (shift) => {
+    const key = (item) => item.day.split(".").reverse().join("") + (item.shift === "night" ? "1" : "0");
+    return key(shift) > key(current);
+  };
+  const nextButton = document.querySelector('[data-wo-shift-step="1"]');
+  if (nextButton) nextButton.disabled = isFuture(nextShift);
+
+  woEl("woShiftSubtitle").innerHTML = `
+    ${escapeHtml(report.periodLabel || "")} МСК · ${escapeHtml(report.scopeLabel || "")}
+    <span class="wo-history-meta">
+      ${report.complete ? "смена завершена" : "смена идёт — данные на последнюю сводку"} ·
+      сводок: <b>${report.snapshots || 0}</b>
+      ${report.baseline ? ` · начало: ${escapeHtml(report.baseline.generatedAt || "")}${report.baseline.beforeShift ? "" : " (первая сводка смены)"}` : ""}
+      ${report.final ? ` · конец: ${escapeHtml(report.final.generatedAt || "")}` : ""}
+    </span>`;
+
+  if (report.empty) {
+    woEl("woShiftBody").innerHTML = '<div class="requests-empty">За эту смену в архиве нет сводок НДР.</div>';
+    return;
+  }
+
+  const delta = report.end.total - report.start.total;
+  const kpis = [
+    ["На начало смены", report.start.total, ""],
+    ["На конец смены", report.end.total, delta ? `${delta > 0 ? "+" : ""}${delta}` : "без изменений"],
+    ["Появились", report.appearedCount, "новые в сводке"],
+    ["Ушли из сводки", report.goneCount, "закрыты / убраны"],
+    ["Сменили статус", report.changedCount, "нарядов"],
+    ["Начаты за смену", report.startedDuringShift, "перешли в «Работы начаты»"]
+  ];
+
+  const groups = [
+    ["notChecked", "Не проверен"],
+    ["checked", "Проверен, не начат"],
+    ["started", "Работы начаты"],
+    ["notAdmitted", "Допуск не производился"],
+    ["other", "Прочие"]
+  ];
+  const maxTransition = Math.max(1, ...report.transitions.map((item) => item.count));
+
+  woEl("woShiftBody").innerHTML = `
+    <div class="wo-shift-kpis">
+      ${kpis.map(([label, value, note]) => `
+        <div class="wo-shift-kpi"><span>${escapeHtml(label)}</span><b>${value}</b><small>${escapeHtml(note)}</small></div>
+      `).join("")}
+    </div>
+
+    <h3 class="wo-shift-h">Группы: начало → конец смены</h3>
+    <table class="wo-shift-table">
+      <thead><tr><th>Группа</th><th>Начало</th><th>Конец</th><th>Изм.</th></tr></thead>
+      <tbody>
+        ${groups.map(([key, label]) => {
+          const from = report.start.groups[key] || 0;
+          const to = report.end.groups[key] || 0;
+          const diff = to - from;
+          return `<tr><td>${escapeHtml(label)}</td><td>${from}</td><td>${to}</td><td class="${diff > 0 ? "is-up" : diff < 0 ? "is-down" : ""}">${diff > 0 ? "+" : ""}${diff || "—"}</td></tr>`;
+        }).join("")}
+        <tr class="is-total"><td>Всего</td><td>${report.start.total}</td><td>${report.end.total}</td><td>${delta > 0 ? "+" : ""}${delta || "—"}</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="wo-shift-h">Переходы статусов за смену</h3>
+    ${report.transitions.length ? `
+      <ul class="wo-shift-transitions">
+        ${report.transitions.map((item) => `
+          <li>
+            <span class="wo-shift-tr-label">${escapeHtml(item.from)} <i>→</i> ${escapeHtml(item.to)}</span>
+            <span class="wo-shift-tr-bar"><em style="width:${Math.max(4, Math.round(item.count / maxTransition * 100))}%"></em></span>
+            <b>${item.count}</b>
+          </li>`).join("")}
+      </ul>` : '<p class="wo-shift-note">За смену статусы не менялись.</p>'}
+
+    ${woShiftList("Сменили статус", report.changed, report.changedCount, (item) => woShiftOrderRow(item, `
+      <div class="wo-shift-path">${item.path.map((step, index) => `${index ? "<i>→</i>" : ""}<span>${escapeHtml(step.status)}${step.at ? ` <small>${escapeHtml(String(step.at).split(" ")[1] || step.at)}</small>` : ""}</span>`).join("")}</div>
+    `), true)}
+    ${woShiftList("Появились за смену", report.appeared, report.appearedCount, (item) => woShiftOrderRow(item, `
+      <div class="wo-shift-path"><span>${escapeHtml(item.status || "—")} <small>${escapeHtml(String(item.at || "").split(" ")[1] || "")}</small></span></div>
+    `))}
+    ${woShiftList("Ушли из сводки", report.gone, report.goneCount, (item) => woShiftOrderRow(item, `
+      <div class="wo-shift-path"><span>последний статус: ${escapeHtml(item.status || "—")}</span><span><small>нет с ${escapeHtml(String(item.at || "").split(" ")[1] || "")}</small></span></div>
+    `))}
+  `;
+}
+
+async function showWoShiftReport(day, shift) {
+  woShiftState.day = day;
+  woShiftState.shift = shift === "night" ? "night" : "day";
+  const token = ++woShiftState.token;
+  woEl("woShiftTitle").textContent = `${woShiftState.shift === "night" ? "Ночная смена" : "Дневная смена"} · ${day}`;
+  woEl("woShiftSubtitle").textContent = "";
+  woEl("woShiftBody").innerHTML = '<div class="requests-empty">Считаем смену по архиву сводок…</div>';
+  openWoShiftModal();
+
+  try {
+    const params = woScopeParams();
+    params.set("report", "shift");
+    params.set("day", day);
+    params.set("shift", woShiftState.shift);
+    const response = await fetch(`${API_WORKORDERS_HISTORY}?${params.toString()}`, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "include",
+      headers: getSessionHeaders()
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+    if (token === woShiftState.token) renderWoShiftReport(payload);
+  } catch (error) {
+    if (token === woShiftState.token) {
+      woEl("woShiftBody").innerHTML = `<div class="requests-empty">${escapeHtml(error instanceof Error ? error.message : "Не удалось построить отчёт")}</div>`;
+    }
+  }
+}
+
+woEl("woShiftReportButton")?.addEventListener("click", () => {
+  const current = woCurrentShift();
+  showWoShiftReport(current.day, current.shift);
+});
+
+document.querySelectorAll("[data-wo-shift-step]").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (!woShiftState.day) return;
+    const next = woShiftShift(woShiftState.day, woShiftState.shift, Number(button.dataset.woShiftStep));
+    showWoShiftReport(next.day, next.shift);
+  });
+});
+
+document.querySelectorAll("[data-wo-shift-pick]").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (woShiftState.day) showWoShiftReport(woShiftState.day, button.dataset.woShiftPick);
+  });
+});
+
+woEl("woShiftBody")?.addEventListener("click", (event) => {
+  const row = event.target.closest("[data-wo-history]");
+  if (row) showWoHistory(row.dataset.woHistory);
+});
+
+woEl("woShiftClose")?.addEventListener("click", closeWoShiftModal);
+woEl("woShiftModal")?.addEventListener("click", (event) => {
+  if (event.target === woEl("woShiftModal")) closeWoShiftModal();
+});
+// В фазе перехвата: если сверху открыта история наряда, Escape закроет только её.
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (woEl("woHistoryModal")?.classList.contains("is-open")) return;
+  if (woEl("woShiftModal")?.classList.contains("is-open")) closeWoShiftModal();
+}, true);
 
 /* ---------- архив НДР: жизнь наряда ---------- */
 const WO_HISTORY_FIELDS = [
@@ -12208,6 +12597,11 @@ function handleAppBackAction() {
 
   if (document.getElementById("woHistoryModal")?.classList.contains("is-open")) {
     closeWoHistoryModal();
+    return;
+  }
+
+  if (document.getElementById("woShiftModal")?.classList.contains("is-open")) {
+    closeWoShiftModal();
     return;
   }
 
