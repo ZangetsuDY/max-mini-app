@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261111-roles1" />
-  <link rel="stylesheet" href="pro.css?v=20261111-roles1" />
+  <link rel="stylesheet" href="style.css?v=20261112-shift1" />
+  <link rel="stylesheet" href="pro.css?v=20261112-shift1" />
 </head>
 
 <body class="auth-pending">
@@ -926,16 +926,19 @@
               </label>
             </div>
             <div class="wo-archive-bar">
-              <label class="wo-archive-select">
+              <div class="wo-archive-select wo-snap-picker" id="woSnapshotPicker">
                 <span>Сводка</span>
-                <select id="woSnapshotSelect">
-                  <option value="">Текущая (онлайн)</option>
-                </select>
-              </label>
+                <button id="woSnapshotButton" class="wo-snap-button" type="button" aria-haspopup="true" aria-expanded="false">
+                  <b id="woSnapshotButtonLabel">Текущая (онлайн)</b>
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+                </button>
+                <div id="woSnapshotMenu" class="wo-snap-menu" hidden></div>
+              </div>
               <div class="wo-archive-quick">
                 <button type="button" data-wo-jump="0">Текущая</button>
                 <button type="button" data-wo-jump="1">Сутки назад</button>
                 <button type="button" data-wo-jump="7">Неделю назад</button>
+                <button type="button" id="woShiftReportButton" class="wo-shift-report-open">Отчёт за смену</button>
               </div>
             </div>
           </div>
@@ -2355,6 +2358,25 @@
     <small class="grid-loader-caption">Все права защищены</small>
   </div>
 
+  <!-- WORKORDER SHIFT REPORT -->
+  <div id="woShiftModal" class="modal-backdrop wo-history-backdrop" aria-hidden="true">
+    <div class="modal-card wo-history-card wo-shift-card" role="dialog" aria-modal="true" aria-labelledby="woShiftTitle">
+      <button id="woShiftClose" class="icon-button modal-close" type="button" aria-label="Закрыть">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+      </button>
+      <span class="micro-label">НДР · ОТЧЁТ ЗА СМЕНУ</span>
+      <h2 id="woShiftTitle">Отчёт за смену</h2>
+      <div class="wo-shift-nav">
+        <button type="button" data-wo-shift-step="-1">‹ Предыдущая</button>
+        <button type="button" data-wo-shift-pick="day">Дневная 08–20</button>
+        <button type="button" data-wo-shift-pick="night">Ночная 20–08</button>
+        <button type="button" data-wo-shift-step="1">Следующая ›</button>
+      </div>
+      <p id="woShiftSubtitle" class="wo-history-subtitle"></p>
+      <div id="woShiftBody" class="wo-history-body"></div>
+    </div>
+  </div>
+
   <!-- WORKORDER HISTORY -->
   <div id="woHistoryModal" class="modal-backdrop wo-history-backdrop" aria-hidden="true">
     <div class="modal-card wo-history-card" role="dialog" aria-modal="true" aria-labelledby="woHistoryTitle">
@@ -2393,7 +2415,7 @@
     </div>
   </div>
 
-  <script src="demo.js?v=20261111-roles1"></script>
-  <script src="app.js?v=20261111-roles1"></script>
+  <script src="demo.js?v=20261112-shift1"></script>
+  <script src="app.js?v=20261112-shift1"></script>
 </body>
 </html>

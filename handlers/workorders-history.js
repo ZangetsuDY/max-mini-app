@@ -14,13 +14,15 @@ import {
 import {
   listWorkorderSnapshots,
   getWorkorderHistory,
+  getWorkorderShiftReport,
   archiveInfo
 } from "../lib/workorders-archive.js";
 
 /*
   Архив НДР:
     ?list=1      — сохранённые сводки за 32 дня (для выбора в дашборде);
-    ?uid=<UID>   — жизнь наряда: все версии и что менялось.
+    ?uid=<UID>   — жизнь наряда: все версии и что менялось;
+    ?report=shift&day=ДД.ММ.ГГГГ&shift=day|night — отчёт за смену.
   Область доступа — та же, что у дашборда НДР (scope / group / unit).
 */
 export default {
@@ -34,6 +36,19 @@ export default {
     const url = new URL(request.url);
 
     try {
+      if (url.searchParams.get("report") === "shift") {
+        const allowed = new Set(scope.sources.map(normalizeWorkorderLabel));
+        const report = await getWorkorderShiftReport({
+          day: String(url.searchParams.get("day") || "").trim(),
+          shift: url.searchParams.get("shift") === "night" ? "night" : "day",
+          include: scope.isWholeNetwork
+            ? () => true
+            : (order) => allowed.has(normalizeWorkorderLabel(order.journal)),
+          scopeKey: scope.isWholeNetwork ? "all" : [...allowed].sort().join("|")
+        });
+        return jsonResponse({ ...report, scopeLabel: scope.scopeLabel, archive: archiveInfo() });
+      }
+
       const uid = String(url.searchParams.get("uid") || "").trim();
       if (uid) {
         const history = await getWorkorderHistory(uid);

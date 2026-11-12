@@ -408,6 +408,31 @@
     };
   }
 
+  function demoShiftReport(day, shift) {
+    const night = shift === "night";
+    const orders = units.flatMap(ordersFor).slice(0, 60);
+    const brief = (order) => ({ uid: order.uid, number: order.number, journal: order.journal, object: order.object, works: order.works, status: order.status, group: order.group, groupLabel: order.groupLabel });
+    const time = (h, m) => `${day} ${pad(h)}:${pad(m)}`;
+    const changed = orders.slice(0, 14).map((order, index) => ({
+      ...brief(order),
+      path: [{ status: "Создан", at: "" }, { status: "Проверен", at: time(night ? 21 : 9, index * 3) }, ...(index % 2 ? [{ status: "Допуск", at: time(night ? 23 : 12, index * 2) }] : [])]
+    }));
+    return {
+      day, shift: night ? "night" : "day", shiftLabel: night ? "Ночная смена" : "Дневная смена",
+      periodLabel: night ? `${day} 20:00 — следующие сутки 08:00` : `${day} 08:00 — ${day} 20:00`,
+      complete: true, snapshots: 25, empty: false, scopeLabel: "Демо",
+      baseline: { id: "demo-a", generatedAt: time(night ? 19 : 7, 41), beforeShift: true },
+      final: { id: "demo-b", generatedAt: time(night ? 7 : 19, 41) },
+      start: { total: 412, groups: { notChecked: 120, checked: 190, started: 70, notAdmitted: 20, other: 12 } },
+      end: { total: 426, groups: { notChecked: 98, checked: 196, started: 99, notAdmitted: 21, other: 12 } },
+      appearedCount: 22, goneCount: 8, changedCount: changed.length, startedDuringShift: 29,
+      transitions: [{ from: "Создан", to: "Проверен", count: 31 }, { from: "Проверен", to: "Допуск", count: 29 }, { from: "Допуск", to: "Окончание работ", count: 11 }, { from: "Создан", to: "Отменён", count: 2 }],
+      changed,
+      appeared: orders.slice(20, 30).map((order) => ({ ...brief(order), at: time(night ? 22 : 10, 41) })),
+      gone: orders.slice(40, 45).map((order) => ({ ...brief(order), at: time(night ? 2 : 15, 39) }))
+    };
+  }
+
   function workordersHistoryPayload(params) {
     const uid = params.get("uid");
     if (uid) {
@@ -426,10 +451,20 @@
         archive: { backend: "demo", retentionDays: 32, longAdmissionMinutes: 40 }
       }];
     }
-    return [200, {
-      snapshots: [0, 1, 2].map((index) => ({ id: `demo-${index}`, ts: Date.now() - index * 3 * 3600_000, generatedAt: fmt(shiftMinutes(-index * 180)), shift: shiftName(), period: shiftPeriod(), total: 50 + index * 3, started: 12 + index })),
-      archive: { backend: "demo", retentionDays: 32, longAdmissionMinutes: 40 }
-    }];
+    if (params.get("report") === "shift") return [200, demoShiftReport(params.get("day"), params.get("shift"))];
+    // Сводки дважды в час за последние 20 суток, как в реальном архиве.
+    const snapshots = [];
+    const hour = new Date(); hour.setMinutes(0, 0, 0);
+    for (let step = 0; step < 20 * 24; step += 1) {
+      const base = new Date(hour.getTime() - step * 3600_000);
+      for (const minute of [41, 39]) {
+        const at = new Date(base.getTime() + minute * 60_000);
+        if (at.getTime() > Date.now()) continue;
+        const h = at.getHours();
+        snapshots.push({ id: `demo-${at.getTime()}`, ts: at.getTime(), generatedAt: fmt(at), shift: h >= 8 && h < 20 ? "ДНЕВНАЯ" : "НОЧНАЯ", period: "", total: 400 + ((step * 7) % 170), started: 80 + ((step * 5) % 40) });
+      }
+    }
+    return [200, { snapshots, archive: { backend: "demo", retentionDays: 32, longAdmissionMinutes: 40 } }];
   }
 
   /* ---------------- филиалы и чаты ---------------- */

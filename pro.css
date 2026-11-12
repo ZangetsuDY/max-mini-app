@@ -5848,3 +5848,459 @@ html body .lenenergo-row header span { color: var(--cyan-bright); font: 600 12px
 html body .lenenergo-row-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--muted); font-size: 12px; }
 html body .lenenergo-row details summary { cursor: pointer; color: var(--gold); font-size: 12px; }
 html body .lenenergo-row details p { margin: 6px 0 0; white-space: pre-wrap; font-size: 13px; overflow-wrap: anywhere; }
+
+/* =========================================================
+   НДР · выбор сводки (месяц → день → время) и отчёт за смену
+   ========================================================= */
+html body .wo-snap-picker {
+  position: relative;
+}
+
+html body .wo-snap-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 380px;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: transparent;
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+html body .wo-snap-button b {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+html body .wo-snap-button svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+html body .wo-snap-button:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+html body .wo-snap-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  width: min(420px, calc(100vw - 32px));
+  max-height: min(64vh, 560px);
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid rgba(214,164,70,.45);
+  border-radius: 6px;
+  background: #0b121a;
+  box-shadow: 0 18px 40px rgba(0,0,0,.55);
+}
+
+html body .wo-snap-menu[hidden] {
+  display: none;
+}
+
+html body .wo-snap-toggle,
+html body .wo-snap-item,
+html body .wo-snap-more,
+html body .wo-snap-reports button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #e6eef5;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+html body .wo-snap-toggle:hover,
+html body .wo-snap-item:hover,
+html body .wo-snap-more:hover {
+  background: rgba(255,255,255,.05);
+}
+
+html body .wo-snap-toggle small {
+  margin-left: auto;
+  color: #7f9ab0;
+  font-size: 11.5px;
+}
+
+html body .wo-snap-toggle.is-month b {
+  color: #d6a446;
+  font-size: 13.5px;
+  letter-spacing: .02em;
+}
+
+html body .wo-snap-day {
+  margin-left: 14px;
+  border-left: 1px solid rgba(255,255,255,.07);
+}
+
+html body .wo-snap-items {
+  margin: 0 0 6px 18px;
+}
+
+html body .wo-snap-chevron {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: #7f9ab0;
+  stroke-width: 2;
+  transition: transform .15s ease;
+}
+
+html body .wo-snap-chevron.is-open {
+  transform: rotate(90deg);
+}
+
+html body .wo-snap-item b {
+  min-width: 44px;
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12.5px;
+}
+
+html body .wo-snap-menu span {
+  font: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+html body .wo-snap-item span {
+  font-size: 12px;
+  flex: 1;
+  min-width: 0;
+  color: #b9cad8;
+}
+
+html body .wo-snap-item i {
+  flex: none;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: rgba(214,164,70,.15);
+  color: #e8c27a;
+  font: 700 10px var(--mono, ui-monospace, monospace);
+  font-style: normal;
+}
+
+html body .wo-snap-item.is-active {
+  background: rgba(44,100,150,.45);
+  box-shadow: inset 2px 0 0 #4f8fca;
+}
+
+html body .wo-snap-live b {
+  min-width: 0;
+  color: #6ee7b7;
+}
+
+html body .wo-snap-more {
+  min-height: 28px;
+  color: #8fb3d1;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+html body .wo-snap-all {
+  padding-left: 8px;
+  border-left: 1px dashed rgba(255,255,255,.1);
+}
+
+html body .wo-snap-reports {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin: 4px 0;
+}
+
+html body .wo-snap-reports button {
+  justify-content: center;
+  min-height: 28px;
+  border: 1px solid rgba(110,231,183,.3);
+  color: #6ee7b7;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: center;
+}
+
+html body .wo-snap-reports button:hover {
+  background: rgba(110,231,183,.08);
+}
+
+html body .wo-snap-empty {
+  padding: 10px;
+  color: #7f9ab0;
+  font-size: 12px;
+}
+
+html body .wo-archive-quick .wo-shift-report-open {
+  border-color: rgba(110,231,183,.4);
+  color: #6ee7b7;
+}
+
+/* Отчёт за смену */
+html body .wo-shift-card {
+  width: min(100%, 920px) !important;
+}
+
+html body .wo-shift-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 12px;
+}
+
+html body .wo-shift-nav button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(255,255,255,.02);
+  color: #c6d5e1;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+html body .wo-shift-nav button.is-active {
+  border-color: rgba(214,164,70,.6);
+  color: #e8c27a;
+}
+
+html body .wo-shift-nav button:disabled {
+  opacity: .4;
+  cursor: default;
+}
+
+html body .wo-shift-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+html body .wo-shift-kpi {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(255,255,255,.025);
+}
+
+html body .wo-shift-kpi span {
+  color: #7f9ab0;
+  font: 700 10px var(--mono, ui-monospace, monospace);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+html body .wo-shift-kpi b {
+  color: #fff;
+  font: 700 24px var(--mono, ui-monospace, monospace);
+}
+
+html body .wo-shift-kpi small {
+  color: #8ea6b9;
+  font-size: 11px;
+}
+
+html body .wo-shift-h {
+  margin: 18px 0 8px;
+  color: #d6a446;
+  font: 700 11px var(--mono, ui-monospace, monospace);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+html body .wo-shift-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+html body .wo-shift-table th,
+html body .wo-shift-table td {
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  text-align: right;
+}
+
+html body .wo-shift-table th:first-child,
+html body .wo-shift-table td:first-child {
+  text-align: left;
+}
+
+html body .wo-shift-table th {
+  color: #7f9ab0;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+html body .wo-shift-table td {
+  color: #e6eef5;
+  font-family: var(--mono, ui-monospace, monospace);
+}
+
+html body .wo-shift-table td:first-child {
+  font-family: inherit;
+}
+
+html body .wo-shift-table td.is-up { color: #6ee7b7; }
+html body .wo-shift-table td.is-down { color: #ff8a8f; }
+
+html body .wo-shift-table tr.is-total td {
+  border-top: 1px solid rgba(214,164,70,.5);
+  color: #e8c27a;
+  font-weight: 700;
+}
+
+html body .wo-shift-transitions {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+html body .wo-shift-transitions li {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) 1fr 44px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+  color: #dbe8f4;
+}
+
+html body .wo-shift-transitions i {
+  color: #d6a446;
+  font-style: normal;
+}
+
+html body .wo-shift-tr-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255,255,255,.05);
+  overflow: hidden;
+}
+
+html body .wo-shift-tr-bar em {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #2c6496, #4f8fca);
+}
+
+html body .wo-shift-transitions b {
+  text-align: right;
+  font-family: var(--mono, ui-monospace, monospace);
+}
+
+html body .wo-shift-section {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(255,255,255,.015);
+}
+
+html body .wo-shift-section summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  cursor: pointer;
+  color: #fff;
+  font-size: 13px;
+}
+
+html body .wo-shift-section summary span {
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: rgba(214,164,70,.18);
+  color: #e8c27a;
+  font: 700 12px var(--mono, ui-monospace, monospace);
+}
+
+html body .wo-shift-orders {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0 10px 10px;
+  list-style: none;
+}
+
+html body .wo-shift-order {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 4px;
+  background: rgba(255,255,255,.03);
+  cursor: pointer;
+}
+
+html body .wo-shift-order:hover {
+  background: rgba(79,143,202,.12);
+}
+
+html body .wo-shift-order-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 12.5px;
+}
+
+html body .wo-shift-order-head b { color: #fff; }
+html body .wo-shift-order-head span { color: #7f9ab0; }
+
+html body .wo-shift-order-object {
+  color: #c6d5e1;
+  font-size: 12.5px;
+}
+
+html body .wo-shift-path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  font-size: 12px;
+  color: #dbe8f4;
+}
+
+html body .wo-shift-path span {
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,.05);
+}
+
+html body .wo-shift-path small { color: #7f9ab0; }
+html body .wo-shift-path i { color: #d6a446; font-style: normal; }
+
+html body .wo-shift-note {
+  margin: 6px 0 0;
+  color: #7f9ab0;
+  font-size: 12px;
+}
+
+@media (max-width: 620px) {
+  html body .wo-snap-button { max-width: 100%; }
+  html body .wo-shift-transitions li { grid-template-columns: 1fr 44px; }
+  html body .wo-shift-tr-bar { grid-column: 1 / -1; grid-row: 2; }
+}
