@@ -4024,8 +4024,13 @@ function renderWoShiftReport(report) {
   document.querySelectorAll("[data-wo-shift-pick]").forEach((button) => {
     button.classList.toggle("is-active", !isPeriod && button.dataset.woShiftPick === report.shift);
   });
-  const nextShift = woShiftShift(report.day, report.shift, 1);
+  // У отчёта за период нет даты смены: «Следующая» считается от смены,
+  // которую открывали последней (или от текущей).
   const current = woCurrentShift();
+  const reference = isPeriod
+    ? (woShiftState.day ? { day: woShiftState.day, shift: woShiftState.shift } : current)
+    : { day: report.day, shift: report.shift };
+  const nextShift = woShiftShift(reference.day, reference.shift, 1);
   const isFuture = (shift) => {
     const key = (item) => item.day.split(".").reverse().join("") + (item.shift === "night" ? "1" : "0");
     return key(shift) > key(current);

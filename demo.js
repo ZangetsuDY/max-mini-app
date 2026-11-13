@@ -454,7 +454,7 @@
     if (params.get("report") === "shift") return [200, { ...demoShiftReport(params.get("day"), params.get("shift")), kind: "shift" }];
     if (params.get("report") === "period") {
       const from = params.get("from") || "", to = params.get("to") || "";
-      return [200, { ...demoShiftReport(from.split(" ")[0], "day"), kind: "period", periodLabel: `${from} — ${to}`, complete: true }];
+      return [200, { ...demoShiftReport(from.split(" ")[0], "day"), day: undefined, shift: undefined, shiftLabel: undefined, kind: "period", periodLabel: `${from} — ${to}`, complete: true }];
     }
     // Сводки дважды в час за последние 20 суток, как в реальном архиве.
     const snapshots = [];
