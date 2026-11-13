@@ -451,7 +451,11 @@
         archive: { backend: "demo", retentionDays: 32, longAdmissionMinutes: 40 }
       }];
     }
-    if (params.get("report") === "shift") return [200, demoShiftReport(params.get("day"), params.get("shift"))];
+    if (params.get("report") === "shift") return [200, { ...demoShiftReport(params.get("day"), params.get("shift")), kind: "shift" }];
+    if (params.get("report") === "period") {
+      const from = params.get("from") || "", to = params.get("to") || "";
+      return [200, { ...demoShiftReport(from.split(" ")[0], "day"), kind: "period", periodLabel: `${from} — ${to}`, complete: true }];
+    }
     // Сводки дважды в час за последние 20 суток, как в реальном архиве.
     const snapshots = [];
     const hour = new Date(); hour.setMinutes(0, 0, 0);
@@ -611,6 +615,20 @@
       case "requests-details": return [200, requestsDetailsPayload(params)];
       case "workorders-details": return [200, workordersDetailsPayload(params)];
       case "workorders-history": return workordersHistoryPayload(params);
+      case "workorders-export":
+        if (params.get("options") === "1") {
+          const day = (value) => { const [d, m, y] = String(value).split("."); return Date.UTC(+y, +m - 1, +d); };
+          const days = Math.max(1, Math.round((day(params.get("to")) - day(params.get("from"))) / 86400000) + 1);
+          const shifts = params.get("split") === "shift" ? days * 2 : days;
+          return [200, {
+            scopeLabel: "Демо", periodLabel: `${params.get("from")} — ${params.get("to")}`, snapshots: days * 48, days: shifts,
+            options: [
+              ["group", "Не проверен", 64], ["group", "Проверен, не начат", 120], ["group", "Работы начаты", 88], ["group", "Допуск не производился", 9], ["group", "Прочие", 41],
+              ["status", "Создан", 64], ["status", "Проверен", 120], ["status", "Допуск", 61], ["status", "Подготовка рабочего места", 27], ["status", "Окончание работ", 33], ["status", "Отменён", 8]
+            ].map(([kind, value, count]) => ({ key: `${kind}:${value}`, kind, value, count: count * Math.ceil(days / 3) }))
+          }];
+        }
+        return [400, { error: "В демонстрационной версии выгрузка файла недоступна" }];
       case "branch-chats": return branchChatsPayload(params);
       case "excel-exports": return excelPayload(params);
       case "admin/dashboard": return [200, adminDashboardPayload()];

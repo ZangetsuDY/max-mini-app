@@ -8,6 +8,7 @@ import excelExports from "../handlers/excel-exports.js";
 import requestsDetails from "../handlers/requests-details.js";
 import workordersDetails from "../handlers/workorders-details.js";
 import workordersHistory from "../handlers/workorders-history.js";
+import workordersExport from "../handlers/workorders-export.js";
 import heartbeat from "../handlers/heartbeat.js";
 import system from "../handlers/system.js";
 import branchChats from "../handlers/branch-chats.js";
@@ -37,6 +38,7 @@ const ROUTES = new Map([
   ["requests-details", requestsDetails],
   ["workorders-details", workordersDetails],
   ["workorders-history", workordersHistory],
+  ["workorders-export", workordersExport],
   ["heartbeat", heartbeat],
   ["system", system],
   ["branch-chats", branchChats],
