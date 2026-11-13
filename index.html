@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261112-shift1" />
-  <link rel="stylesheet" href="pro.css?v=20261112-shift1" />
+  <link rel="stylesheet" href="style.css?v=20261113-woexport1" />
+  <link rel="stylesheet" href="pro.css?v=20261113-woexport1" />
 </head>
 
 <body class="auth-pending">
@@ -963,6 +963,7 @@
         <div class="wo-tabs glass-panel" role="tablist">
           <button class="wo-tab is-active" type="button" role="tab" aria-selected="true" data-wo-tab="dashboard">Дашборд</button>
           <button class="wo-tab" type="button" role="tab" aria-selected="false" data-wo-tab="list">Наряды <b id="woListCount">0</b></button>
+          <button class="wo-tab" type="button" role="tab" aria-selected="false" data-wo-tab="export">Выгрузка Excel</button>
         </div>
 
         <div id="woDashboard" class="wo-dashboard">
@@ -1062,6 +1063,51 @@
               </table>
             </div>
             <p class="wo-footnote">Пороги: <i class="wo-tone is-low"></i> &lt; 25% · <i class="wo-tone is-mid"></i> 25–39% · <i class="wo-tone is-high"></i> ≥ 40%. Разница между допуском и началом работ &gt; 40 мин выделяется оранжевым.</p>
+          </article>
+        </div>
+
+        <div id="woExport" class="wo-export-view" hidden>
+          <article class="glass-panel wo-panel wo-export-panel">
+            <div class="wo-panel-head">
+              <div>
+                <span class="micro-label">АРХИВ НДР · EXCEL</span>
+                <h3>Статусы по дням за период</h3>
+              </div>
+            </div>
+            <p class="wo-export-copy">
+              Выберите период и статусы — в Excel будет таблица, где по каждому дню (или смене) видно,
+              сколько нарядов было в каждом статусе. Данные берутся из архива сводок для выбранного
+              подразделения и РЭС; архив хранит последние 32 дня.
+            </p>
+            <div class="wo-export-form">
+              <label><span>С</span><input id="woExportFrom" type="date" /></label>
+              <label><span>По</span><input id="woExportTo" type="date" /></label>
+              <div class="wo-export-split" role="group" aria-label="Разбивка">
+                <button type="button" class="is-active" data-wo-export-split="day">По дням</button>
+                <button type="button" data-wo-export-split="shift">По сменам</button>
+              </div>
+              <div class="wo-export-presets">
+                <button type="button" data-wo-export-preset="7">7 дней</button>
+                <button type="button" data-wo-export-preset="14">14 дней</button>
+                <button type="button" data-wo-export-preset="31">Весь архив</button>
+              </div>
+            </div>
+            <div class="wo-export-statuses">
+              <div class="wo-export-statuses-head">
+                <b>Статусы в периоде</b>
+                <span id="woExportInfo">Выберите даты</span>
+                <button type="button" data-wo-export-all="1">Все</button>
+                <button type="button" data-wo-export-all="0">Снять</button>
+              </div>
+              <div id="woExportOptions" class="wo-export-options"></div>
+            </div>
+            <div class="wo-export-footer">
+              <span id="woExportStatus" class="outages-export-status"></span>
+              <button id="woExportButton" class="primary-action admin-save-button" type="button" disabled>
+                <span>Скачать Excel</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"></path></svg>
+              </button>
+            </div>
           </article>
         </div>
 
@@ -2372,6 +2418,13 @@
         <button type="button" data-wo-shift-pick="night">Ночная 20–08</button>
         <button type="button" data-wo-shift-step="1">Следующая ›</button>
       </div>
+      <div class="wo-shift-period">
+        <span>Свой период</span>
+        <input id="woPeriodFrom" type="datetime-local" step="60" aria-label="Начало периода" />
+        <i>—</i>
+        <input id="woPeriodTo" type="datetime-local" step="60" aria-label="Конец периода" />
+        <button id="woPeriodApply" type="button">Показать</button>
+      </div>
       <p id="woShiftSubtitle" class="wo-history-subtitle"></p>
       <div id="woShiftBody" class="wo-history-body"></div>
     </div>
@@ -2415,7 +2468,7 @@
     </div>
   </div>
 
-  <script src="demo.js?v=20261112-shift1"></script>
-  <script src="app.js?v=20261112-shift1"></script>
+  <script src="demo.js?v=20261113-woexport1"></script>
+  <script src="app.js?v=20261113-woexport1"></script>
 </body>
 </html>

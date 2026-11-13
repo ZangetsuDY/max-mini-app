@@ -15,6 +15,8 @@ import {
   listWorkorderSnapshots,
   getWorkorderHistory,
   getWorkorderShiftReport,
+  getWorkorderPeriodReport,
+  parseMskDateTime,
   archiveInfo
 } from "../lib/workorders-archive.js";
 
@@ -22,7 +24,8 @@ import {
   Архив НДР:
     ?list=1      — сохранённые сводки за 32 дня (для выбора в дашборде);
     ?uid=<UID>   — жизнь наряда: все версии и что менялось;
-    ?report=shift&day=ДД.ММ.ГГГГ&shift=day|night — отчёт за смену.
+    ?report=shift&day=ДД.ММ.ГГГГ&shift=day|night — отчёт за смену;
+    ?report=period&from=ДД.ММ.ГГГГ ЧЧ:ММ&to=ДД.ММ.ГГГГ ЧЧ:ММ — за произвольный период.
   Область доступа — та же, что у дашборда НДР (scope / group / unit).
 */
 export default {
@@ -36,17 +39,32 @@ export default {
     const url = new URL(request.url);
 
     try {
-      if (url.searchParams.get("report") === "shift") {
+      const reportKind = url.searchParams.get("report");
+      if (reportKind === "shift" || reportKind === "period") {
         const allowed = new Set(scope.sources.map(normalizeWorkorderLabel));
-        const report = await getWorkorderShiftReport({
-          day: String(url.searchParams.get("day") || "").trim(),
-          shift: url.searchParams.get("shift") === "night" ? "night" : "day",
-          include: scope.isWholeNetwork
-            ? () => true
-            : (order) => allowed.has(normalizeWorkorderLabel(order.journal)),
-          scopeKey: scope.isWholeNetwork ? "all" : [...allowed].sort().join("|")
-        });
-        return jsonResponse({ ...report, scopeLabel: scope.scopeLabel, archive: archiveInfo() });
+        const include = scope.isWholeNetwork
+          ? () => true
+          : (order) => allowed.has(normalizeWorkorderLabel(order.journal));
+        const scopeKey = scope.isWholeNetwork ? "all" : [...allowed].sort().join("|");
+        try {
+          const report = reportKind === "shift"
+            ? await getWorkorderShiftReport({
+              day: String(url.searchParams.get("day") || "").trim(),
+              shift: url.searchParams.get("shift") === "night" ? "night" : "day",
+              include,
+              scopeKey
+            })
+            : await getWorkorderPeriodReport({
+              start: parseMskDateTime(url.searchParams.get("from")) ?? NaN,
+              end: parseMskDateTime(url.searchParams.get("to")) ?? NaN,
+              include,
+              scopeKey,
+              label: "Произвольный период"
+            });
+          return jsonResponse({ ...report, kind: reportKind, scopeLabel: scope.scopeLabel, archive: archiveInfo() });
+        } catch (error) {
+          return jsonResponse({ error: error instanceof Error ? error.message : "Не удалось построить отчёт" }, 400);
+        }
       }
 
       const uid = String(url.searchParams.get("uid") || "").trim();

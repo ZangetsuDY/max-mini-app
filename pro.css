@@ -6304,3 +6304,224 @@ html body .wo-shift-note {
   html body .wo-shift-transitions li { grid-template-columns: 1fr 44px; }
   html body .wo-shift-tr-bar { grid-column: 1 / -1; grid-row: 2; }
 }
+
+/* НДР · свой период в отчёте */
+html body .wo-shift-period {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+html body .wo-shift-period span {
+  color: #7f9ab0;
+  font: 700 10px var(--mono, ui-monospace, monospace);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+html body .wo-shift-period i {
+  color: #7f9ab0;
+  font-style: normal;
+}
+
+html body .wo-shift-period input,
+html body .wo-export-form input {
+  min-height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(0,0,0,.3);
+  color: #fff;
+  font-size: 12.5px;
+  color-scheme: dark;
+}
+
+html body .wo-shift-period button {
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid rgba(110,231,183,.45);
+  border-radius: 4px;
+  background: rgba(110,231,183,.08);
+  color: #6ee7b7;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* НДР · вкладка «Выгрузка Excel» */
+html body .wo-export-panel {
+  display: grid;
+  gap: 14px;
+}
+
+html body .wo-export-copy {
+  margin: 0;
+  max-width: 860px;
+  color: #a9bccb;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+html body .wo-export-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+html body .wo-export-form label {
+  display: grid;
+  gap: 4px;
+}
+
+html body .wo-export-form label span {
+  color: #7f9ab0;
+  font: 700 10px var(--mono, ui-monospace, monospace);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+html body .wo-export-split,
+html body .wo-export-presets {
+  display: inline-flex;
+  gap: 4px;
+}
+
+html body .wo-export-split button,
+html body .wo-export-presets button,
+html body .wo-export-statuses-head button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(255,255,255,.02);
+  color: #c6d5e1;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+html body .wo-export-split button.is-active {
+  border-color: rgba(214,164,70,.6);
+  color: #e8c27a;
+}
+
+html body .wo-export-statuses {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgba(0,0,0,.18);
+}
+
+html body .wo-export-statuses-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+html body .wo-export-statuses-head b {
+  color: #fff;
+  font-size: 13px;
+}
+
+html body .wo-export-statuses-head span {
+  flex: 1;
+  min-width: 160px;
+  color: #7f9ab0;
+  font-size: 12px;
+}
+
+html body .wo-export-statuses-head button {
+  min-height: 28px;
+  padding: 0 10px;
+}
+
+html body .wo-export-group {
+  display: grid;
+  gap: 6px;
+}
+
+html body .wo-export-group + .wo-export-group {
+  margin-top: 6px;
+}
+
+html body .wo-export-group small {
+  color: #d6a446;
+  font: 700 10px var(--mono, ui-monospace, monospace);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+html body .wo-export-group > div {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 6px;
+}
+
+html body .wo-export-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: rgba(255,255,255,.02);
+  color: #dbe8f4;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+html body .wo-export-option.is-checked {
+  border-color: rgba(79,143,202,.65);
+  background: rgba(44,100,150,.22);
+}
+
+html body .wo-export-option input {
+  width: 15px;
+  height: 15px;
+  accent-color: #4f8fca;
+}
+
+html body .wo-export-option span {
+  flex: 1;
+}
+
+html body .wo-export-option b {
+  color: #8fb3d1;
+  font: 700 11.5px var(--mono, ui-monospace, monospace);
+}
+
+html body .wo-export-loading {
+  padding: 8px 2px;
+  color: #7f9ab0;
+  font-size: 12.5px;
+}
+
+html body .wo-export-loading.is-error {
+  color: #ff8a8f;
+}
+
+html body .wo-export-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+html body #woExportButton.is-loading {
+  opacity: .7;
+  cursor: progress;
+}
+
+@media (max-width: 620px) {
+  html body .wo-export-footer { display: grid; }
+  html body #woExportButton { width: 100%; justify-content: center; }
+  html body .wo-shift-period input { flex: 1 1 140px; }
+}

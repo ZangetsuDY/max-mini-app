@@ -3416,9 +3416,12 @@ function renderWoCards() {
 }
 
 function renderWoTabs() {
-  const isList = workordersState.tab === "list";
-  woEl("woDashboard").hidden = isList;
-  woEl("woList").hidden = !isList;
+  const tab = workordersState.tab;
+  woEl("woDashboard").hidden = tab !== "dashboard";
+  woEl("woList").hidden = tab !== "list";
+  const exportView = woEl("woExport");
+  if (exportView) exportView.hidden = tab !== "export";
+  if (tab === "export") woExportEnsure();
   document.querySelectorAll("[data-wo-tab]").forEach((button) => {
     const active = button.dataset.woTab === workordersState.tab;
     button.classList.toggle("is-active", active);
@@ -4015,10 +4018,11 @@ function woShiftList(title, items, total, render, open = false) {
 }
 
 function renderWoShiftReport(report) {
+  const isPeriod = report.kind === "period";
   const shiftName = report.shift === "night" ? "Ночная смена" : "Дневная смена";
-  woEl("woShiftTitle").textContent = `${shiftName} · ${report.day}`;
+  woEl("woShiftTitle").textContent = isPeriod ? `Период · ${report.periodLabel}` : `${shiftName} · ${report.day}`;
   document.querySelectorAll("[data-wo-shift-pick]").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.woShiftPick === report.shift);
+    button.classList.toggle("is-active", !isPeriod && button.dataset.woShiftPick === report.shift);
   });
   const nextShift = woShiftShift(report.day, report.shift, 1);
   const current = woCurrentShift();
@@ -4032,25 +4036,25 @@ function renderWoShiftReport(report) {
   woEl("woShiftSubtitle").innerHTML = `
     ${escapeHtml(report.periodLabel || "")} МСК · ${escapeHtml(report.scopeLabel || "")}
     <span class="wo-history-meta">
-      ${report.complete ? "смена завершена" : "смена идёт — данные на последнюю сводку"} ·
+      ${report.complete ? (isPeriod ? "период завершён" : "смена завершена") : (isPeriod ? "период ещё идёт" : "смена идёт")}${report.complete ? "" : " — данные на последнюю сводку"} ·
       сводок: <b>${report.snapshots || 0}</b>
       ${report.baseline ? ` · начало: ${escapeHtml(report.baseline.generatedAt || "")}${report.baseline.beforeShift ? "" : " (первая сводка смены)"}` : ""}
       ${report.final ? ` · конец: ${escapeHtml(report.final.generatedAt || "")}` : ""}
     </span>`;
 
   if (report.empty) {
-    woEl("woShiftBody").innerHTML = '<div class="requests-empty">За эту смену в архиве нет сводок НДР.</div>';
+    woEl("woShiftBody").innerHTML = `<div class="requests-empty">За ${isPeriod ? "этот период" : "эту смену"} в архиве нет сводок НДР.</div>`;
     return;
   }
 
   const delta = report.end.total - report.start.total;
   const kpis = [
-    ["На начало смены", report.start.total, ""],
-    ["На конец смены", report.end.total, delta ? `${delta > 0 ? "+" : ""}${delta}` : "без изменений"],
+    [isPeriod ? "На начало" : "На начало смены", report.start.total, ""],
+    [isPeriod ? "На конец" : "На конец смены", report.end.total, delta ? `${delta > 0 ? "+" : ""}${delta}` : "без изменений"],
     ["Появились", report.appearedCount, "новые в сводке"],
     ["Ушли из сводки", report.goneCount, "закрыты / убраны"],
     ["Сменили статус", report.changedCount, "нарядов"],
-    ["Начаты за смену", report.startedDuringShift, "перешли в «Работы начаты»"]
+    [isPeriod ? "Начаты за период" : "Начаты за смену", report.startedDuringShift, "перешли в «Работы начаты»"]
   ];
 
   const groups = [
@@ -4069,7 +4073,7 @@ function renderWoShiftReport(report) {
       `).join("")}
     </div>
 
-    <h3 class="wo-shift-h">Группы: начало → конец смены</h3>
+    <h3 class="wo-shift-h">Группы: начало → конец ${isPeriod ? "периода" : "смены"}</h3>
     <table class="wo-shift-table">
       <thead><tr><th>Группа</th><th>Начало</th><th>Конец</th><th>Изм.</th></tr></thead>
       <tbody>
@@ -4083,7 +4087,7 @@ function renderWoShiftReport(report) {
       </tbody>
     </table>
 
-    <h3 class="wo-shift-h">Переходы статусов за смену</h3>
+    <h3 class="wo-shift-h">Переходы статусов за ${isPeriod ? "период" : "смену"}</h3>
     ${report.transitions.length ? `
       <ul class="wo-shift-transitions">
         ${report.transitions.map((item) => `
@@ -4097,7 +4101,7 @@ function renderWoShiftReport(report) {
     ${woShiftList("Сменили статус", report.changed, report.changedCount, (item) => woShiftOrderRow(item, `
       <div class="wo-shift-path">${item.path.map((step, index) => `${index ? "<i>→</i>" : ""}<span>${escapeHtml(step.status)}${step.at ? ` <small>${escapeHtml(String(step.at).split(" ")[1] || step.at)}</small>` : ""}</span>`).join("")}</div>
     `), true)}
-    ${woShiftList("Появились за смену", report.appeared, report.appearedCount, (item) => woShiftOrderRow(item, `
+    ${woShiftList(isPeriod ? "Появились за период" : "Появились за смену", report.appeared, report.appearedCount, (item) => woShiftOrderRow(item, `
       <div class="wo-shift-path"><span>${escapeHtml(item.status || "—")} <small>${escapeHtml(String(item.at || "").split(" ")[1] || "")}</small></span></div>
     `))}
     ${woShiftList("Ушли из сводки", report.gone, report.goneCount, (item) => woShiftOrderRow(item, `
@@ -4106,20 +4110,59 @@ function renderWoShiftReport(report) {
   `;
 }
 
+// «ДД.ММ.ГГГГ» + час → значение для <input type="datetime-local">.
+function woDayToInput(day, hour) {
+  const [dd, mm, yyyy] = String(day).split(".");
+  return `${yyyy}-${mm}-${dd}T${String(hour).padStart(2, "0")}:00`;
+}
+
+function woInputToMsk(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?/);
+  if (!match) return "";
+  return `${match[3]}.${match[2]}.${match[1]}${match[4] ? ` ${match[4]}:${match[5]}` : ""}`;
+}
+
+function woFillPeriodInputs(day, shift) {
+  const from = woEl("woPeriodFrom");
+  const to = woEl("woPeriodTo");
+  if (!from || !to) return;
+  if (shift === "night") {
+    const next = woShiftShift(day, "night", 1).day;
+    from.value = woDayToInput(day, 20);
+    to.value = woDayToInput(next, 8);
+  } else {
+    from.value = woDayToInput(day, 8);
+    to.value = woDayToInput(day, 20);
+  }
+}
+
+function showWoPeriodReport() {
+  const from = woInputToMsk(woEl("woPeriodFrom")?.value);
+  const to = woInputToMsk(woEl("woPeriodTo")?.value);
+  if (!from || !to) return;
+  loadWoReport({ report: "period", from, to }, `Период · ${from} — ${to}`);
+}
+
 async function showWoShiftReport(day, shift) {
   woShiftState.day = day;
   woShiftState.shift = shift === "night" ? "night" : "day";
+  woFillPeriodInputs(day, woShiftState.shift);
+  loadWoReport(
+    { report: "shift", day, shift: woShiftState.shift },
+    `${woShiftState.shift === "night" ? "Ночная смена" : "Дневная смена"} · ${day}`
+  );
+}
+
+async function loadWoReport(query, title) {
   const token = ++woShiftState.token;
-  woEl("woShiftTitle").textContent = `${woShiftState.shift === "night" ? "Ночная смена" : "Дневная смена"} · ${day}`;
+  woEl("woShiftTitle").textContent = title;
   woEl("woShiftSubtitle").textContent = "";
-  woEl("woShiftBody").innerHTML = '<div class="requests-empty">Считаем смену по архиву сводок…</div>';
+  woEl("woShiftBody").innerHTML = '<div class="requests-empty">Считаем по архиву сводок…</div>';
   openWoShiftModal();
 
   try {
     const params = woScopeParams();
-    params.set("report", "shift");
-    params.set("day", day);
-    params.set("shift", woShiftState.shift);
+    Object.entries(query).forEach(([key, value]) => params.set(key, value));
     const response = await fetch(`${API_WORKORDERS_HISTORY}?${params.toString()}`, {
       method: "GET",
       cache: "no-store",
@@ -4135,6 +4178,204 @@ async function showWoShiftReport(day, shift) {
     }
   }
 }
+
+woEl("woPeriodApply")?.addEventListener("click", showWoPeriodReport);
+
+/* ---------- вкладка «Выгрузка Excel» ---------- */
+const API_WORKORDERS_EXPORT = "/api/workorders-export";
+const woExportState = { split: "day", options: [], selected: new Set(), loadedKey: "", token: 0, touched: false };
+
+function woIsoDay(offsetDays = 0) {
+  const date = new Date(Date.now() + 3 * 60 * 60 * 1000 + offsetDays * 86400000);
+  return date.toISOString().slice(0, 10);
+}
+
+function woExportQuery() {
+  const from = woInputToMsk(woEl("woExportFrom")?.value);
+  const to = woInputToMsk(woEl("woExportTo")?.value);
+  if (!from || !to) return null;
+  const params = woScopeParams();
+  params.set("from", from);
+  params.set("to", to);
+  params.set("split", woExportState.split);
+  return params;
+}
+
+function woExportEnsure() {
+  const fromInput = woEl("woExportFrom");
+  const toInput = woEl("woExportTo");
+  if (!fromInput || !toInput) return;
+  if (!fromInput.value) fromInput.value = woIsoDay(-6);
+  if (!toInput.value) toInput.value = woIsoDay(0);
+  fromInput.min = toInput.min = woIsoDay(-31);
+  fromInput.max = toInput.max = woIsoDay(0);
+  const params = woExportQuery();
+  if (params && params.toString() !== woExportState.loadedKey) loadWoExportOptions();
+}
+
+function renderWoExportOptions() {
+  const box = woEl("woExportOptions");
+  if (!box) return;
+  const groups = woExportState.options.filter((item) => item.kind === "group");
+  const statuses = woExportState.options.filter((item) => item.kind === "status");
+  const item = (option) => `
+    <label class="wo-export-option${woExportState.selected.has(option.key) ? " is-checked" : ""}">
+      <input type="checkbox" value="${escapeHtml(option.key)}"${woExportState.selected.has(option.key) ? " checked" : ""} />
+      <span>${escapeHtml(option.value)}</span>
+      <b>${option.count}</b>
+    </label>`;
+  box.innerHTML = woExportState.options.length ? `
+    <div class="wo-export-group"><small>Группы (как на дашборде)</small><div>${groups.map(item).join("")}</div></div>
+    <div class="wo-export-group"><small>Статусы СК-11</small><div>${statuses.map(item).join("")}</div></div>
+  ` : "";
+  const button = woEl("woExportButton");
+  if (button) button.disabled = !woExportState.selected.size;
+}
+
+async function loadWoExportOptions() {
+  const params = woExportQuery();
+  const info = woEl("woExportInfo");
+  if (!params) return;
+  const key = params.toString();
+  woExportState.loadedKey = key;
+  const token = ++woExportState.token;
+  if (info) info.textContent = "Читаем архив за период…";
+  woEl("woExportOptions").innerHTML = '<div class="wo-export-loading">Загрузка статусов…</div>';
+  woEl("woExportButton").disabled = true;
+
+  try {
+    params.set("options", "1");
+    const response = await fetch(`${API_WORKORDERS_EXPORT}?${params.toString()}`, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "include",
+      headers: getSessionHeaders()
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+    if (token !== woExportState.token) return;
+
+    woExportState.options = Array.isArray(payload.options) ? payload.options : [];
+    const known = new Set(woExportState.options.map((option) => option.key));
+    // Выбор сохраняется между периодами; по умолчанию — все группы.
+    woExportState.selected = new Set([...woExportState.selected].filter((value) => known.has(value)));
+    if (!woExportState.touched && !woExportState.selected.size) {
+      woExportState.options.filter((option) => option.kind === "group").forEach((option) => woExportState.selected.add(option.key));
+    }
+    if (info) {
+      info.textContent = payload.snapshots
+        ? `${payload.scopeLabel || ""} · ${woExportState.split === "shift" ? "смен" : "дней"}: ${payload.days} · сводок: ${payload.snapshots}`
+        : "За этот период в архиве нет сводок";
+    }
+    renderWoExportOptions();
+  } catch (error) {
+    if (token !== woExportState.token) return;
+    woExportState.loadedKey = "";
+    woExportState.options = [];
+    if (info) info.textContent = "";
+    woEl("woExportOptions").innerHTML = `<div class="wo-export-loading is-error">${escapeHtml(error instanceof Error ? error.message : "Не удалось прочитать архив")}</div>`;
+  }
+}
+
+async function downloadWoExport() {
+  const button = woEl("woExportButton");
+  const status = woEl("woExportStatus");
+  const params = woExportQuery();
+  if (!params || !woExportState.selected.size || button.disabled) return;
+  // Порядок колонок — как в списке выбора.
+  const keys = woExportState.options.map((option) => option.key).filter((key) => woExportState.selected.has(key));
+  params.set("keys", keys.join("|"));
+
+  const label = button.querySelector("span");
+  button.disabled = true;
+  button.classList.add("is-loading");
+  if (label) label.textContent = "Формирование…";
+  status.classList.remove("is-error");
+  status.textContent = "Собираем таблицу…";
+
+  try {
+    const response = await fetch(`${API_WORKORDERS_EXPORT}?${params.toString()}`, {
+      method: "GET",
+      cache: "no-store",
+      credentials: "include",
+      headers: getSessionHeaders()
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new Error(payload?.error || "Не удалось сформировать Excel");
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get("content-disposition") || "";
+    const encoded = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1] || "";
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = encoded ? decodeURIComponent(encoded) : "НДР_по_дням.xlsx";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    status.textContent = `Готово: ${keys.length} ${keys.length === 1 ? "статус" : "статусов"}, ${response.headers.get("x-wo-buckets") || "—"} ${woExportState.split === "shift" ? "смен" : "дней"}.`;
+  } catch (error) {
+    status.classList.add("is-error");
+    status.textContent = error instanceof Error ? error.message : "Не удалось сформировать Excel";
+  } finally {
+    button.disabled = !woExportState.selected.size;
+    button.classList.remove("is-loading");
+    if (label) label.textContent = "Скачать Excel";
+  }
+}
+
+["woExportFrom", "woExportTo"].forEach((id) => {
+  woEl(id)?.addEventListener("change", () => {
+    const from = woEl("woExportFrom");
+    const to = woEl("woExportTo");
+    if (from.value && to.value && from.value > to.value) {
+      if (id === "woExportFrom") to.value = from.value;
+      else from.value = to.value;
+    }
+    woExportEnsure();
+  });
+});
+
+document.querySelectorAll("[data-wo-export-split]").forEach((button) => {
+  button.addEventListener("click", () => {
+    woExportState.split = button.dataset.woExportSplit;
+    document.querySelectorAll("[data-wo-export-split]").forEach((item) => item.classList.toggle("is-active", item === button));
+    woExportEnsure();
+  });
+});
+
+document.querySelectorAll("[data-wo-export-preset]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const days = Number(button.dataset.woExportPreset);
+    woEl("woExportFrom").value = woIsoDay(-(days - 1));
+    woEl("woExportTo").value = woIsoDay(0);
+    woExportEnsure();
+  });
+});
+
+document.querySelectorAll("[data-wo-export-all]").forEach((button) => {
+  button.addEventListener("click", () => {
+    woExportState.touched = true;
+    woExportState.selected = button.dataset.woExportAll === "1"
+      ? new Set(woExportState.options.map((option) => option.key))
+      : new Set();
+    renderWoExportOptions();
+  });
+});
+
+woEl("woExportOptions")?.addEventListener("change", (event) => {
+  const input = event.target.closest("input[type=checkbox]");
+  if (!input) return;
+  woExportState.touched = true;
+  if (input.checked) woExportState.selected.add(input.value);
+  else woExportState.selected.delete(input.value);
+  renderWoExportOptions();
+});
+
+woEl("woExportButton")?.addEventListener("click", downloadWoExport);
+
 
 woEl("woShiftReportButton")?.addEventListener("click", () => {
   const current = woCurrentShift();
