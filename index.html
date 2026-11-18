@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261117-prepared-wo" />
-  <link rel="stylesheet" href="pro.css?v=20261117-prepared-wo" />
+  <link rel="stylesheet" href="style.css?v=20261118-prepared-wo2" />
+  <link rel="stylesheet" href="pro.css?v=20261118-prepared-wo2" />
 </head>
 
 <body class="auth-pending">
@@ -2301,9 +2301,18 @@
           </select>
           <button id="preparedWoDownload" class="primary-action" type="button" disabled><span>Скачать Excel</span></button>
         </div>
+        <div id="preparedWoDepartments" class="prepared-wo-departments" hidden>
+          <div class="prepared-wo-departments-heading">
+            <strong>Подразделения / РЭС</strong>
+            <button id="preparedWoClearUnits" class="secondary-action" type="button">Снять выбор</button>
+          </div>
+          <label class="prepared-wo-all"><input id="preparedWoAllUnits" type="checkbox" checked /> Все подразделения — весь файл</label>
+          <div id="preparedWoUnitOptions" class="prepared-wo-unit-options"></div>
+          <p class="access-heading-copy">Подразделения связаны с журналами так же, как в обычной выгрузке НДР. Записи без привязки входят только в «Все подразделения».</p>
+        </div>
         <p id="preparedWoInfo" class="access-heading-copy" aria-live="polite"></p>
         <div id="preparedWoOptions" class="wo-export-options"></div>
-        <p class="access-heading-copy">Статусы и группы выгружаются за весь период, как в подготовленном файле. Список проверяет последние 100 сообщений чата НДР.</p>
+        <p class="access-heading-copy">Данные, статусы и календарные дни поиска берутся из выбранного TXT. Список проверяет последние 100 сообщений чата НДР.</p>
         <div id="preparedWoStatus" class="dispatcher-config-status" role="status" aria-live="polite"></div>
       </article>
     </section>
@@ -2492,7 +2501,7 @@
     </div>
   </div>
 
-  <script src="demo.js?v=20261117-prepared-wo"></script>
-  <script src="app.js?v=20261117-prepared-wo"></script>
+  <script src="demo.js?v=20261118-prepared-wo2"></script>
+  <script src="app.js?v=20261118-prepared-wo2"></script>
 </body>
 </html>

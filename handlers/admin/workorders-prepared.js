@@ -2,6 +2,7 @@ import { getSession } from "../../lib/security.js";
 import { resolveSessionAccess } from "../../lib/access-control.js";
 import { listPreparedWorkorders, loadPreparedWorkorders, preparedWorkordersStats } from "../../lib/prepared-workorders.js";
 import { buildWorkordersPeriodWorkbook } from "../../lib/workorders-period-workbook.js";
+import { resolvePreparedWorkordersScope, preparedWorkordersFilters } from "../../lib/prepared-workorders-scope.js";
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -27,15 +28,19 @@ export default {
     try {
       if (!id) return json(await listPreparedWorkorders({ refresh: url.searchParams.get("refresh") === "1" }));
       const details = await loadPreparedWorkorders(id);
-      const stats = preparedWorkordersStats(details);
+      const scope = await resolvePreparedWorkordersScope(request);
+      if (scope.error) return scope.error;
+      const stats = preparedWorkordersStats(details, { include: scope.include });
       if (url.searchParams.get("options") === "1") {
         return json({ id, period: stats.periodLabel, generatedAt: details.generatedAt,
-          fileName: details.fileName, total: stats.total, options: stats.options });
+          fileName: details.fileName, total: stats.total, options: stats.options,
+          scopeLabel: scope.scopeLabel, filters: preparedWorkordersFilters(details, scope),
+          sourceNote: stats.sourceNote || "" });
       }
       const known = new Set(stats.options.map((option) => option.key));
       const keys = [...new Set(String(url.searchParams.get("keys") || "").split("|"))].filter((key) => known.has(key));
       if (!keys.length) return json({ error: "Выберите хотя бы одну группу или статус" }, 400);
-      const workbook = buildWorkordersPeriodWorkbook(stats, { keys, scopeLabel: "Архивный период · вся сеть" });
+      const workbook = buildWorkordersPeriodWorkbook(stats, { keys, scopeLabel: `Архивный период · ${scope.scopeLabel}` });
       const stamp = (value) => value.replace(/\./g, "-").replace(/\s+/g, "_").replace(/:/g, "-");
       const fileName = `НДР_архивный_период_${stamp(details.archivePeriod.from)}_${stamp(details.archivePeriod.to)}.xlsx`;
       return new Response(workbook, { headers: {

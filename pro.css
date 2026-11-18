@@ -6541,6 +6541,19 @@ html body #woExportButton.is-loading {
 .prepared-wo-controls > select { width: 100%; min-width: 0; }
 .prepared-workorders-panel .wo-export-options { margin: 16px 0; }
 .prepared-workorders-panel .access-heading-copy { overflow-wrap: anywhere; }
+.prepared-wo-departments { margin: 20px 0; padding: 16px; border: 1px solid var(--line); border-radius: 8px; }
+.prepared-wo-departments-heading { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.prepared-wo-all { display: flex; align-items: center; gap: 10px; font-size: 14px; margin-bottom: 12px; }
+.prepared-wo-unit-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); gap: 8px; margin-bottom: 12px; }
+.prepared-wo-unit-group { padding: 10px; border: 1px solid var(--line); border-radius: 6px; min-width: 0; }
+.prepared-wo-unit-group summary { cursor: pointer; color: var(--text); font-size: 13px; }
+.prepared-wo-unit-group summary label { display: inline-flex; align-items: center; gap: 8px; max-width: 90%; }
+.prepared-wo-unit-group > div { display: grid; gap: 8px; margin-top: 12px; }
+.prepared-wo-unit { display: flex; gap: 8px; align-items: center; color: var(--text-2); font-size: 12px; }
+.prepared-wo-unit > span { flex: 1; overflow-wrap: anywhere; }
+.prepared-wo-unit.is-unavailable { opacity: .6; }
+.prepared-wo-unit b { color: var(--text); font: 600 12px var(--mono); }
+.prepared-wo-departments input { accent-color: var(--gold); flex-shrink: 0; }
 @media (max-width: 640px) {
   .prepared-wo-controls { grid-template-columns: minmax(0, 1fr); }
   .prepared-wo-controls > button { width: 100%; }

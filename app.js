@@ -13955,8 +13955,9 @@ lenenergoEls.button?.addEventListener("click", async () => {
 /* ---------- готовые архивные периоды НДР в конце Центра управления ---------- */
 const API_PREPARED_WORKORDERS = "/api/admin/workorders-prepared";
 const preparedWoState = {
-  loadedAt: 0, loading: false, downloading: false, token: 0,
-  id: "", options: [], selected: new Set()
+  loadedAt: 0, loading: false, downloading: false, token: 0, readyKey: "",
+  id: "", options: [], selected: new Set(), touched: false,
+  whole: true, units: new Set(), filters: null
 };
 const preparedWoEls = {
   select: document.getElementById("preparedWoSelect"),
@@ -13964,12 +13965,28 @@ const preparedWoEls = {
   download: document.getElementById("preparedWoDownload"),
   info: document.getElementById("preparedWoInfo"),
   options: document.getElementById("preparedWoOptions"),
-  status: document.getElementById("preparedWoStatus")
+  status: document.getElementById("preparedWoStatus"),
+  departments: document.getElementById("preparedWoDepartments"),
+  allUnits: document.getElementById("preparedWoAllUnits"),
+  unitOptions: document.getElementById("preparedWoUnitOptions"),
+  clearUnits: document.getElementById("preparedWoClearUnits")
 };
 
 function preparedWoStatus(text, error = false) {
   preparedWoEls.status.textContent = text;
   preparedWoEls.status.classList.toggle("is-error", error);
+}
+
+function preparedWoQuery() {
+  return new URLSearchParams({
+    id: preparedWoState.id,
+    units: preparedWoState.whole ? "all" : [...preparedWoState.units].sort().join("|")
+  });
+}
+
+function preparedWoCanDownload() {
+  return Boolean(preparedWoState.id && preparedWoState.selected.size &&
+    preparedWoState.readyKey === preparedWoQuery().toString() && !preparedWoState.downloading);
 }
 
 async function preparedWoJson(params) {
@@ -14012,8 +14029,11 @@ async function loadPreparedWoList(force = false) {
     if (!found) {
       preparedWoState.id = "";
       preparedWoState.token += 1;
+      preparedWoState.readyKey = "";
       preparedWoState.options = [];
       preparedWoState.selected.clear();
+      preparedWoState.filters = null;
+      preparedWoEls.departments.hidden = true;
       preparedWoEls.info.textContent = "";
       preparedWoEls.options.replaceChildren();
     }
@@ -14021,16 +14041,42 @@ async function loadPreparedWoList(force = false) {
     if (force && found) await loadPreparedWoOptions();
   } catch (error) {
     if (currentUser?.username !== username) return;
-    if (!preparedWoState.loadedAt) {
-      preparedWoEls.select.replaceChildren(new Option("Не удалось загрузить список", ""));
-    }
+    if (!preparedWoState.loadedAt) preparedWoEls.select.replaceChildren(new Option("Не удалось загрузить список", ""));
     preparedWoEls.select.disabled = preparedWoEls.select.options.length <= 1;
     preparedWoStatus(error instanceof Error ? error.message : "Не удалось загрузить архивы", true);
   } finally {
     preparedWoState.loading = false;
     preparedWoEls.refresh.disabled = false;
-    preparedWoEls.download.disabled = !preparedWoState.id || !preparedWoState.selected.size;
+    preparedWoEls.download.disabled = !preparedWoCanDownload();
   }
+}
+
+function renderPreparedWoUnits() {
+  const filters = preparedWoState.filters;
+  preparedWoEls.departments.hidden = !filters;
+  if (!filters) return;
+  const openGroups = new Set([...preparedWoEls.unitOptions.querySelectorAll("details[open]")].map((node) => node.dataset.group));
+  preparedWoEls.allUnits.checked = preparedWoState.whole;
+  preparedWoEls.allUnits.indeterminate = !preparedWoState.whole && preparedWoState.units.size > 0;
+  preparedWoEls.unitOptions.innerHTML = filters.groups.map((group) => {
+    const units = filters.units.filter((unit) => unit.groupId === group.id);
+    const available = units.filter((unit) => unit.configured && unit.count > 0);
+    const checked = preparedWoState.whole || (available.length && available.every((unit) => preparedWoState.units.has(unit.id)));
+    return `<details class="prepared-wo-unit-group" data-group="${escapeHtml(group.id)}"${openGroups.has(group.id) ? " open" : ""}>
+      <summary><label><input type="checkbox" data-prepared-group="${escapeHtml(group.id)}"${checked ? " checked" : ""}${available.length ? "" : " disabled"} />${escapeHtml(group.name)}</label></summary>
+      <div>${units.map((unit) => {
+        const enabled = unit.configured && unit.count > 0;
+        return `<label class="prepared-wo-unit${enabled ? "" : " is-unavailable"}" title="${unit.configured ? "Наряды из подключённых журналов НДР" : "Источники НДР для этого РЭС ещё не настроены"}">
+          <input type="checkbox" data-prepared-unit="${escapeHtml(unit.id)}"${preparedWoState.whole || preparedWoState.units.has(unit.id) ? " checked" : ""}${enabled ? "" : " disabled"} />
+          <span>${escapeHtml(unit.name)}</span><b>${unit.count}</b>
+        </label>`;
+      }).join("")}</div></details>`;
+  }).join("");
+  preparedWoEls.unitOptions.querySelectorAll("[data-prepared-group]").forEach((input) => {
+    const units = filters.units.filter((unit) => unit.groupId === input.dataset.preparedGroup && unit.configured && unit.count > 0);
+    const selected = units.filter((unit) => preparedWoState.units.has(unit.id)).length;
+    input.indeterminate = !preparedWoState.whole && selected > 0 && selected < units.length;
+  });
 }
 
 function renderPreparedWoOptions() {
@@ -14042,7 +14088,7 @@ function renderPreparedWoOptions() {
   preparedWoEls.options.innerHTML = [
     ["group", "Группы (как на дашборде)"], ["status", "Статусы СК-11"]
   ].map(([kind, label]) => `<div class="wo-export-group"><small>${label}</small><div>${preparedWoState.options.filter((option) => option.kind === kind).map(item).join("")}</div></div>`).join("");
-  preparedWoEls.download.disabled = !preparedWoState.selected.size;
+  preparedWoEls.download.disabled = !preparedWoCanDownload();
 }
 
 async function loadPreparedWoOptions() {
@@ -14051,23 +14097,41 @@ async function loadPreparedWoOptions() {
   const previousId = preparedWoState.id;
   const previousKeys = new Set(preparedWoState.selected);
   preparedWoState.id = preparedWoEls.select.value;
+  if (previousId !== preparedWoState.id) {
+    preparedWoState.whole = true;
+    preparedWoState.units.clear();
+    preparedWoState.filters = null;
+    preparedWoState.touched = false;
+    preparedWoEls.departments.hidden = true;
+    preparedWoEls.unitOptions.replaceChildren();
+  }
   preparedWoState.options = [];
-  preparedWoState.selected.clear();
+  preparedWoState.readyKey = "";
   preparedWoEls.options.replaceChildren();
   preparedWoEls.info.textContent = "";
   preparedWoEls.download.disabled = true;
   if (!preparedWoState.id) { preparedWoStatus("Выберите подготовленный архив."); return; }
-  preparedWoStatus("Читаем файл архивного периода…");
+  if (!preparedWoState.whole && !preparedWoState.units.size) {
+    preparedWoStatus("Выберите хотя бы одно подразделение / РЭС.");
+    return;
+  }
+  preparedWoStatus("Читаем файл и применяем выбранные подразделения…");
+  const params = preparedWoQuery();
+  const key = params.toString();
+  params.set("options", "1");
   try {
-    const payload = await preparedWoJson(new URLSearchParams({ id: preparedWoState.id, options: "1" }));
+    const payload = await preparedWoJson(params);
     if (token !== preparedWoState.token || currentUser?.username !== username || !currentUser?.isDeveloper) return;
     preparedWoState.options = Array.isArray(payload.options) ? payload.options : [];
+    preparedWoState.filters = payload.filters || null;
     preparedWoState.selected = new Set(preparedWoState.options.filter((option) =>
-      previousId === preparedWoState.id && previousKeys.size ? previousKeys.has(option.key) : option.kind === "group"
+      preparedWoState.touched && previousId === preparedWoState.id ? previousKeys.has(option.key) : option.kind === "group"
     ).map((option) => option.key));
-    preparedWoEls.info.textContent = `Период: ${payload.period} МСК · нарядов: ${payload.total}${payload.generatedAt ? ` · файл сформирован ${payload.generatedAt}` : ""}`;
+    preparedWoState.readyKey = key;
+    preparedWoEls.info.textContent = `Период: ${payload.period} · нарядов в выбранных подразделениях: ${payload.total}${payload.generatedAt ? ` · файл сформирован ${payload.generatedAt}` : ""}${payload.sourceNote ? ` · ${payload.sourceNote}` : ""}`;
+    renderPreparedWoUnits();
     renderPreparedWoOptions();
-    preparedWoStatus(payload.total ? "Выберите группы и статусы для Excel." : "В выбранном файле нет нарядов.");
+    preparedWoStatus(payload.total ? "Выберите группы и статусы для Excel." : "В выбранных подразделениях нет нарядов из этого файла.");
   } catch (error) {
     if (token !== preparedWoState.token || currentUser?.username !== username) return;
     preparedWoStatus(error instanceof Error ? error.message : "Не удалось прочитать архивный файл", true);
@@ -14075,16 +14139,19 @@ async function loadPreparedWoOptions() {
 }
 
 async function downloadPreparedWo() {
-  if (!preparedWoState.id || !preparedWoState.selected.size || preparedWoState.downloading || preparedWoEls.download.disabled) return;
+  if (!preparedWoCanDownload() || preparedWoEls.download.disabled) return;
   const keys = preparedWoState.options.filter((option) => preparedWoState.selected.has(option.key)).map((option) => option.key);
-  const params = new URLSearchParams({ id: preparedWoState.id, keys: keys.join("|") });
+  const params = preparedWoQuery();
+  params.set("keys", keys.join("|"));
   preparedWoState.downloading = true;
   preparedWoEls.download.disabled = true;
   preparedWoEls.refresh.disabled = true;
   preparedWoEls.select.disabled = true;
-  preparedWoEls.options.querySelectorAll("input").forEach((input) => { input.disabled = true; });
+  const inputs = [...preparedWoEls.options.querySelectorAll("input"), ...preparedWoEls.departments.querySelectorAll("input,button")];
+  const disabled = inputs.map((input) => input.disabled);
+  inputs.forEach((input) => { input.disabled = true; });
   preparedWoEls.download.querySelector("span").textContent = "Формирование…";
-  preparedWoStatus("Формируем Excel за архивный период…");
+  preparedWoStatus("Формируем Excel по выбранным подразделениям и статусам…");
   try {
     const response = await fetch(`${API_PREPARED_WORKORDERS}?${params}`, {
       method: "GET", cache: "no-store", credentials: "include", headers: getSessionHeaders()
@@ -14103,15 +14170,15 @@ async function downloadPreparedWo() {
     anchor.click();
     anchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1500);
-    preparedWoStatus("Готово. Excel за архивный период скачан.");
+    preparedWoStatus("Готово. Excel по выбранным подразделениям и статусам скачан.");
   } catch (error) {
     preparedWoStatus(error instanceof Error ? error.message : "Не удалось скачать Excel", true);
   } finally {
     preparedWoState.downloading = false;
-    preparedWoEls.download.disabled = !preparedWoState.selected.size;
+    preparedWoEls.download.disabled = !preparedWoCanDownload();
     preparedWoEls.refresh.disabled = false;
     preparedWoEls.select.disabled = false;
-    preparedWoEls.options.querySelectorAll("input").forEach((input) => { input.disabled = false; });
+    inputs.forEach((input, index) => { input.disabled = disabled[index]; });
     preparedWoEls.download.querySelector("span").textContent = "Скачать Excel";
   }
 }
@@ -14121,7 +14188,37 @@ preparedWoEls.select?.addEventListener("change", loadPreparedWoOptions);
 preparedWoEls.download?.addEventListener("click", downloadPreparedWo);
 preparedWoEls.options?.addEventListener("change", (event) => {
   if (!event.target.matches('input[type="checkbox"]')) return;
+  preparedWoState.touched = true;
   if (event.target.checked) preparedWoState.selected.add(event.target.value);
   else preparedWoState.selected.delete(event.target.value);
   renderPreparedWoOptions();
+});
+preparedWoEls.allUnits?.addEventListener("change", (event) => {
+  preparedWoState.whole = event.target.checked;
+  preparedWoState.units.clear();
+  renderPreparedWoUnits();
+  loadPreparedWoOptions();
+});
+preparedWoEls.clearUnits?.addEventListener("click", () => {
+  preparedWoState.whole = false;
+  preparedWoState.units.clear();
+  renderPreparedWoUnits();
+  loadPreparedWoOptions();
+});
+preparedWoEls.unitOptions?.addEventListener("change", (event) => {
+  const input = event.target;
+  if (!input.matches('[data-prepared-unit], [data-prepared-group]')) return;
+  const units = preparedWoState.filters?.units || [];
+  if (preparedWoState.whole) {
+    preparedWoState.whole = false;
+    preparedWoState.units = new Set(units.filter((unit) => unit.configured && unit.count > 0).map((unit) => unit.id));
+  }
+  const ids = input.dataset.preparedUnit ? [input.dataset.preparedUnit]
+    : units.filter((unit) => unit.groupId === input.dataset.preparedGroup && unit.configured && unit.count > 0).map((unit) => unit.id);
+  ids.forEach((id) => {
+    if (input.checked) preparedWoState.units.add(id);
+    else preparedWoState.units.delete(id);
+  });
+  renderPreparedWoUnits();
+  loadPreparedWoOptions();
 });
