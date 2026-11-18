@@ -31,6 +31,7 @@ const file = `СК-11 — НДР (детально, файл)
 Подразделение: Гт | Журнал: ГтЭС. Журнал НДР
 Объект: ТП-1 | Места: —
 Работы: Ремонт
+Подготовка р.м.: Проверить таблички «А & Б»
 План: 10.09.2026 08:00 — 10.09.2026 17:00
 UID: order-1
 
@@ -155,6 +156,8 @@ test("архивный TXT: разделитель |, записи без ном
   assert.equal(data.orders[0].planStart, "17.08.2026 10:00");
   assert.equal(data.orders[0].planEnd, "22.08.2026 23:00");
   assert.deepEqual(data.orders[0].brigade, ["Первый", "Второй"]);
+  assert.equal(data.orders[0].uid, "test-ks");
+  assert.equal(data.orders[0].preparation, "Подготовить площадку № 1\nПроверить площадку № 2");
   const stats = preparedWorkordersStats({ ...data, archivePeriod: preparedPeriodFromText(historyFile) });
   assert.equal(stats.total, 3);
   assert.equal(stats.split, "day");
@@ -163,6 +166,7 @@ test("архивный TXT: разделитель |, записи без ном
   const entries = workbookEntries(buildWorkordersPeriodWorkbook(stats, { keys: ["group:Прочие", "group:Не проверен"] }));
   assert.match(entries.get("xl/workbook.xml"), /По дням/);
   assert.match(entries.get("xl/worksheets/sheet3.xml"), /КЛ-ТЕСТ-КС/);
+  assert.match(entries.get("xl/worksheets/sheet3.xml"), /r="H\d+"[^>]*><is><t[^>]*>Подготовить площадку № 1\nПроверить площадку № 2<\/t>/);
   assert.match(entries.get("xl/worksheets/sheet3.xml"), /НЕ|не исторические/);
 });
 
@@ -189,6 +193,7 @@ test("TXT за старый период скачивается и не расп
   const details = entries.get("xl/worksheets/sheet3.xml");
   assert.match(details, /10.09.2026 08:00 — 10.10.2026 20:00/);
   assert.match(details, /ТП-1/);
+  assert.match(details, /r="G\d+"[^>]*><is><t[^>]*>Проверить таблички «А &amp; Б»<\/t>/);
   assert.doesNotMatch(details, /ТП-2/);
   assert.match(details, /16.11.2026 09:42/);
 });
@@ -237,6 +242,23 @@ test("текущая сводка и фоновая история игнори�
   const result = await archiveWorkordersFromChat();
   assert.equal(result.processed, 1);
   assert.deepEqual((await listWorkorderSnapshots()).map((item) => item.id), ["live"]);
+});
+
+test("обычная выгрузка по дням и сменам включает подготовку рабочего места из сохранённых сводок", async () => {
+  const day = new Date(now - 1000).toLocaleDateString("ru-RU", { timeZone: "Europe/Moscow" });
+  for (const [split, column] of [["day", "H"], ["shift", "I"]]) {
+    const params = new URLSearchParams({
+      scope: "executive", from: day, to: day, split, keys: "status:Допуск|status:Создан"
+    });
+    const response = await router.fetch(new Request(`http://localhost/api/workorders-export?${params}`, {
+      headers: requestFor().headers
+    }));
+    assert.equal(response.status, 200);
+    const details = workbookEntries(Buffer.from(await response.arrayBuffer())).get("xl/worksheets/sheet3.xml");
+    assert.match(details, new RegExp(`r="${column}\\d+"[^>]*><is><t[^>]*>Подготовка р\\.м\\.<\\/t>`));
+    assert.match(details, new RegExp(`r="${column}\\d+"[^>]*><is><t[^>]*>Проверить таблички «А &amp; Б»<\\/t>`));
+    assert.match(details, new RegExp(`r="${column}\\d+" s="\\d+"\\/>`));
+  }
 });
 
 test("период TXT главнее подписи, а при отсутствии периода в TXT используется подпись", async () => {
