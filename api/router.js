@@ -26,6 +26,7 @@ import adminOutagesExport from "../handlers/admin/outages-export.js";
 import adminRolesExport from "../handlers/admin/roles-export.js";
 import adminBranchChats from "../handlers/admin/branch-chats.js";
 import adminLenenergoSite from "../handlers/admin/lenenergo-site.js";
+import adminWorkordersPrepared from "../handlers/admin/workorders-prepared.js";
 
 const ROUTES = new Map([
   ["login", login],
@@ -54,7 +55,8 @@ const ROUTES = new Map([
   ["admin/outages-export", adminOutagesExport],
   ["admin/roles-export", adminRolesExport],
   ["admin/branch-chats", adminBranchChats],
-  ["admin/lenenergo-site", adminLenenergoSite]
+  ["admin/lenenergo-site", adminLenenergoSite],
+  ["admin/workorders-prepared", adminWorkordersPrepared]
 ]);
 
 function json(data, status = 200) {

@@ -6525,3 +6525,23 @@ html body #woExportButton.is-loading {
   html body #woExportButton { width: 100%; justify-content: center; }
   html body .wo-shift-period input { flex: 1 1 140px; }
 }
+/* Подготовленный архив НДР — последний раздел Центра управления. */
+.prepared-wo-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin: 20px 0 14px;
+}
+.prepared-wo-controls > label {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  color: var(--text-muted, #9baabd);
+}
+.prepared-wo-controls > select { width: 100%; min-width: 0; }
+.prepared-workorders-panel .wo-export-options { margin: 16px 0; }
+.prepared-workorders-panel .access-heading-copy { overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .prepared-wo-controls { grid-template-columns: minmax(0, 1fr); }
+  .prepared-wo-controls > button { width: 100%; }
+}

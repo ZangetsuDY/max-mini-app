@@ -7,6 +7,7 @@
     "node": ">=20 <25"
   },
   "scripts": {
+    "test": "node --test",
     "start": "node index.js",
     "build": "node -e \"console.log('No build step required')\"",
     "make-user": "node scripts/make-user.mjs"

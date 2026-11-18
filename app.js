@@ -7221,6 +7221,12 @@ function renderAdminDashboard(
     if (payload.canManageRoles) loadLenenergoSiteOptions();
   }
 
+  const preparedWorkordersPanel = document.getElementById("preparedWorkordersPanel");
+  if (preparedWorkordersPanel) {
+    preparedWorkordersPanel.hidden = !Boolean(payload.canManageRoles);
+    if (payload.canManageRoles) loadPreparedWoList();
+  }
+
   dispatcherWorkordersManagementPanel.hidden =
     !Boolean(
       payload.canManageRoles
@@ -13944,4 +13950,178 @@ lenenergoEls.button?.addEventListener("click", async () => {
     lenenergoEls.button.disabled = false;
     lenenergoEls.button.querySelector("span").textContent = "Проверить доступ";
   }
+});
+
+/* ---------- готовые архивные периоды НДР в конце Центра управления ---------- */
+const API_PREPARED_WORKORDERS = "/api/admin/workorders-prepared";
+const preparedWoState = {
+  loadedAt: 0, loading: false, downloading: false, token: 0,
+  id: "", options: [], selected: new Set()
+};
+const preparedWoEls = {
+  select: document.getElementById("preparedWoSelect"),
+  refresh: document.getElementById("preparedWoRefresh"),
+  download: document.getElementById("preparedWoDownload"),
+  info: document.getElementById("preparedWoInfo"),
+  options: document.getElementById("preparedWoOptions"),
+  status: document.getElementById("preparedWoStatus")
+};
+
+function preparedWoStatus(text, error = false) {
+  preparedWoEls.status.textContent = text;
+  preparedWoEls.status.classList.toggle("is-error", error);
+}
+
+async function preparedWoJson(params) {
+  const response = await fetch(`${API_PREPARED_WORKORDERS}?${params}`, {
+    method: "GET", cache: "no-store", credentials: "include", headers: getSessionHeaders()
+  });
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(payload?.error || `HTTP ${response.status}`);
+  return payload;
+}
+
+async function loadPreparedWoList(force = false) {
+  if (!currentUser?.isDeveloper || !preparedWoEls.select || preparedWoState.loading || preparedWoState.downloading) return;
+  if (!force && Date.now() - preparedWoState.loadedAt < 60000) return;
+  const username = currentUser.username;
+  preparedWoState.loading = true;
+  preparedWoEls.refresh.disabled = true;
+  preparedWoEls.select.disabled = true;
+  preparedWoEls.download.disabled = true;
+  preparedWoStatus("Ищем подготовленные архивы в чате НДР…");
+  try {
+    const payload = await preparedWoJson(new URLSearchParams(force ? { refresh: "1" } : {}));
+    if (currentUser?.username !== username || !currentUser?.isDeveloper) return;
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    preparedWoEls.select.replaceChildren();
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = items.length ? "Выберите архивный период" : "Подготовленные архивы не найдены";
+    preparedWoEls.select.appendChild(placeholder);
+    for (const item of items) {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = `${item.period || item.fileName || "Архивный период"}${item.generatedAt ? ` · сформирован ${item.generatedAt}` : ""}`;
+      preparedWoEls.select.appendChild(option);
+    }
+    preparedWoState.loadedAt = Date.now();
+    preparedWoEls.select.disabled = !items.length;
+    const found = items.some((item) => item.id === preparedWoState.id);
+    preparedWoEls.select.value = found ? preparedWoState.id : "";
+    if (!found) {
+      preparedWoState.id = "";
+      preparedWoState.token += 1;
+      preparedWoState.options = [];
+      preparedWoState.selected.clear();
+      preparedWoEls.info.textContent = "";
+      preparedWoEls.options.replaceChildren();
+    }
+    preparedWoStatus(payload.message || `Найдено архивных файлов: ${items.length}.`);
+    if (force && found) await loadPreparedWoOptions();
+  } catch (error) {
+    if (currentUser?.username !== username) return;
+    if (!preparedWoState.loadedAt) {
+      preparedWoEls.select.replaceChildren(new Option("Не удалось загрузить список", ""));
+    }
+    preparedWoEls.select.disabled = preparedWoEls.select.options.length <= 1;
+    preparedWoStatus(error instanceof Error ? error.message : "Не удалось загрузить архивы", true);
+  } finally {
+    preparedWoState.loading = false;
+    preparedWoEls.refresh.disabled = false;
+    preparedWoEls.download.disabled = !preparedWoState.id || !preparedWoState.selected.size;
+  }
+}
+
+function renderPreparedWoOptions() {
+  const item = (option) => `
+    <label class="wo-export-option${preparedWoState.selected.has(option.key) ? " is-checked" : ""}">
+      <input type="checkbox" value="${escapeHtml(option.key)}"${preparedWoState.selected.has(option.key) ? " checked" : ""} />
+      <span>${escapeHtml(option.value)}</span><b>${option.count}</b>
+    </label>`;
+  preparedWoEls.options.innerHTML = [
+    ["group", "Группы (как на дашборде)"], ["status", "Статусы СК-11"]
+  ].map(([kind, label]) => `<div class="wo-export-group"><small>${label}</small><div>${preparedWoState.options.filter((option) => option.kind === kind).map(item).join("")}</div></div>`).join("");
+  preparedWoEls.download.disabled = !preparedWoState.selected.size;
+}
+
+async function loadPreparedWoOptions() {
+  const token = ++preparedWoState.token;
+  const username = currentUser?.username;
+  const previousId = preparedWoState.id;
+  const previousKeys = new Set(preparedWoState.selected);
+  preparedWoState.id = preparedWoEls.select.value;
+  preparedWoState.options = [];
+  preparedWoState.selected.clear();
+  preparedWoEls.options.replaceChildren();
+  preparedWoEls.info.textContent = "";
+  preparedWoEls.download.disabled = true;
+  if (!preparedWoState.id) { preparedWoStatus("Выберите подготовленный архив."); return; }
+  preparedWoStatus("Читаем файл архивного периода…");
+  try {
+    const payload = await preparedWoJson(new URLSearchParams({ id: preparedWoState.id, options: "1" }));
+    if (token !== preparedWoState.token || currentUser?.username !== username || !currentUser?.isDeveloper) return;
+    preparedWoState.options = Array.isArray(payload.options) ? payload.options : [];
+    preparedWoState.selected = new Set(preparedWoState.options.filter((option) =>
+      previousId === preparedWoState.id && previousKeys.size ? previousKeys.has(option.key) : option.kind === "group"
+    ).map((option) => option.key));
+    preparedWoEls.info.textContent = `Период: ${payload.period} МСК · нарядов: ${payload.total}${payload.generatedAt ? ` · файл сформирован ${payload.generatedAt}` : ""}`;
+    renderPreparedWoOptions();
+    preparedWoStatus(payload.total ? "Выберите группы и статусы для Excel." : "В выбранном файле нет нарядов.");
+  } catch (error) {
+    if (token !== preparedWoState.token || currentUser?.username !== username) return;
+    preparedWoStatus(error instanceof Error ? error.message : "Не удалось прочитать архивный файл", true);
+  }
+}
+
+async function downloadPreparedWo() {
+  if (!preparedWoState.id || !preparedWoState.selected.size || preparedWoState.downloading || preparedWoEls.download.disabled) return;
+  const keys = preparedWoState.options.filter((option) => preparedWoState.selected.has(option.key)).map((option) => option.key);
+  const params = new URLSearchParams({ id: preparedWoState.id, keys: keys.join("|") });
+  preparedWoState.downloading = true;
+  preparedWoEls.download.disabled = true;
+  preparedWoEls.refresh.disabled = true;
+  preparedWoEls.select.disabled = true;
+  preparedWoEls.options.querySelectorAll("input").forEach((input) => { input.disabled = true; });
+  preparedWoEls.download.querySelector("span").textContent = "Формирование…";
+  preparedWoStatus("Формируем Excel за архивный период…");
+  try {
+    const response = await fetch(`${API_PREPARED_WORKORDERS}?${params}`, {
+      method: "GET", cache: "no-store", credentials: "include", headers: getSessionHeaders()
+    });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new Error(payload?.error || "Не удалось сформировать Excel");
+    }
+    const blob = await response.blob();
+    const encoded = (response.headers.get("content-disposition") || "").match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = encoded ? decodeURIComponent(encoded) : "НДР_архивный_период.xlsx";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    preparedWoStatus("Готово. Excel за архивный период скачан.");
+  } catch (error) {
+    preparedWoStatus(error instanceof Error ? error.message : "Не удалось скачать Excel", true);
+  } finally {
+    preparedWoState.downloading = false;
+    preparedWoEls.download.disabled = !preparedWoState.selected.size;
+    preparedWoEls.refresh.disabled = false;
+    preparedWoEls.select.disabled = false;
+    preparedWoEls.options.querySelectorAll("input").forEach((input) => { input.disabled = false; });
+    preparedWoEls.download.querySelector("span").textContent = "Скачать Excel";
+  }
+}
+
+preparedWoEls.refresh?.addEventListener("click", () => loadPreparedWoList(true));
+preparedWoEls.select?.addEventListener("change", loadPreparedWoOptions);
+preparedWoEls.download?.addEventListener("click", downloadPreparedWo);
+preparedWoEls.options?.addEventListener("change", (event) => {
+  if (!event.target.matches('input[type="checkbox"]')) return;
+  if (event.target.checked) preparedWoState.selected.add(event.target.value);
+  else preparedWoState.selected.delete(event.target.value);
+  renderPreparedWoOptions();
 });

@@ -8,8 +8,8 @@
   />
   <meta name="theme-color" content="#04070b" />
   <title>ПАО «Россети Ленэнерго» — Оперативный портал</title>
-  <link rel="stylesheet" href="style.css?v=20261113-woexport2" />
-  <link rel="stylesheet" href="pro.css?v=20261113-woexport2" />
+  <link rel="stylesheet" href="style.css?v=20261117-prepared-wo" />
+  <link rel="stylesheet" href="pro.css?v=20261117-prepared-wo" />
 </head>
 
 <body class="auth-pending">
@@ -2282,6 +2282,30 @@
           <div class="branch-admin-hint">Проверка ещё не запускалась.</div>
         </div>
       </article>
+      <article id="preparedWorkordersPanel" class="admin-panel prepared-workorders-panel" hidden>
+        <div class="admin-panel-heading access-heading">
+          <div>
+            <span class="micro-label">НДР · АРХИВНЫЙ ПЕРИОД</span>
+            <h2>Выгрузить заготовленный архивный период</h2>
+            <p class="access-heading-copy">
+              Выберите сообщение с TXT-файлом и пометкой «АРХИВНЫЙ ПЕРИОД» из чата НДР.
+              Период берётся из файла или заголовка сообщения, независимо от даты отправки.
+            </p>
+          </div>
+          <button id="preparedWoRefresh" class="secondary-action" type="button">Обновить список</button>
+        </div>
+        <div class="prepared-wo-controls">
+          <label for="preparedWoSelect">Подготовленный архив</label>
+          <select id="preparedWoSelect" class="dispatcher-select" disabled>
+            <option value="">Загрузка списка…</option>
+          </select>
+          <button id="preparedWoDownload" class="primary-action" type="button" disabled><span>Скачать Excel</span></button>
+        </div>
+        <p id="preparedWoInfo" class="access-heading-copy" aria-live="polite"></p>
+        <div id="preparedWoOptions" class="wo-export-options"></div>
+        <p class="access-heading-copy">Статусы и группы выгружаются за весь период, как в подготовленном файле. Список проверяет последние 100 сообщений чата НДР.</p>
+        <div id="preparedWoStatus" class="dispatcher-config-status" role="status" aria-live="polite"></div>
+      </article>
     </section>
   </main>
 
@@ -2468,7 +2492,7 @@
     </div>
   </div>
 
-  <script src="demo.js?v=20261113-woexport2"></script>
-  <script src="app.js?v=20261113-woexport2"></script>
+  <script src="demo.js?v=20261117-prepared-wo"></script>
+  <script src="app.js?v=20261117-prepared-wo"></script>
 </body>
 </html>
